@@ -3,7 +3,9 @@ annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.14.2
 asyncpg==0.31.0
+bcrypt==3.2.2
 certifi==2026.7.22
+cffi==2.1.1
 click==8.4.2
 colorama==0.4.6
 dnspython==2.8.0
@@ -24,11 +26,13 @@ packaging==26.2
 passlib==1.7.4
 pluggy==1.6.0
 pyasn1==0.6.4
+pycparser==3.0
 pydantic==2.13.4
 pydantic_core==2.46.4
 Pygments==2.20.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
+pytest-dotenv==0.5.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 python-jose==3.5.0
