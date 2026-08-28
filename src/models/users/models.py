@@ -8,9 +8,10 @@ from sqlalchemy.types import DateTime
 
 from src.core.database.database import Base
 
-class UserRole(enum.Enum):
-    TELEGRAM = "telegram"
-    OTHER = "other"
+
+class UserRole(str, enum.Enum):
+    TEACHER = "teacher"
+    STUDENT = "student"
 
 
 class Users(Base):
@@ -25,7 +26,7 @@ class Users(Base):
             values_callable=lambda x: [e.value for e in x],
             name="role"
         ),
-        nullable=True
+        nullable=False
     )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -33,5 +34,5 @@ class Users(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user")
-    teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="user")
+    teacher: Mapped["Teachers"] = relationship("Teachers", back_populates="user")
     student: Mapped["Students"] = relationship("Students", back_populates="user")

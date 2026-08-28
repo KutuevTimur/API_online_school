@@ -7,7 +7,7 @@ from sqlalchemy.types import DateTime
 from src.core.database.database import Base
 
 
-class Teacher(Base):
+class Teachers(Base):
     __tablename__ = "teachers"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

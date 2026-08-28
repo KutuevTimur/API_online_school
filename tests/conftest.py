@@ -1,8 +1,7 @@
 import pytest_asyncio
 
 from fixturs import *
-from src.models.db_models import Users
-from src.models.db_models import RefreshToken
+from src.models.db_models import *
 from src.tools.creating_db import create_database
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,5 +21,7 @@ async def clearing_db(session_db: AsyncSession):
     """Очищает базу банных"""
     # удаляем обязательно в таком порядке
     await session_db.execute(delete(RefreshToken))
+    await session_db.execute(delete(Teachers))
+    await session_db.execute(delete(Students))
     await session_db.execute(delete(Users))
     await session_db.commit()

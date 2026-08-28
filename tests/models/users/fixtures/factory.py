@@ -24,7 +24,8 @@ async def create_user_factory(
         hashed_password=_get_hash_password(
             crypto_context=crypto_context,
             password=random_string() if new_user.password is None else new_user.password
-        )
+        ),
+        role=new_user.role,
     )
     session_db.add(user)
     await session_db.commit()

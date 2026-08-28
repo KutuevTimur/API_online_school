@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from src.models.auth.models_dto import TokenResponse, RefreshTokenRequest, LogoutRequest
 from src.models.refresh_tokens.models import RefreshToken
-from src.models.users.models import Users
+from src.models.users.models import Users, UserRole
 from src.models.users.models_dto import RegisterUserRequestDTO, UsersDTO
 from tests.models.refresh_tokens.fixtures.fixtures import create_refresh_token_fixture
 from tests.models.refresh_tokens.fixtures.models_dto import CreateRefreshTokenFixtureDTO
@@ -25,6 +25,7 @@ class TestsForSuccess:
                 email="test_@mail.com",
                 username="test_user",
                 password="test_password",
+                role=UserRole.TEACHER,
             ).model_dump(),
         )
 

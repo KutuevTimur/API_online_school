@@ -63,6 +63,7 @@ class UsersService:
                     email=new_user.email,
                     username=new_user.username,
                     hashed_password=hashed_password,
+                    role=new_user.role,
                 )
             )
             await self.session_db.commit()
