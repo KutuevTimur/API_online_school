@@ -17,7 +17,7 @@ class Config:
         self.db_connection = DbConnectionConfig.build(self.env)
         self.paths = PathsConfig.build()
         self.tokens = TokensConfig.build()
-        self.allowed_extensions = AllowedExtensions()
+        self.allowed_extensions = AllowedExtensions.build()
 
 
 class EnvConfig(BaseModel):
@@ -142,8 +142,8 @@ class TokensConfig(BaseModel):
 
 
 class AllowedExtensions(BaseModel):
-    for_convert_image: List[str]
-    for_convert_pdf: List[str]
+    for_convert_image: List[str] = ["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif"]
+    for_convert_pdf: List[str] = ["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif", "doc", "docx", "odt", "txt"]
 
     @classmethod
     def build(cls) -> "AllowedExtensions":
