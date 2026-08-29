@@ -18,13 +18,23 @@ class TestsForSuccess:
         self, 
         session_db,
         client_for_tests,
+        create_user_fixture,
     ):
+        user, accesses_token = await create_user_fixture(
+            new_user=CreateUserFixtureDTO(
+                password="test_password",
+                role=UserRole.TEACHER,
+            )
+        )
         response = await client_for_tests.post(
             "/auth/register",
+            headers={"Authorization": f"Bearer {accesses_token}"},
             json=RegisterUserRequestDTO(
                 email="test_@mail.com",
                 username="test_user",
                 password="test_password",
+                first_name="test_first_name",
+                last_name="test_last_name",
                 role=UserRole.TEACHER,
             ).model_dump(),
         )

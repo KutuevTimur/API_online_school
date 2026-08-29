@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import EmailStr, BaseModel, ConfigDict
 
@@ -29,6 +30,11 @@ class RegisterUserRequestDTO(BaseModel):
     username: str
     password: str
     role: UserRole
+
+    first_name: str
+    last_name: str
+    middle_name: Optional[str] = None
+    description: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Optional
+
+from fastapi import APIRouter, Depends, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
 
@@ -6,6 +8,7 @@ from src.modules.auth.auth_service import AuthService
 from src.modules.auth.depends import get_auth_service, get_token_service, get_current_user
 from src.modules.auth.models_dto import TokenResponse, RefreshTokenRequest, LogoutRequest, LogoutResponse
 from src.modules.auth.token_service import TokenService
+from src.modules.check_permission import StudentPermissionService
 from src.modules.users.depends import get_user_service
 from src.modules.users.models_dto import UsersDTO, RegisterUserRequestDTO
 from src.modules.users.service import UsersService
@@ -16,11 +19,15 @@ router = APIRouter(prefix="/auth")
 @router.post("/register", response_model=UsersDTO, status_code=status.HTTP_200_OK)
 async def register_user(
     data: RegisterUserRequestDTO,
-    user_service: UsersService = Depends(get_user_service)
+    current_user: UsersDTO = Depends(get_current_user),
+    user_service: UsersService = Depends(get_user_service),
 ):
     """
     :raises UserAlreadyExists: 409 Если email занят
+    :raises PermissionErrorService: 403 Если создаёт нового пользователя не учитель
     """
+    StudentPermissionService.check_role(current_user)
+
     return await user_service.create_user(new_user=data)
 
 
