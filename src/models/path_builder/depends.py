@@ -1,6 +1,6 @@
 from fastapi import Request
 
-from models.path_builder.service import PathBuilder
+from src.models.path_builder.service import PathBuilder
 
 
 def get_path_builder(

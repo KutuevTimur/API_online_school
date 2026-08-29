@@ -1,7 +1,7 @@
 from fastapi import Depends
 
-from models.teachers.repository import TeacherRepository
-from models.teachers.service import TeacherService
+from src.models.teachers.repository import TeacherRepository
+from src.models.teachers.service import TeacherService
 from src.core.database.database import get_db
 
 
