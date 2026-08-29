@@ -2,8 +2,8 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from helpers import test_crypto_context
-from src.models.users.repository import UsersRepository
-from src.models.users.service import UsersService
+from src.modules.users.repository import UsersRepository
+from src.modules.users.service import UsersService
 
 
 @pytest_asyncio.fixture(scope="function")

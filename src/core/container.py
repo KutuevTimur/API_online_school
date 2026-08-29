@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import create_config
 
 # Не удалять. Используется для подгрузки всех моделей БД
-from src.models.db_models import *
+from src.modules.db_models import *
 
 
 class Container:

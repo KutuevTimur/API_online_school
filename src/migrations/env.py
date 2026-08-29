@@ -11,7 +11,7 @@ from src.core.config.base import init_env
 from src.core.database.database import Base
 
 # ОСТАВИТЬ. НЕОБХОДИМО ДЛЯ ПОДГРУЗКИ МОДЕЛЕЙ
-from src.models.db_models import *
+from src.modules.db_models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

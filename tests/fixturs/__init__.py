@@ -3,8 +3,8 @@ from tests.fixturs.replace_services import user_service_fixture
 from tests.fixturs.fixtures import app_fastapi, config_fix, client_for_tests, \
     lifespan_for_tests
 
-from tests.models.users.fixtures import create_user_fixture
-from tests.models.refresh_tokens.fixtures import create_refresh_token_fixture
+from tests.modules.users.fixtures import create_user_fixture
+from tests.modules.refresh_tokens.fixtures import create_refresh_token_fixture
 
 __all__ = [
     "lifespan_for_tests",

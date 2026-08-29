@@ -7,10 +7,10 @@ from httpx import AsyncClient, ASGITransport
 from helpers import test_crypto_context
 from src.core.config import create_config, Config
 from src.core.database.database import get_db
-from src.models.api.app import init_fastapi_app
-from src.models.depends import get_config
-from src.models.users.depends import get_user_service
-from src.models.users.service import UsersService
+from src.modules.api.app import init_fastapi_app
+from src.modules.depends import get_config
+from src.modules.users.depends import get_user_service
+from src.modules.users.service import UsersService
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)

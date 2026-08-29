@@ -1,7 +1,7 @@
 import pytest_asyncio
 
 from fixturs import *
-from src.models.db_models import *
+from src.modules.db_models import *
 from src.tools.creating_db import create_database
 
 from sqlalchemy.ext.asyncio import AsyncSession

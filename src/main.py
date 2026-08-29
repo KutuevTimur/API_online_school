@@ -2,7 +2,7 @@ import asyncio
 
 import uvicorn
 
-from src.models.api.app import init_fastapi_app
+from src.modules.api.app import init_fastapi_app
 
 app = init_fastapi_app()
 
