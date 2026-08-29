@@ -19,14 +19,14 @@ class PathBuilder:
             self.config.paths.avatars_users / str(user_id)
         )
 
-        return root_dir / "avatar.png"
+        return root_dir / "avatar.webp"
 
     def get_avatar_course(self, course_id: int) -> Path:
         root_dir = self._prepare_directory(
             self.config.paths.avatars_courses / str(course_id)
         )
 
-        return root_dir / "avatar.png"
+        return root_dir / "avatar.webp"
 
     # --- lecture ---
 
