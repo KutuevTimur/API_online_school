@@ -1,5 +1,5 @@
-from src.modules.base.exception import ServiceException
+from src.modules.base.exception import NotFoundData
 
 
-class RefreshTokenNotFound(ServiceException):
+class RefreshTokenNotFound(NotFoundData):
     pass

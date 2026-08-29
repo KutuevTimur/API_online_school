@@ -1,7 +1,7 @@
-from src.modules.base.exception import ServiceException
+from src.modules.base.exception import ServiceException, NotFoundData
 
 
-class TeacherNotFound(ServiceException):
+class TeacherNotFound(NotFoundData):
     pass
 
 

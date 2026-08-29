@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
+from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
+from src.modules.check_permission.exception import PermissionErrorService
 
 
 def register_exception_handlers(app: FastAPI):
@@ -14,6 +16,18 @@ def register_exception_handlers(app: FastAPI):
     async def service_handler(request, exc):
         return JSONResponse(status_code=400, content={"detail": "Did not transmit data"})
 
+    @app.exception_handler(InvalidJWTToken)
+    async def service_handler(request, exc):
+        return JSONResponse(status_code=401, content={"detail": "Invalid JWT token"})
+
+    @app.exception_handler(InvalidCredentials)
+    async def service_handler(request, exc):
+        return JSONResponse(status_code=401, content={"detail": "Invalid credentials"})
+
     @app.exception_handler(NotFoundData)
     async def service_handler(request, exc):
         return JSONResponse(status_code=404, content={"detail": "Not found data"})
+
+    @app.exception_handler(PermissionErrorService)
+    async def service_handler(request, exc):
+        return JSONResponse(status_code=403, content={"detail": "Not permission"})
