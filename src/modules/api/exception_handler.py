@@ -4,7 +4,11 @@ from starlette.responses import JSONResponse
 from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
 from src.modules.check_permission.exception import PermissionErrorService
-from src.modules.handlers_files.exception import InvalidImageFormat, ImageConversionError
+from src.modules.handlers_files.exception import (
+    InvalidImageFormat,
+    ImageConversionError,
+    ImageCompressionError,
+)
 
 
 def register_exception_handlers(app: FastAPI):
@@ -40,3 +44,7 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(ImageConversionError)
     async def image_conversion_error_handler(request, exc):
         return JSONResponse(status_code=500, content={"detail": "Image conversion error"})
+
+    @app.exception_handler(ImageCompressionError)
+    async def image_compression_error_handler(request, exc):
+        return JSONResponse(status_code=500, content={"detail": "Image compression error"})

@@ -14,3 +14,8 @@ class InvalidImageFormat(HandlerFileException):
 class ImageConversionError(HandlerFileException):
     """Исключение при ошибке конвертации изображения."""
     pass
+
+
+class ImageCompressionError(HandlerFileException):
+    """Исключение при ошибке сжатия изображения."""
+    pass
