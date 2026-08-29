@@ -17,7 +17,7 @@ class Teachers(Base):
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
     middle_name: Mapped[str] = mapped_column(String(255), nullable=True)
 
-    avatar_url: Mapped[str] = mapped_column(String(1000), nullable=True)
+    avatar_path: Mapped[str] = mapped_column(String(1000), nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
