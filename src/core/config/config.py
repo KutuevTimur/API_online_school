@@ -86,17 +86,42 @@ class DbConnectionConfig(BaseModel):
 class PathsConfig(BaseModel):
     base: Path
     media: Path
+    avatars_users: Path
+    avatars_courses: Path
+    lectures: Path
+    homework: Path
+    homework_submissions: Path
+    temp: Path
 
     @classmethod
     def build(cls) -> "PathsConfig":
         base = Path(__file__).resolve().parents[3]
+
         media = base / Path("media")
+        avatars_users = media / Path("avatars_users")
+        avatars_courses = media / Path("avatars_courses")
+        lectures = media / Path("lectures")
+        homework = media / Path("homework")
+        homework_submissions = media / Path("homework_submissions")
+        temp = media / Path("temp")
 
         media.mkdir(exist_ok=True)
+        avatars_users.mkdir(exist_ok=True)
+        avatars_courses.mkdir(exist_ok=True)
+        lectures.mkdir(exist_ok=True)
+        homework.mkdir(exist_ok=True)
+        homework_submissions.mkdir(exist_ok=True)
+        temp.mkdir(exist_ok=True)
 
         return cls(
             base=base,
             media=media,
+            avatars_users=avatars_users,
+            avatars_courses=avatars_courses,
+            lectures=lectures,
+            homework=homework,
+            homework_submissions=homework_submissions,
+            temp=temp,
         )
 
 
