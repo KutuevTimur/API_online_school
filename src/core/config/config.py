@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import List
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncEngine
@@ -16,6 +17,7 @@ class Config:
         self.db_connection = DbConnectionConfig.build(self.env)
         self.paths = PathsConfig.build()
         self.tokens = TokensConfig.build()
+        self.allowed_extensions = AllowedExtensions()
 
 
 class EnvConfig(BaseModel):
@@ -136,4 +138,16 @@ class TokensConfig(BaseModel):
             access_token_expire_minutes=30,
             refresh_token_expire_days=30,
             algorithm="HS256",
+        )
+
+
+class AllowedExtensions(BaseModel):
+    for_convert_image: List[str]
+    for_convert_pdf: List[str]
+
+    @classmethod
+    def build(cls) -> "AllowedExtensions":
+        return cls(
+            for_convert_image=["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif"],
+            for_convert_pdf=["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif", "doc", "docx", "odt", "txt"],
         )
