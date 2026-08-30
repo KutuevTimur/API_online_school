@@ -1,21 +1,29 @@
+import shutil
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from fastapi import UploadFile
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.base.exception import NotFoundData
 from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
 from src.modules.path_builder import PathBuilder
-from src.modules.students.models_dto import CreateStudentDTO
+from src.modules.students.models_dto import CreateStudentDTO, UpdateStudentDTO
 from src.modules.students.repository import StudentRepository
-from src.modules.teachers.models_dto import CreateTeacherDTO
+from src.modules.students.service import StudentService
 from src.modules.teachers.repository import TeacherRepository
-from src.modules.users.exception import UserAlreadyExit, InvalidRole
+from src.modules.teachers.service import TeacherService
+from src.modules.teachers.models_dto import CreateTeacherDTO, UpdateTeacherDTO
+from src.modules.users.exception import UserAlreadyExit, InvalidRole, AvatarNotFound
 from src.modules.users.models import UserRole
-from src.modules.users.models_dto import UsersDTO, RegisterUserRequestDTO, CreateUserDTO
+from src.modules.users.models_dto import (
+    UsersDTO,
+    RegisterUserRequestDTO,
+    CreateUserDTO,
+    UserAvatarResponseDTO,
+)
 from src.modules.users.repository import UsersRepository
 
 
@@ -25,7 +33,9 @@ class UsersService:
         self,
         users_repo: UsersRepository,
         teacher_repo: TeacherRepository,
+        teacher_service: TeacherService,
         student_repo: StudentRepository,
+        student_service: StudentService,
         cr_context: CryptContext,
         path_builder: PathBuilder,
         handler_images: HandlerImages,
@@ -34,7 +44,9 @@ class UsersService:
     ):
         self.users_repo = users_repo
         self.teacher_repo = teacher_repo
+        self.teacher_service = teacher_service
         self.student_repo = student_repo
+        self.student_service = student_service
         self.cr_context = cr_context
         self.path_builder = path_builder
         self.handler_images = handler_images
@@ -53,21 +65,35 @@ class UsersService:
         :raises InvalidImageFormat: Если расширение или формат файла недопустимы / повреждены.
         :raises ImageConversionError: При ошибке в процессе конвертации / сжатия / сохранения.
         """
-        temp_webp = Path()
-        result_file_path = Path()
+        temp_webp: Path | None = None
+        result_file_path: Path | None = None
         try:
-            temp_webp = self.path_builder.get_temp() / Path(uuid.uuid4().hex)
+            temp_webp = self.path_builder.get_temp() / Path(f"{uuid.uuid4().hex}.webp")
             temp_webp = await self.handler_images.convert_to_webp(photo=avatar, dest=temp_webp)
 
             result_file_path = self.path_builder.get_avatar_user(user_id)
             result_file_path = await self.compression_images.compress_webp(file=temp_webp, dest=result_file_path)
         except Exception:
-            temp_webp.unlink(missing_ok=True)
-            result_file_path.unlink(missing_ok=True)
+            if temp_webp and temp_webp.is_file():
+                temp_webp.unlink(missing_ok=True)
+            if result_file_path and result_file_path.is_file():
+                result_file_path.unlink(missing_ok=True)
             raise
+        finally:
+            if temp_webp and temp_webp.is_file():
+                temp_webp.unlink(missing_ok=True)
 
-        temp_webp.unlink(missing_ok=True)
         return str(result_file_path)
+
+    def delete_avatar(self, user_id: int) -> None:
+        """
+        :raises AvatarNotFound: Если аватар не найден
+        """
+        avatar_path = self.path_builder.get_avatar_user(user_id)
+        if avatar_path.is_file():
+            shutil.rmtree(avatar_path.parent)
+        else:
+            raise AvatarNotFound()
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """
@@ -93,12 +119,11 @@ class UsersService:
     async def create_user(
         self,
         new_user: RegisterUserRequestDTO,
-        avatar: Optional[UploadFile] = None
     ) -> UsersDTO:
         """
-        :raises UserAlreadyExit:
-        :raises InvalidImageFormat: Если расширение или формат файла недопустимы / повреждены.
-        :raises ImageConversionError: При ошибке в процессе конвертации / сжатия / сохранения.
+        Создает нового пользователя (учителя или ученика).
+        :raises UserAlreadyExit: Если пользователь с таким email/username уже существует.
+        :raises InvalidRole: Если роль недопустима.
         """
         if await self.get_user_by_username_or_email(new_user.email):
             raise UserAlreadyExit()
@@ -117,27 +142,23 @@ class UsersService:
 
             await self.session_db.flush()
 
-            avatar_path = await self._create_avatar(user_id=user_orm.id, avatar=avatar) if avatar else None
-
             if new_user.role == UserRole.TEACHER:
-                teacher_orm = await self.teacher_repo.add_teacher(
+                await self.teacher_repo.add_teacher(
                     CreateTeacherDTO(
                         user_id=user_orm.id,
                         first_name=new_user.first_name,
                         last_name=new_user.last_name,
                         middle_name=new_user.middle_name,
-                        avatar_path=avatar_path,
                         description=new_user.description,
                     )
                 )
             elif new_user.role == UserRole.STUDENT:
-                student_orm = await self.student_repo.add_student(
+                await self.student_repo.add_student(
                     CreateStudentDTO(
                         user_id=user_orm.id,
                         first_name=new_user.first_name,
                         last_name=new_user.last_name,
                         middle_name=new_user.middle_name,
-                        avatar_path=avatar_path,
                     )
                 )
             else:
@@ -151,3 +172,49 @@ class UsersService:
                 raise
 
         return UsersDTO.model_validate(user_orm)
+
+    async def update_avatar(
+        self,
+        user_id: int,
+        avatar: UploadFile,
+    ) -> UserAvatarResponseDTO:
+        """
+        Обновляет аватарку пользователя.
+        :param user_id: ID пользователя, которому обновляется аватарка
+        :param avatar: Загружаемый файл
+        :return: UserAvatarResponseDTO с путем к аватарке
+        :raises NotFoundData: Если пользователь не найден
+        :raises InvalidRole: Если роль пользователя неизвестна
+        :raises InvalidImageFormat: Если формат файла недопустим / поврежден
+        :raises ImageConversionError: При ошибке конвертации
+        :raises ImageCompressionError: При ошибке сжатия
+        """
+        user = await self.users_repo.get_user_by_id(user_id)
+        if not user:
+            raise NotFoundData()
+
+        try:
+            self.delete_avatar(user_id=user_id)
+        except AvatarNotFound:
+            pass
+
+        avatar_path = await self._create_avatar(user_id=user_id, avatar=avatar)
+
+        if user.role == UserRole.TEACHER:
+            await self.teacher_service.update_teacher_by_user_id(
+                user_id=user_id,
+                data=UpdateTeacherDTO(
+                    avatar_path=avatar_path,
+                )
+            )
+        elif user.role == UserRole.STUDENT:
+            await self.student_service.update_student_by_user_id(
+                user_id=user_id,
+                data=UpdateStudentDTO(
+                    avatar_path=avatar_path,
+                )
+            )
+        else:
+            raise InvalidRole()
+
+        return UserAvatarResponseDTO(avatar_path=avatar_path)

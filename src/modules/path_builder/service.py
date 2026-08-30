@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from core.config import Config
+from src.core.config import Config
 
 
 class PathBuilder:

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
-from modules.users.exception import InvalidRole
+from src.modules.users.exception import InvalidRole
 from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
 from src.modules.check_permission.exception import PermissionErrorService

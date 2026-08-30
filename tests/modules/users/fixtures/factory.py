@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from helpers.functions import random_string
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
-from src.modules.users.models import Users
+from src.modules.students.models import Students
+from src.modules.teachers.models import Teachers
+from src.modules.users.models import Users, UserRole
 from src.modules.users.models_dto import UsersDTO
 
 
@@ -31,5 +33,21 @@ async def create_user_factory(
     await session_db.commit()
     await session_db.refresh(user)
 
-    return UsersDTO.model_validate(user)
+    if new_user.role == UserRole.TEACHER:
+        teacher = Teachers(
+            user_id=user.id,
+            first_name=user.username,
+            last_name="Teacher",
+        )
+        session_db.add(teacher)
+        await session_db.commit()
+    elif new_user.role == UserRole.STUDENT:
+        student = Students(
+            user_id=user.id,
+            first_name=user.username,
+            last_name="Student",
+        )
+        session_db.add(student)
+        await session_db.commit()
 
+    return UsersDTO.model_validate(user)

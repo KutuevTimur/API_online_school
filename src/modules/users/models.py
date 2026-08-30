@@ -20,7 +20,7 @@ class Users(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    role: Mapped[Optional[UserRole]] = mapped_column(
+    role: Mapped[UserRole] = mapped_column(
         Enum(
             UserRole,
             values_callable=lambda x: [e.value for e in x],

@@ -25,6 +25,12 @@ class UserResponse(ORMDTO):
     created_at: datetime
 
 
+class UserAvatarResponseDTO(BaseModel):
+    avatar_path: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RegisterUserRequestDTO(BaseModel):
     email: EmailStr
     username: str

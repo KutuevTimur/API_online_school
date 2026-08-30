@@ -5,6 +5,10 @@ class UserNotFound(NotFoundData):
     pass
 
 
+class AvatarNotFound(NotFoundData):
+    pass
+
+
 class InvalidRole(ServiceException):
     pass
 
