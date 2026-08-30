@@ -1,7 +1,12 @@
 import pytest
 from sqlalchemy import select
 
-from src.modules.auth.models_dto import TokenResponse, RefreshTokenRequest, LogoutRequest
+from src.modules.auth.models_dto import (
+    TokenResponse,
+    RefreshTokenRequest,
+    LogoutRequest,
+    ChangePasswordRequestDTO,
+)
 from src.modules.refresh_tokens.models import RefreshToken
 from src.modules.users.models import Users, UserRole
 from src.modules.users.models_dto import RegisterUserRequestDTO, RegisterUserByAdminRequestDTO, UsersDTO
@@ -188,3 +193,119 @@ class TestsForSuccess:
         result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.token == token.token))
         token_db: RefreshToken = result_db.scalar_one_or_none()
         assert not token_db
+
+    @pytest.mark.asyncio
+    async def test_change_password_by_self_student(
+        self,
+        client_for_tests,
+        create_user_fixture,
+    ):
+        student, access_token = await create_user_fixture(
+            new_user=CreateUserFixtureDTO(
+                password="old_student_password",
+                role=UserRole.STUDENT,
+            )
+        )
+
+        response = await client_for_tests.post(
+            f"/auth/change_password/{student.id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json=ChangePasswordRequestDTO(new_password="new_student_password").model_dump(),
+        )
+
+        assert response.status_code == 200
+
+        # Проверяем, что можно успешно залогиниться с новым паролем
+        login_response = await client_for_tests.post(
+            "/auth/login",
+            data={
+                "username": student.username,
+                "password": "new_student_password",
+            },
+        )
+        assert login_response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_change_password_by_teacher_for_student(
+        self,
+        client_for_tests,
+        create_user_fixture,
+    ):
+        teacher, teacher_token = await create_user_fixture(
+            new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+        )
+        student, _ = await create_user_fixture(
+            new_user=CreateUserFixtureDTO(
+                password="initial_student_pwd",
+                role=UserRole.STUDENT,
+            )
+        )
+
+        response = await client_for_tests.post(
+            f"/auth/change_password/{student.id}",
+            headers={"Authorization": f"Bearer {teacher_token}"},
+            json=ChangePasswordRequestDTO(new_password="reset_by_teacher_pwd").model_dump(),
+        )
+
+        assert response.status_code == 200
+
+        login_response = await client_for_tests.post(
+            "/auth/login",
+            data={
+                "username": student.username,
+                "password": "reset_by_teacher_pwd",
+            },
+        )
+        assert login_response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_change_password_forbidden_for_other_student(
+        self,
+        client_for_tests,
+        create_user_fixture,
+    ):
+        student_1, token_1 = await create_user_fixture(
+            new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+        )
+        student_2, _ = await create_user_fixture(
+            new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+        )
+
+        response = await client_for_tests.post(
+            f"/auth/change_password/{student_2.id}",
+            headers={"Authorization": f"Bearer {token_1}"},
+            json=ChangePasswordRequestDTO(new_password="hacked_pwd").model_dump(),
+        )
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Not permission"}
+
+    @pytest.mark.asyncio
+    async def test_change_password_unauthorized(
+        self,
+        client_for_tests,
+    ):
+        response = await client_for_tests.post(
+            "/auth/change_password/1",
+            json={"new_password": "no_auth_password"},
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_change_password_not_found(
+        self,
+        client_for_tests,
+        create_user_fixture,
+    ):
+        teacher, teacher_token = await create_user_fixture(
+            new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+        )
+
+        response = await client_for_tests.post(
+            "/auth/change_password/99999",
+            headers={"Authorization": f"Bearer {teacher_token}"},
+            json=ChangePasswordRequestDTO(new_password="some_pwd").model_dump(),
+        )
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Not found data"}

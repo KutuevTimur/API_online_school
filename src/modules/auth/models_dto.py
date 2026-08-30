@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel, ConfigDict
 
 
 class RefreshTokenRequest(BaseModel):
@@ -17,3 +18,9 @@ class LogoutRequest(BaseModel):
 
 class LogoutResponse(BaseModel):
     success: bool
+
+
+class ChangePasswordRequestDTO(BaseModel):
+    new_password: str
+
+    model_config = ConfigDict(from_attributes=True)

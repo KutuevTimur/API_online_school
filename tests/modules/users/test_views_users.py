@@ -423,11 +423,12 @@ async def test_delete_avatar_by_teacher_for_student(
 
     # Загружаем аватар студенту
     image_bytes = _generate_test_image_bytes("PNG")
-    await client_for_tests.patch(
+    upload_res = await client_for_tests.patch(
         f"/users/{student.id}/avatar",
         headers={"Authorization": f"Bearer {student_token}"},
         files={"avatar": ("photo.png", io.BytesIO(image_bytes), "image/png")},
     )
+    assert upload_res.status_code == 200
 
     avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
     assert avatar_file.is_file()
@@ -456,11 +457,12 @@ async def test_delete_avatar_forbidden_for_other_student(
 
     # Загружаем аватар студенту 2
     image_bytes = _generate_test_image_bytes("PNG")
-    await client_for_tests.patch(
+    upload_res = await client_for_tests.patch(
         f"/users/{student_2.id}/avatar",
         headers={"Authorization": f"Bearer {token_2}"},
         files={"avatar": ("photo.png", io.BytesIO(image_bytes), "image/png")},
     )
+    assert upload_res.status_code == 200
 
     # Студент 1 пытается удалить аватар студента 2
     delete_res = await client_for_tests.delete(

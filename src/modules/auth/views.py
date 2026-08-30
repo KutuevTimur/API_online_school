@@ -5,7 +5,13 @@ from starlette import status
 from src.core.config import Config
 from src.modules.auth.auth_service import AuthService
 from src.modules.auth.depends import get_auth_service, get_token_service, get_current_user
-from src.modules.auth.models_dto import TokenResponse, RefreshTokenRequest, LogoutRequest, LogoutResponse
+from src.modules.auth.models_dto import (
+    TokenResponse,
+    RefreshTokenRequest,
+    LogoutRequest,
+    LogoutResponse,
+    ChangePasswordRequestDTO,
+)
 from src.modules.auth.token_service import TokenService
 from src.modules.check_permission import StudentPermissionService
 from src.modules.depends import get_config
@@ -49,6 +55,32 @@ async def register_user_by_admin(
     )
 
     return await user_service.create_user(new_user=data)
+
+
+@router.post("/change_password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK)
+@router.post("/change-password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.patch("/change_password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.patch("/change-password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+async def change_password(
+    user_id: int,
+    data: ChangePasswordRequestDTO,
+    current_user: UsersDTO = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """
+    Смена пароля пользователя.
+    :raises PermissionErrorService: 403 Если нет прав (не сам пользователь и не учитель)
+    :raises NotFoundData: 404 Если пользователь не найден
+    """
+    StudentPermissionService.check_role_and_id(
+        current_user=current_user,
+        target_user_id=user_id,
+    )
+
+    return await auth_service.change_password(
+        user_id=user_id,
+        new_password=data.new_password,
+    )
 
 
 @router.post('/login', response_model=TokenResponse, tags=["Authentication"])

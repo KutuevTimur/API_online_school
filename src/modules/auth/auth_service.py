@@ -51,3 +51,13 @@ class AuthService:
             raise InvalidCredentials()
 
         return await self.token_service.create_token_response(user_id=user.id)
+
+    async def change_password(
+        self,
+        user_id: int,
+        new_password: str,
+    ) -> UsersDTO:
+        return await self.users_service.change_password(
+            user_id=user_id,
+            new_password=new_password,
+        )

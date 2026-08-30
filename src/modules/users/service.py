@@ -6,7 +6,7 @@ from fastapi import UploadFile
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.exception import NotFoundData, NoDataForUpdate
+from src.modules.base.exception import NotFoundData
 from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
 from src.modules.path_builder import PathBuilder
@@ -238,8 +238,6 @@ class UsersService:
             raise NotFoundData()
 
         update_data = data.model_dump(exclude_unset=True)
-        if not update_data:
-            raise NoDataForUpdate()
 
         if user.role == UserRole.TEACHER:
             teacher = await self.teacher_service.update_teacher_by_user_id(
@@ -260,3 +258,31 @@ class UsersService:
             return student
         else:
             raise InvalidRole()
+
+    async def change_password(
+        self,
+        user_id: int,
+        new_password: str,
+    ) -> UsersDTO:
+        """
+        Изменяет пароль пользователя по user_id.
+        :param user_id: ID пользователя
+        :param new_password: Новый пароль
+        :return: UsersDTO обновленного пользователя
+        :raises NotFoundData: Если пользователь не найден
+        """
+        user = await self.users_repo.get_user_by_id(user_id)
+        if not user:
+            raise NotFoundData()
+
+        hashed_password = self._get_hash_password(new_password)
+        updated_user = await self.users_repo.update_user(
+            user_id=user_id,
+            values={"hashed_password": hashed_password},
+        )
+        if not updated_user:
+            raise NotFoundData()
+
+        await self.session_db.commit()
+        await self.session_db.refresh(updated_user)
+        return UsersDTO.model_validate(updated_user)
