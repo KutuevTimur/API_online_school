@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncEngine
@@ -96,16 +96,16 @@ class PathsConfig(BaseModel):
     temp: Path
 
     @classmethod
-    def build(cls) -> "PathsConfig":
+    def build(cls, postscript: Optional[str] = '') -> "PathsConfig":
         base = Path(__file__).resolve().parents[3]
 
-        media = base / Path("media")
-        avatars_users = media / Path("avatars_users")
-        avatars_courses = media / Path("avatars_courses")
-        lectures = media / Path("lectures")
-        homework = media / Path("homework")
-        homework_submissions = media / Path("homework_submissions")
-        temp = media / Path("temp")
+        media = base / Path(f"media{postscript}")
+        avatars_users = media / Path(f"avatars_users{postscript}")
+        avatars_courses = media / Path(f"avatars_courses{postscript}")
+        lectures = media / Path(f"lectures{postscript}")
+        homework = media / Path(f"homework{postscript}")
+        homework_submissions = media / Path(f"homework_submissions{postscript}")
+        temp = media / Path(f"temp{postscript}")
 
         media.mkdir(exist_ok=True)
         avatars_users.mkdir(exist_ok=True)
