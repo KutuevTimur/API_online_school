@@ -36,3 +36,14 @@ class StudentPermissionService:
             return
 
         raise PermissionErrorService()
+
+    @staticmethod
+    def check_admin_password(
+        provided_password: str,
+        expected_password: str,
+    ) -> None:
+        """
+        :exception PermissionErrorService: Если пароль администратора не совпадает
+        """
+        if provided_password != expected_password:
+            raise PermissionErrorService()

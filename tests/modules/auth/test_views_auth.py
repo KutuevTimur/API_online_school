@@ -4,7 +4,7 @@ from sqlalchemy import select
 from src.modules.auth.models_dto import TokenResponse, RefreshTokenRequest, LogoutRequest
 from src.modules.refresh_tokens.models import RefreshToken
 from src.modules.users.models import Users, UserRole
-from src.modules.users.models_dto import RegisterUserRequestDTO, UsersDTO
+from src.modules.users.models_dto import RegisterUserRequestDTO, RegisterUserByAdminRequestDTO, UsersDTO
 from tests.modules.refresh_tokens.fixtures.fixtures import create_refresh_token_fixture
 from tests.modules.refresh_tokens.fixtures.models_dto import CreateRefreshTokenFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
@@ -49,6 +49,56 @@ class TestsForSuccess:
 
         assert comparison_models(new_user, user_from_db)
 
+    @pytest.mark.asyncio
+    async def test_register_user_by_admin_success(
+        self,
+        session_db,
+        client_for_tests,
+        config_fix,
+    ):
+        response = await client_for_tests.post(
+            "/auth/register_by_admin",
+            json=RegisterUserByAdminRequestDTO(
+                email="admin_created@mail.com",
+                username="admin_created_user",
+                password="admin_created_password",
+                first_name="Admin",
+                last_name="Created",
+                role=UserRole.TEACHER,
+                password_for_admin=config_fix.env.password_for_admin,
+            ).model_dump(),
+        )
+
+        assert response.status_code == 200
+
+        new_user = UsersDTO.model_validate(response.json())
+
+        result_db = await session_db.execute(select(Users).where(Users.id == new_user.id))
+        user_from_db = result_db.scalar_one_or_none()
+        assert user_from_db
+
+        assert comparison_models(new_user, user_from_db)
+
+    @pytest.mark.asyncio
+    async def test_register_user_by_admin_invalid_password(
+        self,
+        client_for_tests,
+    ):
+        response = await client_for_tests.post(
+            "/auth/register_by_admin",
+            json=RegisterUserByAdminRequestDTO(
+                email="admin_created_fail@mail.com",
+                username="admin_created_fail_user",
+                password="admin_created_fail_password",
+                first_name="Admin",
+                last_name="Fail",
+                role=UserRole.TEACHER,
+                password_for_admin="wrong_admin_password",
+            ).model_dump(),
+        )
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Not permission"}
 
     @pytest.mark.asyncio
     async def test_login(
@@ -110,7 +160,7 @@ class TestsForSuccess:
         assert token_db
 
     @pytest.mark.asyncio
-    async def test_login(
+    async def test_logout(
         self,
         session_db,
         client_for_tests,

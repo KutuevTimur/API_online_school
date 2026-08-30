@@ -45,6 +45,10 @@ class RegisterUserRequestDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RegisterUserByAdminRequestDTO(RegisterUserRequestDTO):
+    password_for_admin: str
+
+
 class CreateUserDTO(BaseModel):
     email: str
     username: str

@@ -22,6 +22,7 @@ class Config:
 
 class EnvConfig(BaseModel):
     secret_key: str
+    password_for_admin: str
 
     db_host: str
     db_port: str
@@ -42,6 +43,7 @@ class EnvConfig(BaseModel):
 
         return cls(
             secret_key=os.environ['SECRET_KEY'],
+            password_for_admin=os.environ['PASSWORD_FOR_ADMIN'],
             db_host=os.environ['DB_HOST'],
             db_port=os.environ['DB_PORT'],
             db_user=os.environ['DB_USER'],
