@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 import pytest
 from PIL import Image
 from sqlalchemy import select
@@ -214,3 +215,121 @@ async def test_update_avatar_user_not_found(
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Not found data"}
+
+
+@pytest.mark.asyncio
+async def test_delete_avatar_by_self_student(
+    client_for_tests,
+    create_user_fixture,
+    config_fix,
+):
+    student, token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    # Загружаем аватар
+    image_bytes = _generate_test_image_bytes("PNG")
+    upload_res = await client_for_tests.patch(
+        f"/users/{student.id}/avatar",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"avatar": ("photo.png", io.BytesIO(image_bytes), "image/png")},
+    )
+    assert upload_res.status_code == 200
+
+    avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
+    assert avatar_file.is_file()
+
+    # Удаляем аватар
+    delete_res = await client_for_tests.delete(
+        f"/users/{student.id}/avatar",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert delete_res.status_code == 204
+    assert not avatar_file.exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_avatar_by_teacher_for_student(
+    client_for_tests,
+    create_user_fixture,
+    config_fix,
+):
+    teacher, teacher_token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+    )
+    student, student_token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    # Загружаем аватар студенту
+    image_bytes = _generate_test_image_bytes("PNG")
+    await client_for_tests.patch(
+        f"/users/{student.id}/avatar",
+        headers={"Authorization": f"Bearer {student_token}"},
+        files={"avatar": ("photo.png", io.BytesIO(image_bytes), "image/png")},
+    )
+
+    avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
+    assert avatar_file.is_file()
+
+    # Учитель удаляет аватар студента
+    delete_res = await client_for_tests.delete(
+        f"/users/{student.id}/avatar",
+        headers={"Authorization": f"Bearer {teacher_token}"},
+    )
+    assert delete_res.status_code == 204
+    assert not avatar_file.exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_avatar_forbidden_for_other_student(
+    client_for_tests,
+    create_user_fixture,
+    config_fix,
+):
+    student_1, token_1 = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+    student_2, token_2 = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    # Загружаем аватар студенту 2
+    image_bytes = _generate_test_image_bytes("PNG")
+    await client_for_tests.patch(
+        f"/users/{student_2.id}/avatar",
+        headers={"Authorization": f"Bearer {token_2}"},
+        files={"avatar": ("photo.png", io.BytesIO(image_bytes), "image/png")},
+    )
+
+    # Студент 1 пытается удалить аватар студента 2
+    delete_res = await client_for_tests.delete(
+        f"/users/{student_2.id}/avatar",
+        headers={"Authorization": f"Bearer {token_1}"},
+    )
+    assert delete_res.status_code == 403
+    assert delete_res.json() == {"detail": "Not permission"}
+
+
+@pytest.mark.asyncio
+async def test_delete_avatar_not_found(
+    client_for_tests,
+    create_user_fixture,
+):
+    student, token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    # Пытаемся удалить несуществующий аватар
+    delete_res = await client_for_tests.delete(
+        f"/users/{student.id}/avatar",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert delete_res.status_code == 404
+    assert delete_res.json() == {"detail": "Not found data"}
+
+
+@pytest.mark.asyncio
+async def test_delete_avatar_unauthorized(client_for_tests):
+    delete_res = await client_for_tests.delete("/users/1/avatar")
+    assert delete_res.status_code == 401

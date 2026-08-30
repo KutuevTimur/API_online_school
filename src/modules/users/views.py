@@ -39,3 +39,16 @@ async def update_avatar(
             "Content-Disposition": f'inline; filename="{avatar.filename}"'
         }
     )
+
+
+@router.delete("/{user_id}/avatar", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_avatar(
+    user_id: int,
+    current_user: UsersDTO = Depends(get_current_user),
+    user_service: UsersService = Depends(get_user_service),
+):
+    StudentPermissionService.check_role_and_id(
+        current_user=current_user,
+        target_user_id=user_id,
+    )
+    user_service.delete_avatar(user_id=user_id)
