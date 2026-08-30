@@ -13,7 +13,11 @@ from src.modules.auth.models_dto import (
     ChangePasswordRequestDTO,
 )
 from src.modules.auth.token_service import TokenService
-from src.modules.check_permission import StudentPermissionService
+from src.modules.check_permission import (
+    StudentPermissionService,
+    get_current_teacher_user,
+    get_current_user_with_target_permission,
+)
 from src.modules.depends import get_config
 from src.modules.users.depends import get_user_service
 from src.modules.users.models_dto import UsersDTO, RegisterUserRequestDTO, RegisterUserByAdminRequestDTO
@@ -25,15 +29,13 @@ router = APIRouter(prefix="/auth")
 @router.post("/register", response_model=UsersDTO, status_code=status.HTTP_200_OK)
 async def register_user(
     data: RegisterUserRequestDTO,
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UsersDTO = Depends(get_current_teacher_user),
     user_service: UsersService = Depends(get_user_service),
 ):
     """
     :raises UserAlreadyExists: 409 Если email занят
     :raises PermissionErrorService: 403 Если создаёт нового пользователя не учитель
     """
-    StudentPermissionService.check_role(current_user)
-
     return await user_service.create_user(new_user=data)
 
 
@@ -64,7 +66,7 @@ async def register_user_by_admin(
 async def change_password(
     user_id: int,
     data: ChangePasswordRequestDTO,
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """
@@ -72,11 +74,6 @@ async def change_password(
     :raises PermissionErrorService: 403 Если нет прав (не сам пользователь и не учитель)
     :raises NotFoundData: 404 Если пользователь не найден
     """
-    StudentPermissionService.check_role_and_id(
-        current_user=current_user,
-        target_user_id=user_id,
-    )
-
     return await auth_service.change_password(
         user_id=user_id,
         new_password=data.new_password,

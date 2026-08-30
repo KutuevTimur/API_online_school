@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, UploadFile, File, Response
 from starlette import status
 
 from src.modules.auth.depends import get_current_user
+from src.modules.check_permission import get_current_user_with_target_permission
 from src.modules.check_permission.exception import PermissionErrorService
-from src.modules.check_permission.service import StudentPermissionService
 from src.modules.students.models_dto import StudentsDTO
 from src.modules.teachers.models_dto import TeachersDTO
 from src.modules.users.depends import get_user_service
@@ -23,13 +23,9 @@ async def get_me(user: UsersDTO = Depends(get_current_user)):
 async def update_user(
     user_id: int,
     data: UpdateUserDataRequestDTO,
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
     user_service: UsersService = Depends(get_user_service),
 ):
-    StudentPermissionService.check_role_and_id(
-        current_user=current_user,
-        target_user_id=user_id,
-    )
     if data.is_active is not None and current_user.role != UserRole.TEACHER:
         raise PermissionErrorService()
 
@@ -40,14 +36,9 @@ async def update_user(
 async def update_avatar(
     user_id: int,
     avatar: UploadFile = File(...),
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
     user_service: UsersService = Depends(get_user_service),
 ):
-    StudentPermissionService.check_role_and_id(
-        current_user=current_user,
-        target_user_id=user_id,
-    )
-
     file_bytes = await avatar.read()
 
     await avatar.seek(0)  # Сбрасываем курсор в начало
@@ -65,11 +56,7 @@ async def update_avatar(
 @router.delete("/{user_id}/avatar", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_avatar(
     user_id: int,
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
     user_service: UsersService = Depends(get_user_service),
 ):
-    StudentPermissionService.check_role_and_id(
-        current_user=current_user,
-        target_user_id=user_id,
-    )
     user_service.delete_avatar(user_id=user_id)
