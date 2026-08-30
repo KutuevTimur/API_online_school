@@ -6,16 +6,16 @@ from fastapi import UploadFile
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.exception import NotFoundData
+from src.modules.base.exception import NotFoundData, NoDataForUpdate
 from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
 from src.modules.path_builder import PathBuilder
-from src.modules.students.models_dto import CreateStudentDTO, UpdateStudentDTO
+from src.modules.students.models_dto import CreateStudentDTO, UpdateStudentDTO, StudentsDTO
 from src.modules.students.repository import StudentRepository
 from src.modules.students.service import StudentService
 from src.modules.teachers.repository import TeacherRepository
 from src.modules.teachers.service import TeacherService
-from src.modules.teachers.models_dto import CreateTeacherDTO, UpdateTeacherDTO
+from src.modules.teachers.models_dto import CreateTeacherDTO, UpdateTeacherDTO, TeachersDTO
 from src.modules.users.exception import UserAlreadyExit, InvalidRole, AvatarNotFound
 from src.modules.users.models import UserRole
 from src.modules.users.models_dto import (
@@ -23,6 +23,7 @@ from src.modules.users.models_dto import (
     RegisterUserRequestDTO,
     CreateUserDTO,
     UserAvatarResponseDTO,
+    UpdateUserDataRequestDTO,
 )
 from src.modules.users.repository import UsersRepository
 
@@ -218,3 +219,44 @@ class UsersService:
             raise InvalidRole()
 
         return UserAvatarResponseDTO(avatar_path=avatar_path)
+
+    async def update_user(
+        self,
+        user_id: int,
+        data: UpdateUserDataRequestDTO,
+    ) -> TeachersDTO | StudentsDTO:
+        """
+        Обновляет данные профиля пользователя (учителя или ученика) по user_id.
+        :param user_id: ID пользователя
+        :param data: Данные для обновления
+        :return: TeachersDTO или StudentsDTO
+        :raises NotFoundData: Если пользователь не найден
+        :raises InvalidRole: Если роль пользователя неизвестна
+        """
+        user = await self.users_repo.get_user_by_id(user_id)
+        if not user:
+            raise NotFoundData()
+
+        update_data = data.model_dump(exclude_unset=True)
+        if not update_data:
+            raise NoDataForUpdate()
+
+        if user.role == UserRole.TEACHER:
+            teacher = await self.teacher_service.update_teacher_by_user_id(
+                user_id=user_id,
+                data=UpdateTeacherDTO(**update_data),
+            )
+            if not teacher:
+                raise NotFoundData()
+            return teacher
+        elif user.role == UserRole.STUDENT:
+            update_data.pop("description", None)
+            student = await self.student_service.update_student_by_user_id(
+                user_id=user_id,
+                data=UpdateStudentDTO(**update_data),
+            )
+            if not student:
+                raise NotFoundData()
+            return student
+        else:
+            raise InvalidRole()

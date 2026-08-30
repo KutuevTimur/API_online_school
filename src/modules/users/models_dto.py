@@ -49,6 +49,15 @@ class RegisterUserByAdminRequestDTO(RegisterUserRequestDTO):
     password_for_admin: str
 
 
+class UpdateUserDataRequestDTO(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    description: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class CreateUserDTO(BaseModel):
     email: str
     username: str

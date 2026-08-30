@@ -7,8 +7,11 @@ from sqlalchemy import select
 from helpers.functions import comparison_models
 from src.modules.path_builder import PathBuilder
 from src.modules.students.models import Students
+from src.modules.students.models_dto import StudentsDTO
 from src.modules.teachers.models import Teachers
+from src.modules.teachers.models_dto import TeachersDTO
 from src.modules.users.models import UserRole
+from src.modules.users.models_dto import UpdateUserDataRequestDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 
 
@@ -30,6 +33,163 @@ async def test_get_me(client_for_tests, create_user_fixture):
 
     assert response.status_code == 200
     assert comparison_models(user, response.json())
+
+
+@pytest.mark.asyncio
+async def test_update_user_self_student(
+    client_for_tests,
+    create_user_fixture,
+    session_db,
+):
+    student, access_token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    update_dto = UpdateUserDataRequestDTO(
+        first_name="Ivan_Updated",
+        last_name="Petrov_Updated",
+        middle_name="Alexandrovich",
+    )
+    response = await client_for_tests.patch(
+        f"/users/{student.id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json=update_dto.model_dump(),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["first_name"] == "Ivan_Updated"
+    assert data["last_name"] == "Petrov_Updated"
+    assert data["middle_name"] == "Alexandrovich"
+    assert data["user_id"] == student.id
+
+    result_db = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    student_db = result_db.scalar_one_or_none()
+    assert student_db is not None
+    assert student_db.first_name == "Ivan_Updated"
+    assert student_db.last_name == "Petrov_Updated"
+    assert student_db.middle_name == "Alexandrovich"
+
+
+@pytest.mark.asyncio
+async def test_update_user_self_teacher(
+    client_for_tests,
+    create_user_fixture,
+    session_db,
+):
+    teacher, access_token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+    )
+
+    update_dto = UpdateUserDataRequestDTO(
+        first_name="Prof_Updated",
+        last_name="Smith_Updated",
+        middle_name="John",
+        description="Senior Mathematics Professor",
+    )
+    response = await client_for_tests.patch(
+        f"/users/{teacher.id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json=update_dto.model_dump(),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["first_name"] == "Prof_Updated"
+    assert data["last_name"] == "Smith_Updated"
+    assert data["middle_name"] == "John"
+    assert data["description"] == "Senior Mathematics Professor"
+    assert data["user_id"] == teacher.id
+
+    result_db = await session_db.execute(select(Teachers).where(Teachers.user_id == teacher.id))
+    teacher_db = result_db.scalar_one_or_none()
+    assert teacher_db is not None
+    assert teacher_db.first_name == "Prof_Updated"
+    assert teacher_db.description == "Senior Mathematics Professor"
+
+
+@pytest.mark.asyncio
+async def test_update_user_by_teacher_for_student(
+    client_for_tests,
+    create_user_fixture,
+    session_db,
+):
+    teacher, teacher_token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+    )
+    student, _ = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    update_dto = UpdateUserDataRequestDTO(
+        first_name="Changed_By_Teacher",
+        last_name="Student_New_Last",
+    )
+    response = await client_for_tests.patch(
+        f"/users/{student.id}",
+        headers={"Authorization": f"Bearer {teacher_token}"},
+        json=update_dto.model_dump(),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["first_name"] == "Changed_By_Teacher"
+    assert data["last_name"] == "Student_New_Last"
+
+    result_db = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    student_db = result_db.scalar_one_or_none()
+    assert student_db is not None
+    assert student_db.first_name == "Changed_By_Teacher"
+
+
+@pytest.mark.asyncio
+async def test_update_user_forbidden_for_other_student(
+    client_for_tests,
+    create_user_fixture,
+):
+    student_1, token_1 = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+    student_2, _ = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    response = await client_for_tests.patch(
+        f"/users/{student_2.id}",
+        headers={"Authorization": f"Bearer {token_1}"},
+        json={"first_name": "HackedName"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Not permission"}
+
+
+@pytest.mark.asyncio
+async def test_update_user_unauthorized(client_for_tests):
+    response = await client_for_tests.patch(
+        "/users/1",
+        json={"first_name": "NoAuth"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_update_user_not_found(
+    client_for_tests,
+    create_user_fixture,
+):
+    teacher, teacher_token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+    )
+
+    response = await client_for_tests.patch(
+        "/users/99999",
+        headers={"Authorization": f"Bearer {teacher_token}"},
+        json={"first_name": "Ghost"},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not found data"}
 
 
 @pytest.mark.asyncio
