@@ -226,36 +226,69 @@ class UsersService:
         data: UpdateUserDataRequestDTO,
     ) -> TeachersDTO | StudentsDTO:
         """
-        Обновляет данные профиля пользователя (учителя или ученика) по user_id.
+        Обновляет данные профиля пользователя (учителя или ученика) и аккаунта по user_id.
         :param user_id: ID пользователя
         :param data: Данные для обновления
         :return: TeachersDTO или StudentsDTO
         :raises NotFoundData: Если пользователь не найден
+        :raises UserAlreadyExit: Если email или username уже заняты другим пользователем
         :raises InvalidRole: Если роль пользователя неизвестна
         """
         user = await self.users_repo.get_user_by_id(user_id)
         if not user:
             raise NotFoundData()
 
-        update_data = data.model_dump(exclude_unset=True)
+        # Обновление данных аккаунта (таблица Users)
+        user_account_dto = data.to_user_account_dto()
+        user_values = user_account_dto.model_dump(exclude_unset=True, exclude_none=True)
 
+        if user_values:
+            if user_account_dto.email:
+                existing_by_email = await self.users_repo.get_user_by_email(user_account_dto.email)
+                if existing_by_email and existing_by_email.id != user_id:
+                    raise UserAlreadyExit()
+            if user_account_dto.username:
+                existing_by_username = await self.users_repo.get_user_by_username_or_email(user_account_dto.username)
+                if existing_by_username and existing_by_username.id != user_id:
+                    raise UserAlreadyExit()
+
+            await self.users_repo.update_user(user_id=user_id, values=user_values)
+
+        # Обновление данных профиля (таблицы Teachers / Students)
         if user.role == UserRole.TEACHER:
-            teacher = await self.teacher_service.update_teacher_by_user_id(
-                user_id=user_id,
-                data=UpdateTeacherDTO(**update_data),
-            )
+            teacher_dto = data.to_teacher_dto()
+            profile_values = teacher_dto.model_dump(exclude_unset=True, exclude_none=True)
+            if profile_values:
+                teacher = await self.teacher_repo.update_teacher_by_user_id(
+                    user_id=user_id,
+                    values=profile_values,
+                )
+            else:
+                teacher = await self.teacher_repo.get_teacher_by_user_id(user_id=user_id)
+
             if not teacher:
                 raise NotFoundData()
-            return teacher
+            await self.session_db.commit()
+            await self.session_db.refresh(teacher)
+            return TeachersDTO.model_validate(teacher)
+
         elif user.role == UserRole.STUDENT:
-            update_data.pop("description", None)
-            student = await self.student_service.update_student_by_user_id(
-                user_id=user_id,
-                data=UpdateStudentDTO(**update_data),
-            )
+            student_dto = data.to_student_dto()
+            profile_values = student_dto.model_dump(exclude_unset=True, exclude_none=True)
+            if profile_values:
+                student = await self.student_repo.update_student_by_user_id(
+                    user_id=user_id,
+                    values=profile_values,
+                )
+            else:
+                student = await self.student_repo.get_student_by_user_id(user_id=user_id)
+
             if not student:
                 raise NotFoundData()
-            return student
+            await self.session_db.commit()
+            await self.session_db.refresh(student)
+            return StudentsDTO.model_validate(student)
+
         else:
             raise InvalidRole()
 

@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, UploadFile, File, Response
 from starlette import status
 
 from src.modules.auth.depends import get_current_user
+from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.check_permission.service import StudentPermissionService
 from src.modules.students.models_dto import StudentsDTO
 from src.modules.teachers.models_dto import TeachersDTO
 from src.modules.users.depends import get_user_service
+from src.modules.users.models import UserRole
 from src.modules.users.models_dto import UserResponse, UsersDTO, UpdateUserDataRequestDTO
 from src.modules.users.service import UsersService
 
@@ -28,6 +30,9 @@ async def update_user(
         current_user=current_user,
         target_user_id=user_id,
     )
+    if data.is_active is not None and current_user.role != UserRole.TEACHER:
+        raise PermissionErrorService()
+
     return await user_service.update_user(user_id=user_id, data=data)
 
 

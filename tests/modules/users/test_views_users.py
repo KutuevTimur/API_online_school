@@ -10,7 +10,7 @@ from src.modules.students.models import Students
 from src.modules.students.models_dto import StudentsDTO
 from src.modules.teachers.models import Teachers
 from src.modules.teachers.models_dto import TeachersDTO
-from src.modules.users.models import UserRole
+from src.modules.users.models import Users, UserRole
 from src.modules.users.models_dto import UpdateUserDataRequestDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 
@@ -49,11 +49,13 @@ async def test_update_user_self_student(
         first_name="Ivan_Updated",
         last_name="Petrov_Updated",
         middle_name="Alexandrovich",
+        email="updated_student@mail.com",
+        username="updated_student_user",
     )
     response = await client_for_tests.patch(
         f"/users/{student.id}",
         headers={"Authorization": f"Bearer {access_token}"},
-        json=update_dto.model_dump(),
+        json=update_dto.model_dump(exclude_unset=True),
     )
 
     assert response.status_code == 200
@@ -63,12 +65,16 @@ async def test_update_user_self_student(
     assert data["middle_name"] == "Alexandrovich"
     assert data["user_id"] == student.id
 
-    result_db = await session_db.execute(select(Students).where(Students.user_id == student.id))
-    student_db = result_db.scalar_one_or_none()
+    result_student = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    student_db = result_student.scalar_one_or_none()
     assert student_db is not None
     assert student_db.first_name == "Ivan_Updated"
-    assert student_db.last_name == "Petrov_Updated"
-    assert student_db.middle_name == "Alexandrovich"
+
+    result_user = await session_db.execute(select(Users).where(Users.id == student.id))
+    user_db = result_user.scalar_one_or_none()
+    assert user_db is not None
+    assert user_db.email == "updated_student@mail.com"
+    assert user_db.username == "updated_student_user"
 
 
 @pytest.mark.asyncio
@@ -86,11 +92,12 @@ async def test_update_user_self_teacher(
         last_name="Smith_Updated",
         middle_name="John",
         description="Senior Mathematics Professor",
+        email="prof_updated@mail.com",
     )
     response = await client_for_tests.patch(
         f"/users/{teacher.id}",
         headers={"Authorization": f"Bearer {access_token}"},
-        json=update_dto.model_dump(),
+        json=update_dto.model_dump(exclude_unset=True),
     )
 
     assert response.status_code == 200
@@ -101,11 +108,16 @@ async def test_update_user_self_teacher(
     assert data["description"] == "Senior Mathematics Professor"
     assert data["user_id"] == teacher.id
 
-    result_db = await session_db.execute(select(Teachers).where(Teachers.user_id == teacher.id))
-    teacher_db = result_db.scalar_one_or_none()
+    result_teacher = await session_db.execute(select(Teachers).where(Teachers.user_id == teacher.id))
+    teacher_db = result_teacher.scalar_one_or_none()
     assert teacher_db is not None
     assert teacher_db.first_name == "Prof_Updated"
     assert teacher_db.description == "Senior Mathematics Professor"
+
+    result_user = await session_db.execute(select(Users).where(Users.id == teacher.id))
+    user_db = result_user.scalar_one_or_none()
+    assert user_db is not None
+    assert user_db.email == "prof_updated@mail.com"
 
 
 @pytest.mark.asyncio
@@ -124,11 +136,12 @@ async def test_update_user_by_teacher_for_student(
     update_dto = UpdateUserDataRequestDTO(
         first_name="Changed_By_Teacher",
         last_name="Student_New_Last",
+        is_active=False,
     )
     response = await client_for_tests.patch(
         f"/users/{student.id}",
         headers={"Authorization": f"Bearer {teacher_token}"},
-        json=update_dto.model_dump(),
+        json=update_dto.model_dump(exclude_unset=True),
     )
 
     assert response.status_code == 200
@@ -136,10 +149,34 @@ async def test_update_user_by_teacher_for_student(
     assert data["first_name"] == "Changed_By_Teacher"
     assert data["last_name"] == "Student_New_Last"
 
-    result_db = await session_db.execute(select(Students).where(Students.user_id == student.id))
-    student_db = result_db.scalar_one_or_none()
+    result_student = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    student_db = result_student.scalar_one_or_none()
     assert student_db is not None
     assert student_db.first_name == "Changed_By_Teacher"
+
+    result_user = await session_db.execute(select(Users).where(Users.id == student.id))
+    user_db = result_user.scalar_one_or_none()
+    assert user_db is not None
+    assert user_db.is_active is False
+
+
+@pytest.mark.asyncio
+async def test_update_user_is_active_forbidden_for_student(
+    client_for_tests,
+    create_user_fixture,
+):
+    student, access_token = await create_user_fixture(
+        new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
+    )
+
+    response = await client_for_tests.patch(
+        f"/users/{student.id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json={"is_active": False},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Not permission"}
 
 
 @pytest.mark.asyncio
