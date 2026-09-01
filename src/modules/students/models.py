@@ -23,3 +23,4 @@ class Students(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user: Mapped["Users"] = relationship("Users", back_populates="student")
+    student_courses: Mapped[List["StudentCourses"]] = relationship("StudentCourses", back_populates="student")
