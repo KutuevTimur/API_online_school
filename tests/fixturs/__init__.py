@@ -1,5 +1,5 @@
 from tests.fixturs.fixturs_db import session_db, not_open_session_db
-from tests.fixturs.replace_services import user_service_fixture
+from tests.fixturs.replace_services import user_service_fixture, courses_service_fixture
 from tests.fixturs.fixtures import app_fastapi, config_fix, client_for_tests, \
     lifespan_for_tests, cleaning_paths_fix
 
@@ -19,6 +19,7 @@ __all__ = [
 
     # сервисы
     "user_service_fixture",
+    "courses_service_fixture",
 
     # из моделей
     "create_user_fixture",

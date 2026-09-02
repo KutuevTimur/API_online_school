@@ -2,6 +2,8 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from helpers import test_crypto_context
+from src.modules.courses.repository import CourseRepository
+from src.modules.courses.service import CoursesService
 from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
 from src.modules.path_builder import PathBuilder
@@ -24,6 +26,23 @@ async def user_service_fixture(session_db: AsyncSession, config_fix) -> UsersSer
         student_repo=student_repo,
         student_service=StudentService(student_repo=student_repo, session_db=session_db),
         cr_context=test_crypto_context,
+        path_builder=PathBuilder(config=config_fix),
+        handler_images=HandlerImages(config=config_fix),
+        compression_images=CompressionImages(config=config_fix),
+        session_db=session_db,
+    )
+
+
+@pytest_asyncio.fixture(scope="function")
+async def courses_service_fixture(session_db: AsyncSession, config_fix) -> CoursesService:
+    teacher_repo = TeacherRepository(session=session_db)
+    student_repo = StudentRepository(session=session_db)
+    return CoursesService(
+        course_repo=CourseRepository(session=session_db),
+        teacher_repo=teacher_repo,
+        teacher_service=TeacherService(teacher_repo=teacher_repo, session_db=session_db),
+        student_repo=student_repo,
+        student_service=StudentService(student_repo=student_repo, session_db=session_db),
         path_builder=PathBuilder(config=config_fix),
         handler_images=HandlerImages(config=config_fix),
         compression_images=CompressionImages(config=config_fix),

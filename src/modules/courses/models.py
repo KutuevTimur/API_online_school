@@ -1,17 +1,22 @@
 import enum
 from datetime import datetime
+from typing import List, TYPE_CHECKING
 
 from sqlalchemy import String, func, Enum, Boolean, Integer, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
 from src.core.database.database import Base
+
+if TYPE_CHECKING:
+    from src.modules.student_courses.models import StudentCourses
 
 
 class AvatarCoursesType(str, enum.Enum):
     """
     Если стоит CUSTOM, то необходимо использовать avatar_path. т.к. Пользователь задал кастомную аватарку
     """
+    DEFAULT = "default"
     CUSTOM = "custom"
     PYTHON = "python"
     MATHEMATICS = "mathematics"

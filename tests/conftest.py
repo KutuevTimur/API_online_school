@@ -18,8 +18,10 @@ async def start_test(config_fix, app_fastapi):
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def clearing_db(session_db: AsyncSession):
-    """Очищает базу банных"""
+    """Очищает базу данных"""
     # удаляем обязательно в таком порядке
+    await session_db.execute(delete(StudentCourses))
+    await session_db.execute(delete(Courses))
     await session_db.execute(delete(RefreshToken))
     await session_db.execute(delete(Teachers))
     await session_db.execute(delete(Students))

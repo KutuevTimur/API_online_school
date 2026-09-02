@@ -1,13 +1,14 @@
 import asyncio
 import logging
 
-from sqlalchemy import text
+from sqlalchemy import text, Enum
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.core.config import Config
 
 # Не удалять. Используется для подгрузки всех моделей БД
 from src.core.database.database import Base
+import src.modules.db_models  # noqa: F401
 
 async def create_database():
     """Создает базу данных и все таблицы в ней (если существует, то ничего не произойдёт) """
@@ -42,6 +43,13 @@ async def create_database():
         async with engine.begin() as conn:
             logging.info("Creating database tables...")
             await conn.run_sync(Base.metadata.create_all)
+            for table in Base.metadata.tables.values():
+                for column in table.columns:
+                    if isinstance(column.type, Enum) and column.type.name:
+                        for val in column.type.enums:
+                            await conn.execute(
+                                text(f"ALTER TYPE {column.type.name} ADD VALUE IF NOT EXISTS '{val}'")
+                            )
             logging.info("Database tables created successfully")
     except Exception as e:
         logging.error(f"Error creating tables: {e}")

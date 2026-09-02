@@ -1,4 +1,4 @@
-from typing import TypeVar, Type
+from typing import TypeVar, Type, Union
 from pydantic import BaseModel
 
 from sqlalchemy import select
@@ -17,8 +17,13 @@ class BaseRepository:
         self.session = session
         self.model = model
 
-    def add(self, data: DTOType) -> ModelType:
-        instance = self.model(**data.model_dump())
+    def add(self, data: Union[DTOType, dict]) -> ModelType:
+        if isinstance(data, dict):
+            instance = self.model(**data)
+        elif hasattr(data, "model_dump"):
+            instance = self.model(**data.model_dump())
+        else:
+            instance = self.model(**dict(data))
         self.session.add(instance)
         return instance
 
