@@ -1,3 +1,4 @@
+import shutil
 import uuid
 from pathlib import Path
 from typing import Tuple
@@ -148,7 +149,7 @@ class CompressionImages:
                             lossless=lossless,
                         )
 
-                output_temp.replace(target_path)
+                shutil.move(output_temp, target_path)
 
             except (UnidentifiedImageError, OSError) as e:
                 raise InvalidImageFormat(f"Не удалось открыть WebP-изображение или файл поврежден: {e}") from e
@@ -166,6 +167,3 @@ class CompressionImages:
                 await file.seek(0)
 
         return target_path
-
-
-
