@@ -1,11 +1,9 @@
-import io
 from pathlib import Path
 import pytest
-from fastapi import UploadFile
-from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from helpers.functions import comparison_models
 from src.modules.courses.exception import CourseNotFound, CourseAlreadyExists
 from src.modules.courses.models import AvatarCoursesType
 from src.modules.courses.models_dto import (
@@ -17,18 +15,8 @@ from src.modules.courses.service import CoursesService
 from src.modules.student_courses.models import StudentCourses
 from src.modules.students.models import Students
 from src.modules.users.models import UserRole
+from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
-
-
-def _create_upload_image(filename: str = "avatar.png", size=(100, 100), color="red") -> UploadFile:
-    img = Image.new("RGB", size, color=color)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return UploadFile(
-        file=io.BytesIO(buf.getvalue()),
-        filename=filename,
-    )
 
 
 @pytest.mark.asyncio
@@ -42,28 +30,37 @@ async def test_create_course_success(courses_service_fixture: CoursesService):
     course = await courses_service_fixture.create_course(req)
 
     assert course.id is not None
-    assert course.name == "Python Basics"
-    assert course.slug == "python-basics"
-    assert course.description == "Learn Python from scratch"
+    assert comparison_models(
+        req,
+        course,
+        keys_not_checked=["id", "avatar_type", "avatar_path", "created_at", "updated_at"],
+    )
     assert course.avatar_type == AvatarCoursesType.DEFAULT
     assert course.avatar_path is None
-    assert course.is_active is True
 
 
 @pytest.mark.asyncio
-async def test_create_course_duplicate_slug(courses_service_fixture: CoursesService):
-    req = CreateCourseDTORequest(name="Math", slug="math-course")
-    await courses_service_fixture.create_course(req)
+async def test_create_course_duplicate_slug(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+):
+    await create_course_fixture(
+        CreateCourseFixtureDTO(name="Math", slug="math-course")
+    )
 
+    req = CreateCourseDTORequest(name="Math Another", slug="math-course")
     with pytest.raises(CourseAlreadyExists):
         await courses_service_fixture.create_course(req)
 
 
 @pytest.mark.asyncio
-async def test_get_all_courses_pagination(courses_service_fixture: CoursesService):
+async def test_get_all_courses_pagination(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+):
     for i in range(5):
-        await courses_service_fixture.create_course(
-            CreateCourseDTORequest(name=f"Course {i}", slug=f"course-{i}", is_active=(i % 2 == 0))
+        await create_course_fixture(
+            CreateCourseFixtureDTO(name=f"Course {i}", slug=f"course-{i}", is_active=(i % 2 == 0))
         )
 
     # limit & offset
@@ -85,13 +82,14 @@ async def test_get_courses_by_student(
     courses_service_fixture: CoursesService,
     session_db: AsyncSession,
     create_user_fixture,
+    create_course_fixture,
 ):
     user, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
     student = (await session_db.execute(select(Students).where(Students.user_id == user.id))).scalar_one()
 
-    c1 = await courses_service_fixture.create_course(CreateCourseDTORequest(name="C1", slug="c1"))
-    c2 = await courses_service_fixture.create_course(CreateCourseDTORequest(name="C2", slug="c2"))
-    c3 = await courses_service_fixture.create_course(CreateCourseDTORequest(name="C3", slug="c3"))
+    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="C1", slug="c1"))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="C2", slug="c2"))
+    await create_course_fixture(CreateCourseFixtureDTO(name="C3", slug="c3"))
 
     # Привязываем только к c1 и c2
     session_db.add_all([
@@ -111,38 +109,46 @@ async def test_get_courses_by_student(
 
 
 @pytest.mark.asyncio
-async def test_get_course_by_id(courses_service_fixture: CoursesService):
-    created = await courses_service_fixture.create_course(
-        CreateCourseDTORequest(name="Target Course", slug="target-course")
+async def test_get_course_by_id(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+):
+    created = await create_course_fixture(
+        CreateCourseFixtureDTO(name="Target Course", slug="target-course")
     )
 
     found = await courses_service_fixture.get_course_by_id(created.id)
     assert found is not None
-    assert found.id == created.id
-    assert found.slug == "target-course"
+    assert comparison_models(created, found)
 
     not_found = await courses_service_fixture.get_course_by_id(99999)
     assert not_found is None
 
 
 @pytest.mark.asyncio
-async def test_get_course_by_slug(courses_service_fixture: CoursesService):
-    created = await courses_service_fixture.create_course(
-        CreateCourseDTORequest(name="Slug Test", slug="slug-test")
+async def test_get_course_by_slug(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+):
+    created = await create_course_fixture(
+        CreateCourseFixtureDTO(name="Slug Test", slug="slug-test")
     )
 
     found = await courses_service_fixture.get_course_by_slug("slug-test")
     assert found is not None
-    assert found.id == created.id
+    assert comparison_models(created, found)
 
     not_found = await courses_service_fixture.get_course_by_slug("does-not-exist")
     assert not_found is None
 
 
 @pytest.mark.asyncio
-async def test_update_course_success(courses_service_fixture: CoursesService):
-    created = await courses_service_fixture.create_course(
-        CreateCourseDTORequest(name="Original", slug="orig-slug", description="Orig desc")
+async def test_update_course_success(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+):
+    created = await create_course_fixture(
+        CreateCourseFixtureDTO(name="Original", slug="orig-slug", description="Orig desc")
     )
 
     updated = await courses_service_fixture.update_course(
@@ -161,9 +167,12 @@ async def test_update_course_success(courses_service_fixture: CoursesService):
 
 
 @pytest.mark.asyncio
-async def test_update_course_duplicate_slug(courses_service_fixture: CoursesService):
-    c1 = await courses_service_fixture.create_course(CreateCourseDTORequest(name="C1", slug="course-1"))
-    c2 = await courses_service_fixture.create_course(CreateCourseDTORequest(name="C2", slug="course-2"))
+async def test_update_course_duplicate_slug(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+):
+    await create_course_fixture(CreateCourseFixtureDTO(name="C1", slug="course-1"))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="C2", slug="course-2"))
 
     with pytest.raises(CourseAlreadyExists):
         await courses_service_fixture.update_course(
@@ -182,12 +191,20 @@ async def test_update_course_not_found(courses_service_fixture: CoursesService):
 
 
 @pytest.mark.asyncio
-async def test_update_avatar(courses_service_fixture: CoursesService):
-    created = await courses_service_fixture.create_course(
-        CreateCourseDTORequest(name="Avatar Course", slug="avatar-course")
+async def test_update_avatar(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+    create_upload_file_fixture,
+    create_image_bytes_fixture,
+):
+    created = await create_course_fixture(
+        CreateCourseFixtureDTO(name="Avatar Course", slug="avatar-course")
     )
 
-    upload_file = _create_upload_image("test_avatar.png")
+    upload_file = create_upload_file_fixture(
+        create_image_bytes_fixture("PNG", (100, 100), "red"),
+        "test_avatar.png",
+    )
     updated = await courses_service_fixture.update_avatar(
         course_id=created.id,
         avatar=upload_file,
@@ -198,7 +215,10 @@ async def test_update_avatar(courses_service_fixture: CoursesService):
     assert Path(updated.avatar_path).is_file()
 
     # Повторное обновление заменяет существующую аватарку
-    second_upload = _create_upload_image("second.png", color="blue")
+    second_upload = create_upload_file_fixture(
+        create_image_bytes_fixture("PNG", (100, 100), "blue"),
+        "second.png",
+    )
     updated_again = await courses_service_fixture.update_avatar(
         course_id=created.id,
         avatar=second_upload,
@@ -208,20 +228,35 @@ async def test_update_avatar(courses_service_fixture: CoursesService):
 
 
 @pytest.mark.asyncio
-async def test_update_avatar_course_not_found(courses_service_fixture: CoursesService):
-    upload_file = _create_upload_image("avatar.png")
+async def test_update_avatar_course_not_found(
+    courses_service_fixture: CoursesService,
+    create_upload_file_fixture,
+    create_image_bytes_fixture,
+):
+    upload_file = create_upload_file_fixture(
+        create_image_bytes_fixture("PNG", (100, 100), "red"),
+        "avatar.png",
+    )
     with pytest.raises(CourseNotFound):
         await courses_service_fixture.update_avatar(course_id=99999, avatar=upload_file)
 
 
 @pytest.mark.asyncio
-async def test_delete_course(courses_service_fixture: CoursesService):
-    created = await courses_service_fixture.create_course(
-        CreateCourseDTORequest(name="To Delete", slug="to-delete")
+async def test_delete_course(
+    courses_service_fixture: CoursesService,
+    create_course_fixture,
+    create_upload_file_fixture,
+    create_image_bytes_fixture,
+):
+    created = await create_course_fixture(
+        CreateCourseFixtureDTO(name="To Delete", slug="to-delete")
     )
 
     # Прикрепим аватарку
-    upload_file = _create_upload_image("del_avatar.png")
+    upload_file = create_upload_file_fixture(
+        create_image_bytes_fixture("PNG", (100, 100), "red"),
+        "del_avatar.png",
+    )
     with_avatar = await courses_service_fixture.update_avatar(
         course_id=created.id,
         avatar=upload_file,

@@ -2,12 +2,14 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.courses.models import AvatarCoursesType, Courses
+from helpers.functions import comparison_models
+from src.modules.courses.models import AvatarCoursesType
 from src.modules.courses.models_dto import CreateCourseDTO
 from src.modules.courses.repository import CourseRepository, CoursesRepository
 from src.modules.student_courses.models import StudentCourses
 from src.modules.students.models import Students
 from src.modules.users.models import UserRole
+from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 
 
@@ -29,11 +31,7 @@ async def test_add_course_dto(session_db: AsyncSession):
     await session_db.refresh(course)
 
     assert course.id is not None
-    assert course.name == "Python Base"
-    assert course.slug == "python-base"
-    assert course.description == "Introductory Python course"
-    assert course.avatar_type == AvatarCoursesType.PYTHON
-    assert course.is_active is True
+    assert comparison_models(dto, course, keys_not_checked=["id", "created_at", "updated_at"])
 
 
 @pytest.mark.asyncio
@@ -53,54 +51,65 @@ async def test_add_course_dict(session_db: AsyncSession):
     await session_db.refresh(course)
 
     assert course.id is not None
-    assert course.name == "Math 101"
-    assert course.slug == "math-101"
+    assert comparison_models(data, course, keys_not_checked=["id", "created_at", "updated_at"])
 
 
 @pytest.mark.asyncio
-async def test_get_course_by_id(session_db: AsyncSession):
+async def test_get_course_by_id(
+    session_db: AsyncSession,
+    create_course_fixture,
+):
     repo = CourseRepository(session=session_db)
 
-    course = await repo.add_course(
-        CreateCourseDTO(name="Russian", slug="russian-lang", avatar_type=AvatarCoursesType.RUSSIAN_LANGUAGE)
+    course = await create_course_fixture(
+        CreateCourseFixtureDTO(
+            name="Russian",
+            slug="russian-lang",
+            avatar_type=AvatarCoursesType.RUSSIAN_LANGUAGE,
+        )
     )
-    await session_db.commit()
-    await session_db.refresh(course)
 
     fetched = await repo.get_course_by_id(course.id)
     assert fetched is not None
-    assert fetched.id == course.id
-    assert fetched.name == "Russian"
+    assert comparison_models(course, fetched)
 
     not_found = await repo.get_course_by_id(99999)
     assert not_found is None
 
 
 @pytest.mark.asyncio
-async def test_get_course_by_slug(session_db: AsyncSession):
+async def test_get_course_by_slug(
+    session_db: AsyncSession,
+    create_course_fixture,
+):
     repo = CourseRepository(session=session_db)
 
-    course = await repo.add_course(
-        CreateCourseDTO(name="Algorithms", slug="algorithms-pro", avatar_type=AvatarCoursesType.CUSTOM)
+    course = await create_course_fixture(
+        CreateCourseFixtureDTO(
+            name="Algorithms",
+            slug="algorithms-pro",
+            avatar_type=AvatarCoursesType.CUSTOM,
+        )
     )
-    await session_db.commit()
 
     fetched = await repo.get_course_by_slug("algorithms-pro")
     assert fetched is not None
-    assert fetched.name == "Algorithms"
+    assert comparison_models(course, fetched)
 
     not_found = await repo.get_course_by_slug("non-existent-slug")
     assert not_found is None
 
 
 @pytest.mark.asyncio
-async def test_get_all_courses(session_db: AsyncSession):
+async def test_get_all_courses(
+    session_db: AsyncSession,
+    create_course_fixture,
+):
     repo = CourseRepository(session=session_db)
 
-    c1 = await repo.add_course(CreateCourseDTO(name="Course 1", slug="c-1", is_active=True))
-    c2 = await repo.add_course(CreateCourseDTO(name="Course 2", slug="c-2", is_active=False))
-    c3 = await repo.add_course(CreateCourseDTO(name="Course 3", slug="c-3", is_active=True))
-    await session_db.commit()
+    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 1", slug="c-1", is_active=True))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 2", slug="c-2", is_active=False))
+    c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 3", slug="c-3", is_active=True))
 
     all_courses = await repo.get_all_courses()
     assert len(all_courses) == 3
@@ -118,7 +127,11 @@ async def test_get_all_courses(session_db: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_get_courses_by_student_id(session_db: AsyncSession, create_user_fixture):
+async def test_get_courses_by_student_id(
+    session_db: AsyncSession,
+    create_user_fixture,
+    create_course_fixture,
+):
     repo = CourseRepository(session=session_db)
 
     # Создаем 2 студентов
@@ -128,14 +141,10 @@ async def test_get_courses_by_student_id(session_db: AsyncSession, create_user_f
     student1_db = (await session_db.execute(select(Students).where(Students.user_id == user1.id))).scalar_one()
     student2_db = (await session_db.execute(select(Students).where(Students.user_id == user2.id))).scalar_one()
 
-    # Создаем курсы
-    c1 = await repo.add_course(CreateCourseDTO(name="Course A", slug="course-a", is_active=True))
-    c2 = await repo.add_course(CreateCourseDTO(name="Course B", slug="course-b", is_active=True))
-    c3 = await repo.add_course(CreateCourseDTO(name="Course C", slug="course-c", is_active=True))
-    await session_db.commit()
-    await session_db.refresh(c1)
-    await session_db.refresh(c2)
-    await session_db.refresh(c3)
+    # Создаем курсы через фикстуру
+    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Course A", slug="course-a", is_active=True))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Course B", slug="course-b", is_active=True))
+    c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course C", slug="course-c", is_active=True))
 
     # Привязываем студента 1 к c1 (активен) и c2 (неактивен)
     sc1 = StudentCourses(student_id=student1_db.id, course_id=c1.id, is_active=True)
@@ -164,14 +173,15 @@ async def test_get_courses_by_student_id(session_db: AsyncSession, create_user_f
 
 
 @pytest.mark.asyncio
-async def test_update_course(session_db: AsyncSession):
+async def test_update_course(
+    session_db: AsyncSession,
+    create_course_fixture,
+):
     repo = CourseRepository(session=session_db)
 
-    course = await repo.add_course(
-        CreateCourseDTO(name="Old Name", slug="old-slug", description="Old desc")
+    course = await create_course_fixture(
+        CreateCourseFixtureDTO(name="Old Name", slug="old-slug", description="Old desc")
     )
-    await session_db.commit()
-    await session_db.refresh(course)
 
     updated = await repo.update_course(
         course_id=course.id,
@@ -190,12 +200,15 @@ async def test_update_course(session_db: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_delete_course(session_db: AsyncSession):
+async def test_delete_course(
+    session_db: AsyncSession,
+    create_course_fixture,
+):
     repo = CourseRepository(session=session_db)
 
-    course = await repo.add_course(CreateCourseDTO(name="To Delete", slug="to-delete"))
-    await session_db.commit()
-    await session_db.refresh(course)
+    course = await create_course_fixture(
+        CreateCourseFixtureDTO(name="To Delete", slug="to-delete")
+    )
 
     deleted = await repo.delete_course(course_id=course.id)
     await session_db.commit()

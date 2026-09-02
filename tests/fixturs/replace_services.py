@@ -48,3 +48,13 @@ async def courses_service_fixture(session_db: AsyncSession, config_fix) -> Cours
         compression_images=CompressionImages(config=config_fix),
         session_db=session_db,
     )
+
+
+@pytest_asyncio.fixture(scope="function")
+async def compression_images_fixture(config_fix) -> CompressionImages:
+    return CompressionImages(config=config_fix)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def handler_images_fixture(config_fix) -> HandlerImages:
+    return HandlerImages(config=config_fix)
