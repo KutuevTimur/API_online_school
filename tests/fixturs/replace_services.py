@@ -7,6 +7,7 @@ from src.modules.courses.service import CoursesService
 from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
 from src.modules.path_builder import PathBuilder
+from src.modules.student_courses.repository import StudentCoursesRepository
 from src.modules.students.repository import StudentRepository
 from src.modules.students.service import StudentService
 from src.modules.teachers.repository import TeacherRepository
@@ -47,6 +48,7 @@ async def courses_service_fixture(session_db: AsyncSession, config_fix) -> Cours
         handler_images=HandlerImages(config=config_fix),
         compression_images=CompressionImages(config=config_fix),
         session_db=session_db,
+        student_courses_repo=StudentCoursesRepository(session=session_db),
     )
 
 
