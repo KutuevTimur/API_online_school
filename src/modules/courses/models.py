@@ -10,6 +10,7 @@ from src.core.database.database import Base
 
 if TYPE_CHECKING:
     from src.modules.student_courses.models import StudentCourses
+    from src.modules.teacher_couses.models import TeacherCourses
 
 
 class AvatarCoursesType(str, enum.Enum):
@@ -48,3 +49,4 @@ class Courses(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     student_courses: Mapped[List["StudentCourses"]] = relationship("StudentCourses", back_populates="course")
+    teacher_courses: Mapped[List["TeacherCourses"]] = relationship("TeacherCourses", back_populates="course")
