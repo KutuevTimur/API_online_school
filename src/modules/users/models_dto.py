@@ -9,7 +9,7 @@ from src.modules.teachers.models_dto import UpdateTeacherDTO
 from src.modules.users.models import UserRole
 
 
-class UsersDTO(ORMDTO):
+class UserDTO(ORMDTO):
     id: int
     email: EmailStr
     username: str

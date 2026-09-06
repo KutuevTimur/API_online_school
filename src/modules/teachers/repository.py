@@ -4,7 +4,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.database_model import BaseRepository
-from src.modules.teachers.models import Teachers
+from src.modules.teachers.models import Teacher
 from src.modules.teachers.models_dto import CreateTeacherDTO
 
 
@@ -13,24 +13,24 @@ class TeacherRepository(BaseRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session=session,
-            model=Teachers,
+            model=Teacher,
         )
 
     async def add_teacher(
         self,
         data: CreateTeacherDTO,
-    ) -> Teachers:
+    ) -> Teacher:
         """Добавление новой записи преподавателя в сессию"""
         return self.add(data)
 
-    async def get_teacher_by_id(self, teacher_id: int) -> Teachers | None:
+    async def get_teacher_by_id(self, teacher_id: int) -> Teacher | None:
         """Получение преподавателя по ID"""
-        return await self.get_by_id(Teachers, teacher_id)
+        return await self.get_by_id(Teacher, teacher_id)
 
-    async def get_teacher_by_user_id(self, user_id: int) -> Teachers | None:
+    async def get_teacher_by_user_id(self, user_id: int) -> Teacher | None:
         """Получение профиля преподавателя по user_id"""
         result_db = await self.session.execute(
-            select(Teachers).where(Teachers.user_id == user_id)
+            select(Teacher).where(Teacher.user_id == user_id)
         )
         return result_db.scalar_one_or_none()
 
@@ -38,10 +38,10 @@ class TeacherRepository(BaseRepository):
         self,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Teachers]:
+    ) -> List[Teacher]:
         """Получение списка всех преподавателей с пагинацией"""
         result_db = await self.session.execute(
-            select(Teachers).limit(limit).offset(offset)
+            select(Teacher).limit(limit).offset(offset)
         )
         return list(result_db.scalars().all())
 
@@ -49,13 +49,13 @@ class TeacherRepository(BaseRepository):
         self,
         teacher_id: int,
         values: dict,
-    ) -> Teachers | None:
+    ) -> Teacher | None:
         """Обновление данных преподавателя по ID"""
         result_db = await self.session.execute(
-            update(Teachers)
-            .where(Teachers.id == teacher_id)
+            update(Teacher)
+            .where(Teacher.id == teacher_id)
             .values(**values)
-            .returning(Teachers)
+            .returning(Teacher)
         )
         return result_db.scalar_one_or_none()
 
@@ -63,30 +63,30 @@ class TeacherRepository(BaseRepository):
         self,
         user_id: int,
         values: dict,
-    ) -> Teachers | None:
+    ) -> Teacher | None:
         """Обновление данных преподавателя по user_id"""
         result_db = await self.session.execute(
-            update(Teachers)
-            .where(Teachers.user_id == user_id)
+            update(Teacher)
+            .where(Teacher.user_id == user_id)
             .values(**values)
-            .returning(Teachers)
+            .returning(Teacher)
         )
         return result_db.scalar_one_or_none()
 
-    async def delete_teacher(self, teacher_id: int) -> Teachers | None:
+    async def delete_teacher(self, teacher_id: int) -> Teacher | None:
         """Удаление преподавателя по ID"""
         result_db = await self.session.execute(
-            delete(Teachers)
-            .where(Teachers.id == teacher_id)
-            .returning(Teachers)
+            delete(Teacher)
+            .where(Teacher.id == teacher_id)
+            .returning(Teacher)
         )
         return result_db.scalar_one_or_none()
 
-    async def delete_teacher_by_user_id(self, user_id: int) -> Teachers | None:
+    async def delete_teacher_by_user_id(self, user_id: int) -> Teacher | None:
         """Удаление преподавателя по user_id"""
         result_db = await self.session.execute(
-            delete(Teachers)
-            .where(Teachers.user_id == user_id)
-            .returning(Teachers)
+            delete(Teacher)
+            .where(Teacher.user_id == user_id)
+            .returning(Teacher)
         )
         return result_db.scalar_one_or_none()

@@ -8,7 +8,7 @@ from src.modules.depends import get_config
 from src.modules.refresh_tokens.depends import get_refresh_tokens_service
 from src.modules.refresh_tokens.service import RefreshTokensService
 from src.modules.users.depends import get_user_service
-from src.modules.users.models_dto import UsersDTO
+from src.modules.users.models_dto import UserDTO
 from src.modules.users.service import UsersService
 
 
@@ -37,5 +37,5 @@ def get_auth_service(
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     user_service: AuthService = Depends(get_auth_service),
-) -> UsersDTO:
+) -> UserDTO:
     return await user_service.get_current_user(token)

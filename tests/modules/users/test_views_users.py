@@ -6,11 +6,11 @@ from sqlalchemy import select
 
 from helpers.functions import comparison_models
 from src.modules.path_builder import PathBuilder
-from src.modules.students.models import Students
+from src.modules.students.models import Student
 from src.modules.students.models_dto import StudentsDTO
-from src.modules.teachers.models import Teachers
+from src.modules.teachers.models import Teacher
 from src.modules.teachers.models_dto import TeachersDTO
-from src.modules.users.models import Users, UserRole
+from src.modules.users.models import User, UserRole
 from src.modules.users.models_dto import UpdateUserDataRequestDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 
@@ -65,12 +65,12 @@ async def test_update_user_self_student(
     assert data["middle_name"] == "Alexandrovich"
     assert data["user_id"] == student.id
 
-    result_student = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    result_student = await session_db.execute(select(Student).where(Student.user_id == student.id))
     student_db = result_student.scalar_one_or_none()
     assert student_db is not None
     assert student_db.first_name == "Ivan_Updated"
 
-    result_user = await session_db.execute(select(Users).where(Users.id == student.id))
+    result_user = await session_db.execute(select(User).where(User.id == student.id))
     user_db = result_user.scalar_one_or_none()
     assert user_db is not None
     assert user_db.email == "updated_student@mail.com"
@@ -108,13 +108,13 @@ async def test_update_user_self_teacher(
     assert data["description"] == "Senior Mathematics Professor"
     assert data["user_id"] == teacher.id
 
-    result_teacher = await session_db.execute(select(Teachers).where(Teachers.user_id == teacher.id))
+    result_teacher = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
     teacher_db = result_teacher.scalar_one_or_none()
     assert teacher_db is not None
     assert teacher_db.first_name == "Prof_Updated"
     assert teacher_db.description == "Senior Mathematics Professor"
 
-    result_user = await session_db.execute(select(Users).where(Users.id == teacher.id))
+    result_user = await session_db.execute(select(User).where(User.id == teacher.id))
     user_db = result_user.scalar_one_or_none()
     assert user_db is not None
     assert user_db.email == "prof_updated@mail.com"
@@ -149,12 +149,12 @@ async def test_update_user_by_teacher_for_student(
     assert data["first_name"] == "Changed_By_Teacher"
     assert data["last_name"] == "Student_New_Last"
 
-    result_student = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    result_student = await session_db.execute(select(Student).where(Student.user_id == student.id))
     student_db = result_student.scalar_one_or_none()
     assert student_db is not None
     assert student_db.first_name == "Changed_By_Teacher"
 
-    result_user = await session_db.execute(select(Users).where(Users.id == student.id))
+    result_user = await session_db.execute(select(User).where(User.id == student.id))
     user_db = result_user.scalar_one_or_none()
     assert user_db is not None
     assert user_db.is_active is False
@@ -260,7 +260,7 @@ async def test_update_avatar_by_self_student(
         assert img.size[0] <= 512 and img.size[1] <= 512
 
     # Проверяем запись в БД
-    result_db = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    result_db = await session_db.execute(select(Student).where(Student.user_id == student.id))
     student_db = result_db.scalar_one_or_none()
     assert student_db is not None
     assert student_db.avatar_path == str(avatar_file)
@@ -296,7 +296,7 @@ async def test_update_avatar_by_teacher_for_student(
     avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
     assert avatar_file.is_file()
 
-    result_db = await session_db.execute(select(Students).where(Students.user_id == student.id))
+    result_db = await session_db.execute(select(Student).where(Student.user_id == student.id))
     student_db = result_db.scalar_one_or_none()
     assert student_db is not None
     assert student_db.avatar_path == str(avatar_file)
@@ -336,7 +336,7 @@ async def test_update_avatar_replaces_existing_avatar(
     assert response_2.content == second_bytes
     assert avatar_file.is_file()
 
-    result_db = await session_db.execute(select(Teachers).where(Teachers.user_id == teacher.id))
+    result_db = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
     teacher_db = result_db.scalar_one_or_none()
     assert teacher_db is not None
     assert teacher_db.avatar_path == str(avatar_file)

@@ -4,7 +4,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.database_model import BaseRepository
-from src.modules.students.models import Students
+from src.modules.students.models import Student
 from src.modules.students.models_dto import CreateStudentDTO
 
 
@@ -13,24 +13,24 @@ class StudentRepository(BaseRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session=session,
-            model=Students,
+            model=Student,
         )
 
     async def add_student(
         self,
         data: CreateStudentDTO,
-    ) -> Students:
+    ) -> Student:
         """Добавление новой записи студента в сессию"""
         return self.add(data)
 
-    async def get_student_by_id(self, student_id: int) -> Students | None:
+    async def get_student_by_id(self, student_id: int) -> Student | None:
         """Получение студента по ID"""
-        return await self.get_by_id(Students, student_id)
+        return await self.get_by_id(Student, student_id)
 
-    async def get_student_by_user_id(self, user_id: int) -> Students | None:
+    async def get_student_by_user_id(self, user_id: int) -> Student | None:
         """Получение профиля студента по user_id"""
         result_db = await self.session.execute(
-            select(Students).where(Students.user_id == user_id)
+            select(Student).where(Student.user_id == user_id)
         )
         return result_db.scalar_one_or_none()
 
@@ -38,10 +38,10 @@ class StudentRepository(BaseRepository):
         self,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Students]:
+    ) -> List[Student]:
         """Получение списка всех студентов с пагинацией"""
         result_db = await self.session.execute(
-            select(Students).limit(limit).offset(offset)
+            select(Student).limit(limit).offset(offset)
         )
         return list(result_db.scalars().all())
 
@@ -49,13 +49,13 @@ class StudentRepository(BaseRepository):
         self,
         student_id: int,
         values: dict,
-    ) -> Students | None:
+    ) -> Student | None:
         """Обновление данных студента по ID"""
         result_db = await self.session.execute(
-            update(Students)
-            .where(Students.id == student_id)
+            update(Student)
+            .where(Student.id == student_id)
             .values(**values)
-            .returning(Students)
+            .returning(Student)
         )
         return result_db.scalar_one_or_none()
 
@@ -63,30 +63,30 @@ class StudentRepository(BaseRepository):
         self,
         user_id: int,
         values: dict,
-    ) -> Students | None:
+    ) -> Student | None:
         """Обновление данных студента по user_id"""
         result_db = await self.session.execute(
-            update(Students)
-            .where(Students.user_id == user_id)
+            update(Student)
+            .where(Student.user_id == user_id)
             .values(**values)
-            .returning(Students)
+            .returning(Student)
         )
         return result_db.scalar_one_or_none()
 
-    async def delete_student(self, student_id: int) -> Students | None:
+    async def delete_student(self, student_id: int) -> Student | None:
         """Удаление студента по ID"""
         result_db = await self.session.execute(
-            delete(Students)
-            .where(Students.id == student_id)
-            .returning(Students)
+            delete(Student)
+            .where(Student.id == student_id)
+            .returning(Student)
         )
         return result_db.scalar_one_or_none()
 
-    async def delete_student_by_user_id(self, user_id: int) -> Students | None:
+    async def delete_student_by_user_id(self, user_id: int) -> Student | None:
         """Удаление студента по user_id"""
         result_db = await self.session.execute(
-            delete(Students)
-            .where(Students.user_id == user_id)
-            .returning(Students)
+            delete(Student)
+            .where(Student.user_id == user_id)
+            .returning(Student)
         )
         return result_db.scalar_one_or_none()

@@ -4,10 +4,10 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.database_model import BaseRepository
-from src.modules.courses.models import Courses
+from src.modules.courses.models import Course
 from src.modules.courses.models_dto import CreateCourseDTO
-from src.modules.student_courses.models import StudentCourses
-from src.modules.teacher_couses.models import TeacherCourses
+from src.modules.student_courses.models import StudentCourse
+from src.modules.teacher_couses.models import TeacherCourse
 
 
 class CourseRepository(BaseRepository):
@@ -15,24 +15,24 @@ class CourseRepository(BaseRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session=session,
-            model=Courses,
+            model=Course,
         )
 
     async def add_course(
         self,
         data: Union[CreateCourseDTO, dict],
-    ) -> Courses:
+    ) -> Course:
         """Добавление нового курса в сессию"""
         return self.add(data)
 
-    async def get_course_by_id(self, course_id: int) -> Courses | None:
+    async def get_course_by_id(self, course_id: int) -> Course | None:
         """Получение курса по ID"""
-        return await self.get_by_id(Courses, course_id)
+        return await self.get_by_id(Course, course_id)
 
-    async def get_course_by_slug(self, slug: str) -> Courses | None:
+    async def get_course_by_slug(self, slug: str) -> Course | None:
         """Получение курса по уникальному slug"""
         result_db = await self.session.execute(
-            select(Courses).where(Courses.slug == slug)
+            select(Course).where(Course.slug == slug)
         )
         return result_db.scalar_one_or_none()
 
@@ -42,17 +42,17 @@ class CourseRepository(BaseRepository):
         offset: int = 0,
         is_active: Optional[bool] = None,
         teacher_id: Optional[int] = None,
-    ) -> List[Courses]:
+    ) -> List[Course]:
         """Получение списка всех курсов с пагинацией и опциональным фильтром активности и учителя"""
-        stmt = select(Courses)
+        stmt = select(Course)
         if is_active is not None:
-            stmt = stmt.where(Courses.is_active == is_active)
+            stmt = stmt.where(Course.is_active == is_active)
         if teacher_id is not None:
             stmt = (
-                stmt.join(TeacherCourses, TeacherCourses.course_id == Courses.id)
+                stmt.join(TeacherCourse, TeacherCourse.course_id == Course.id)
                 .where(
-                    (TeacherCourses.teacher_id == teacher_id) &
-                    (TeacherCourses.is_active == True)
+                    (TeacherCourse.teacher_id == teacher_id) &
+                    (TeacherCourse.is_active == True)
                 )
             )
 
@@ -67,17 +67,17 @@ class CourseRepository(BaseRepository):
         only_active: Optional[bool] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Courses]:
+    ) -> List[Course]:
         """Получение списка курсов, к которым привязан конкретный студент"""
         stmt = (
-            select(Courses)
-            .join(StudentCourses, StudentCourses.course_id == Courses.id)
-            .where(StudentCourses.student_id == student_id)
+            select(Course)
+            .join(StudentCourse, StudentCourse.course_id == Course.id)
+            .where(StudentCourse.student_id == student_id)
         )
         if only_active is not None:
             stmt = stmt.where(
-                StudentCourses.is_active == only_active,
-                Courses.is_active == only_active,
+                StudentCourse.is_active == only_active,
+                Course.is_active == only_active,
             )
         stmt = stmt.distinct().limit(limit).offset(offset)
 
@@ -88,21 +88,21 @@ class CourseRepository(BaseRepository):
         self,
         course_id: int,
         values: dict,
-    ) -> Courses | None:
+    ) -> Course | None:
         """Обновление данных курса по ID"""
         result_db = await self.session.execute(
-            update(Courses)
-            .where(Courses.id == course_id)
+            update(Course)
+            .where(Course.id == course_id)
             .values(**values)
-            .returning(Courses)
+            .returning(Course)
         )
         return result_db.scalar_one_or_none()
 
-    async def delete_course(self, course_id: int) -> Courses | None:
+    async def delete_course(self, course_id: int) -> Course | None:
         """Удаление курса по ID"""
         result_db = await self.session.execute(
-            delete(Courses)
-            .where(Courses.id == course_id)
-            .returning(Courses)
+            delete(Course)
+            .where(Course.id == course_id)
+            .returning(Course)
         )
         return result_db.scalar_one_or_none()

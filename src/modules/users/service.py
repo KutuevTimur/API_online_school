@@ -19,7 +19,7 @@ from src.modules.teachers.models_dto import CreateTeacherDTO, UpdateTeacherDTO, 
 from src.modules.users.exception import UserAlreadyExit, InvalidRole, AvatarNotFound
 from src.modules.users.models import UserRole
 from src.modules.users.models_dto import (
-    UsersDTO,
+    UserDTO,
     RegisterUserRequestDTO,
     CreateUserDTO,
     UserAvatarResponseDTO,
@@ -105,22 +105,22 @@ class UsersService:
         """
         return self.cr_context.verify(plain_password, hashed_password)
 
-    async def get_user_by_username_or_email(self, username_or_email: str) -> UsersDTO | None:
+    async def get_user_by_username_or_email(self, username_or_email: str) -> UserDTO | None:
         result = await self.users_repo.get_user_by_username_or_email(username_or_email)
-        return UsersDTO.model_validate(result) if result else None
+        return UserDTO.model_validate(result) if result else None
 
-    async def get_user_by_id(self, user_id: int) -> UsersDTO | None:
+    async def get_user_by_id(self, user_id: int) -> UserDTO | None:
         result = await self.users_repo.get_user_by_id(user_id)
-        return UsersDTO.model_validate(result) if result else None
+        return UserDTO.model_validate(result) if result else None
 
-    async def get_user_by_email(self, email: str) -> UsersDTO | None:
+    async def get_user_by_email(self, email: str) -> UserDTO | None:
         result = await self.users_repo.get_user_by_email(email)
-        return UsersDTO.model_validate(result) if result else None
+        return UserDTO.model_validate(result) if result else None
 
     async def create_user(
         self,
         new_user: RegisterUserRequestDTO,
-    ) -> UsersDTO:
+    ) -> UserDTO:
         """
         Создает нового пользователя (учителя или ученика).
         :raises UserAlreadyExit: Если пользователь с таким email/username уже существует.
@@ -172,7 +172,7 @@ class UsersService:
             else:
                 raise
 
-        return UsersDTO.model_validate(user_orm)
+        return UserDTO.model_validate(user_orm)
 
     async def update_avatar(
         self,
@@ -238,7 +238,7 @@ class UsersService:
         if not user:
             raise NotFoundData()
 
-        # Обновление данных аккаунта (таблица Users)
+        # Обновление данных аккаунта (таблица User)
         user_account_dto = data.to_user_account_dto()
         user_values = user_account_dto.model_dump(exclude_unset=True, exclude_none=True)
 
@@ -254,7 +254,7 @@ class UsersService:
 
             await self.users_repo.update_user(user_id=user_id, values=user_values)
 
-        # Обновление данных профиля (таблицы Teachers / Students)
+        # Обновление данных профиля (таблицы Teacher / Student)
         if user.role == UserRole.TEACHER:
             teacher_dto = data.to_teacher_dto()
             profile_values = teacher_dto.model_dump(exclude_unset=True, exclude_none=True)
@@ -296,12 +296,12 @@ class UsersService:
         self,
         user_id: int,
         new_password: str,
-    ) -> UsersDTO:
+    ) -> UserDTO:
         """
         Изменяет пароль пользователя по user_id.
         :param user_id: ID пользователя
         :param new_password: Новый пароль
-        :return: UsersDTO обновленного пользователя
+        :return: UserDTO обновленного пользователя
         :raises NotFoundData: Если пользователь не найден
         """
         user = await self.users_repo.get_user_by_id(user_id)
@@ -318,4 +318,4 @@ class UsersService:
 
         await self.session_db.commit()
         await self.session_db.refresh(updated_user)
-        return UsersDTO.model_validate(updated_user)
+        return UserDTO.model_validate(updated_user)

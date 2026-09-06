@@ -2,13 +2,13 @@ from fastapi import Depends
 
 from src.modules.auth.depends import get_current_user
 from src.modules.check_permission.service import StudentPermissionService
-from src.modules.users.models_dto import UsersDTO
+from src.modules.users.models_dto import UserDTO
 
 
 async def get_current_user_with_target_permission(
     user_id: int,
-    current_user: UsersDTO = Depends(get_current_user),
-) -> UsersDTO:
+    current_user: UserDTO = Depends(get_current_user),
+) -> UserDTO:
     """
     Проверяет, что текущий пользователь имеет доступ к target_user_id (он сам или учитель),
     и возвращает current_user.
@@ -22,8 +22,8 @@ async def get_current_user_with_target_permission(
 
 
 async def get_current_teacher_user(
-    current_user: UsersDTO = Depends(get_current_user),
-) -> UsersDTO:
+    current_user: UserDTO = Depends(get_current_user),
+) -> UserDTO:
     """
     Проверяет, что текущий пользователь является преподавателем, и возвращает его.
     :raises PermissionErrorService: Если пользователь не является учителем

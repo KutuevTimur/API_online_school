@@ -1,13 +1,13 @@
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.users.models import UserRole
-from src.modules.users.models_dto import UsersDTO
+from src.modules.users.models_dto import UserDTO
 
 
 class StudentPermissionService:
 
     @staticmethod
     def check_role_and_id(
-        current_user: UsersDTO,
+        current_user: UserDTO,
         target_user_id: int,
     ) -> None:
         """
@@ -25,7 +25,7 @@ class StudentPermissionService:
 
     @staticmethod
     def check_role(
-        current_user: UsersDTO,
+        current_user: UserDTO,
     ) -> None:
         """
         :exception PermissionErrorService: Если пользователь не является учителем

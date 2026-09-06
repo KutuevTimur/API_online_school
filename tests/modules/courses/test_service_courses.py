@@ -12,8 +12,8 @@ from src.modules.courses.models_dto import (
     UpdateCourseDTORequest,
 )
 from src.modules.courses.service import CoursesService
-from src.modules.student_courses.models import StudentCourses
-from src.modules.students.models import Students
+from src.modules.student_courses.models import StudentCourse
+from src.modules.students.models import Student
 from src.modules.users.models import UserRole
 from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
@@ -85,7 +85,7 @@ async def test_get_courses_by_student(
     create_course_fixture,
 ):
     user, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
-    student = (await session_db.execute(select(Students).where(Students.user_id == user.id))).scalar_one()
+    student = (await session_db.execute(select(Student).where(Student.user_id == user.id))).scalar_one()
 
     c1 = await create_course_fixture(CreateCourseFixtureDTO(name="C1", slug="c1"))
     c2 = await create_course_fixture(CreateCourseFixtureDTO(name="C2", slug="c2"))
@@ -93,8 +93,8 @@ async def test_get_courses_by_student(
 
     # Привязываем только к c1 и c2
     session_db.add_all([
-        StudentCourses(student_id=student.id, course_id=c1.id, is_active=True),
-        StudentCourses(student_id=student.id, course_id=c2.id, is_active=True),
+        StudentCourse(student_id=student.id, course_id=c1.id, is_active=True),
+        StudentCourse(student_id=student.id, course_id=c2.id, is_active=True),
     ])
     await session_db.commit()
 

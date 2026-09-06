@@ -8,7 +8,7 @@ from src.core.database.database import Base
 
 
 
-class StudentCourses(Base):
+class StudentCourse(Base):
     __tablename__ = "student_courses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -24,5 +24,5 @@ class StudentCourses(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    student: Mapped["Students"] = relationship("Students", back_populates="student_courses")
-    course: Mapped["Courses"] = relationship("Courses", back_populates="student_courses")
+    student: Mapped["Student"] = relationship("Student", back_populates="student_courses")
+    course: Mapped["Course"] = relationship("Course", back_populates="student_courses")

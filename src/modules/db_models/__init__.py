@@ -1,17 +1,17 @@
-from src.modules.users.models import Users
+from src.modules.users.models import User
 from src.modules.refresh_tokens.models import RefreshToken
-from src.modules.teachers.models import Teachers
-from src.modules.students.models import Students
-from src.modules.courses.models import Courses
-from src.modules.student_courses.models import StudentCourses
-from src.modules.teacher_couses.models import TeacherCourses
+from src.modules.teachers.models import Teacher
+from src.modules.students.models import Student
+from src.modules.courses.models import Course
+from src.modules.student_courses.models import StudentCourse
+from src.modules.teacher_couses.models import TeacherCourse
 
 __all__ = [
-    "Users",
+    "User",
     "RefreshToken",
-    "Teachers",
-    "Students",
-    "Courses",
-    "StudentCourses",
-    "TeacherCourses",
+    "Teacher",
+    "Student",
+    "Course",
+    "StudentCourse",
+    "TeacherCourse",
 ]

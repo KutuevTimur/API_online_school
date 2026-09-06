@@ -14,7 +14,7 @@ class UserRole(str, enum.Enum):
     STUDENT = "student"
 
 
-class Users(Base):
+class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -34,5 +34,5 @@ class Users(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user")
-    teacher: Mapped["Teachers"] = relationship("Teachers", back_populates="user")
-    student: Mapped["Students"] = relationship("Students", back_populates="user")
+    teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="user")
+    student: Mapped["Student"] = relationship("Student", back_populates="user")

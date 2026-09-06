@@ -3,11 +3,11 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.courses.models import Courses, AvatarCoursesType
+from src.modules.courses.models import Course, AvatarCoursesType
 from src.modules.courses.models_dto import CreateCourseDTORequest, UpdateCourseDTORequest
 from src.modules.path_builder import PathBuilder
-from src.modules.student_courses.models import StudentCourses
-from src.modules.students.models import Students
+from src.modules.student_courses.models import StudentCourse
+from src.modules.students.models import Student
 from src.modules.users.models import UserRole
 from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
@@ -83,7 +83,7 @@ async def test_get_courses_as_student_only_enrolled(
     create_course_fixture,
 ):
     user_student, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
-    student_res = await session_db.execute(select(Students).where(Students.user_id == user_student.id))
+    student_res = await session_db.execute(select(Student).where(Student.user_id == user_student.id))
     student = student_res.scalar_one()
 
     c_enrolled = await create_course_fixture(CreateCourseFixtureDTO(name="Enrolled Course", slug="enrolled", is_active=True))
@@ -92,8 +92,8 @@ async def test_get_courses_as_student_only_enrolled(
 
     # Привязываем студента к c_enrolled и c_inactive
     session_db.add_all([
-        StudentCourses(student_id=student.id, course_id=c_enrolled.id, is_active=True),
-        StudentCourses(student_id=student.id, course_id=c_inactive.id, is_active=True),
+        StudentCourse(student_id=student.id, course_id=c_enrolled.id, is_active=True),
+        StudentCourse(student_id=student.id, course_id=c_inactive.id, is_active=True),
     ])
     await session_db.commit()
 
@@ -145,11 +145,11 @@ async def test_get_course_by_id_as_student_allowed(
     create_course_fixture,
 ):
     user_student, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
-    student_res = await session_db.execute(select(Students).where(Students.user_id == user_student.id))
+    student_res = await session_db.execute(select(Student).where(Student.user_id == user_student.id))
     student = student_res.scalar_one()
 
     course = await create_course_fixture(CreateCourseFixtureDTO(name="Allowed Course", slug="allowed-course", is_active=True))
-    session_db.add(StudentCourses(student_id=student.id, course_id=course.id, is_active=True))
+    session_db.add(StudentCourse(student_id=student.id, course_id=course.id, is_active=True))
     await session_db.commit()
 
     response = await client_for_tests.get(
@@ -222,7 +222,7 @@ async def test_create_course_by_teacher(
     assert data["avatar_type"] == AvatarCoursesType.DEFAULT
 
     # Проверяем в БД
-    res_db = await session_db.execute(select(Courses).where(Courses.slug == "new-fastapi-course"))
+    res_db = await session_db.execute(select(Course).where(Course.slug == "new-fastapi-course"))
     course_db = res_db.scalar_one_or_none()
     assert course_db is not None
     assert course_db.name == "New FastApi Course"
@@ -294,7 +294,7 @@ async def test_update_course_by_teacher(
     assert data["is_active"] is False
 
     # Проверка в БД
-    res_db = await session_db.execute(select(Courses).where(Courses.id == course.id))
+    res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
     assert db_course.name == "Updated Name"
     assert db_course.is_active is False
@@ -351,7 +351,7 @@ async def test_update_avatar_by_teacher(
     assert avatar_file.is_file()
 
     # Проверяем обновление модели в БД
-    res_db = await session_db.execute(select(Courses).where(Courses.id == course.id))
+    res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
     assert db_course.avatar_type == AvatarCoursesType.CUSTOM
     assert db_course.avatar_path == str(avatar_file)
@@ -410,7 +410,7 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     assert "__deleted__" in deleted_data["slug"]
 
     # Проверяем в БД: запись сохранилась, но деактивирована
-    res_db = await session_db.execute(select(Courses).where(Courses.id == course.id))
+    res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one_or_none()
     assert db_course is not None
     assert db_course.is_active is False
@@ -466,7 +466,7 @@ async def test_hard_delete_course_by_teacher(
     assert not avatar_path.exists()
 
     # Запись удалена из БД
-    res_db = await session_db.execute(select(Courses).where(Courses.id == course.id))
+    res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     assert res_db.scalar_one_or_none() is None
 
 

@@ -8,14 +8,14 @@ from src.modules.students.models_dto import StudentsDTO
 from src.modules.teachers.models_dto import TeachersDTO
 from src.modules.users.depends import get_user_service
 from src.modules.users.models import UserRole
-from src.modules.users.models_dto import UserResponse, UsersDTO, UpdateUserDataRequestDTO
+from src.modules.users.models_dto import UserResponse, UserDTO, UpdateUserDataRequestDTO
 from src.modules.users.service import UsersService
 
 router = APIRouter(prefix="/users")
 
 
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
-async def get_me(user: UsersDTO = Depends(get_current_user)):
+async def get_me(user: UserDTO = Depends(get_current_user)):
     return user
 
 
@@ -23,7 +23,7 @@ async def get_me(user: UsersDTO = Depends(get_current_user)):
 async def update_user(
     user_id: int,
     data: UpdateUserDataRequestDTO,
-    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
+    current_user: UserDTO = Depends(get_current_user_with_target_permission),
     user_service: UsersService = Depends(get_user_service),
 ):
     if data.is_active is not None and current_user.role != UserRole.TEACHER:
@@ -36,7 +36,7 @@ async def update_user(
 async def update_avatar(
     user_id: int,
     avatar: UploadFile = File(...),
-    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
+    current_user: UserDTO = Depends(get_current_user_with_target_permission),
     user_service: UsersService = Depends(get_user_service),
 ):
     file_bytes = await avatar.read()
@@ -56,7 +56,7 @@ async def update_avatar(
 @router.delete("/{user_id}/avatar", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_avatar(
     user_id: int,
-    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
+    current_user: UserDTO = Depends(get_current_user_with_target_permission),
     user_service: UsersService = Depends(get_user_service),
 ):
     user_service.delete_avatar(user_id=user_id)

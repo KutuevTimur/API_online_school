@@ -2,7 +2,7 @@ from src.modules.auth.exception import InvalidCredentials
 from src.modules.auth.models_dto import TokenResponse
 from src.modules.auth.token_service import TokenService
 from src.modules.users.exception import UserNotFound
-from src.modules.users.models_dto import UsersDTO
+from src.modules.users.models_dto import UserDTO
 from src.modules.users.service import UsersService
 
 
@@ -19,7 +19,7 @@ class AuthService:
     async def get_current_user(
         self,
         token: str
-    ) -> UsersDTO:
+    ) -> UserDTO:
         """
         :raises InvalidJWTToken: невалидный токен
         :raises UserNotFound:
@@ -56,7 +56,7 @@ class AuthService:
         self,
         user_id: int,
         new_password: str,
-    ) -> UsersDTO:
+    ) -> UserDTO:
         return await self.users_service.change_password(
             user_id=user_id,
             new_password=new_password,

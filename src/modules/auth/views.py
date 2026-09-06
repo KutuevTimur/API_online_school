@@ -20,16 +20,16 @@ from src.modules.check_permission import (
 )
 from src.modules.depends import get_config
 from src.modules.users.depends import get_user_service
-from src.modules.users.models_dto import UsersDTO, RegisterUserRequestDTO, RegisterUserByAdminRequestDTO
+from src.modules.users.models_dto import UserDTO, RegisterUserRequestDTO, RegisterUserByAdminRequestDTO
 from src.modules.users.service import UsersService
 
 router = APIRouter(prefix="/auth")
 
 
-@router.post("/register", response_model=UsersDTO, status_code=status.HTTP_200_OK)
+@router.post("/register", response_model=UserDTO, status_code=status.HTTP_200_OK)
 async def register_user(
     data: RegisterUserRequestDTO,
-    current_user: UsersDTO = Depends(get_current_teacher_user),
+    current_user: UserDTO = Depends(get_current_teacher_user),
     user_service: UsersService = Depends(get_user_service),
 ):
     """
@@ -39,8 +39,8 @@ async def register_user(
     return await user_service.create_user(new_user=data)
 
 
-@router.post("/register_by_admin", response_model=UsersDTO, status_code=status.HTTP_200_OK)
-@router.post("/register-by-admin", response_model=UsersDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.post("/register_by_admin", response_model=UserDTO, status_code=status.HTTP_200_OK)
+@router.post("/register-by-admin", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
 async def register_user_by_admin(
     data: RegisterUserByAdminRequestDTO,
     config: Config = Depends(get_config),
@@ -59,14 +59,14 @@ async def register_user_by_admin(
     return await user_service.create_user(new_user=data)
 
 
-@router.post("/change_password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK)
-@router.post("/change-password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
-@router.patch("/change_password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
-@router.patch("/change-password/{user_id}", response_model=UsersDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.post("/change_password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK)
+@router.post("/change-password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.patch("/change_password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.patch("/change-password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
 async def change_password(
     user_id: int,
     data: ChangePasswordRequestDTO,
-    current_user: UsersDTO = Depends(get_current_user_with_target_permission),
+    current_user: UserDTO = Depends(get_current_user_with_target_permission),
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """
@@ -102,7 +102,7 @@ async def refresh_tokens(
 @router.post('/logout', response_model=LogoutResponse)
 async def logout(
     token: LogoutRequest,
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UserDTO = Depends(get_current_user),
     token_service: TokenService = Depends(get_token_service)
 ):
     """Удаляет refresh токен только который передаётся"""

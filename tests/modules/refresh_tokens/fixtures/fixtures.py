@@ -13,7 +13,7 @@ async def create_refresh_token_fixture(
     not_open_session_db
 ):
     """
-    :return: Возвращает функцию -> функция возвращает `UsersDTO` и `access_token`
+    :return: Возвращает функцию -> функция возвращает `UserDTO` и `access_token`
     """
 
     async def _factory(

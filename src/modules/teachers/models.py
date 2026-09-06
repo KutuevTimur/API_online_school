@@ -7,7 +7,7 @@ from sqlalchemy.types import DateTime
 from src.core.database.database import Base
 
 
-class Teachers(Base):
+class Teacher(Base):
     __tablename__ = "teachers"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -23,5 +23,5 @@ class Teachers(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    user: Mapped["Users"] = relationship("Users", back_populates="teacher")
-    teacher_courses: Mapped[List["TeacherCourses"]] = relationship("TeacherCourses", back_populates="teacher")
+    user: Mapped["User"] = relationship("User", back_populates="teacher")
+    teacher_courses: Mapped[List["TeacherCourse"]] = relationship("TeacherCourse", back_populates="teacher")

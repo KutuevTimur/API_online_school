@@ -6,8 +6,8 @@ from helpers.functions import comparison_models
 from src.modules.courses.models import AvatarCoursesType
 from src.modules.courses.models_dto import CreateCourseDTO
 from src.modules.courses.repository import CourseRepository
-from src.modules.student_courses.models import StudentCourses
-from src.modules.students.models import Students
+from src.modules.student_courses.models import StudentCourse
+from src.modules.students.models import Student
 from src.modules.users.models import UserRole
 from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
@@ -138,8 +138,8 @@ async def test_get_courses_by_student_id(
     user1, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
     user2, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
 
-    student1_db = (await session_db.execute(select(Students).where(Students.user_id == user1.id))).scalar_one()
-    student2_db = (await session_db.execute(select(Students).where(Students.user_id == user2.id))).scalar_one()
+    student1_db = (await session_db.execute(select(Student).where(Student.user_id == user1.id))).scalar_one()
+    student2_db = (await session_db.execute(select(Student).where(Student.user_id == user2.id))).scalar_one()
 
     # Создаем курсы через фикстуру
     c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Course A", slug="course-a", is_active=True))
@@ -147,10 +147,10 @@ async def test_get_courses_by_student_id(
     c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course C", slug="course-c", is_active=True))
 
     # Привязываем студента 1 к c1 (активен) и c2 (неактивен)
-    sc1 = StudentCourses(student_id=student1_db.id, course_id=c1.id, is_active=True)
-    sc2 = StudentCourses(student_id=student1_db.id, course_id=c2.id, is_active=False)
+    sc1 = StudentCourse(student_id=student1_db.id, course_id=c1.id, is_active=True)
+    sc2 = StudentCourse(student_id=student1_db.id, course_id=c2.id, is_active=False)
     # Привязываем студента 2 только к c3
-    sc3 = StudentCourses(student_id=student2_db.id, course_id=c3.id, is_active=True)
+    sc3 = StudentCourse(student_id=student2_db.id, course_id=c3.id, is_active=True)
 
     session_db.add_all([sc1, sc2, sc3])
     await session_db.commit()

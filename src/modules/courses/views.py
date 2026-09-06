@@ -15,9 +15,9 @@ from src.modules.courses.models_dto import (
 )
 from src.modules.courses.service import CoursesService
 from src.modules.users.models import UserRole
-from src.modules.users.models_dto import UsersDTO
+from src.modules.users.models_dto import UserDTO
 
-router = APIRouter(tags=["Courses"])
+router = APIRouter(tags=["Course"])
 
 
 @router.get(
@@ -31,7 +31,7 @@ async def get_courses(
     is_active: Optional[bool] = Query(None),
     teacher_user_id: Optional[int] = Query(None, description="Фильтр курсов по преподавателю"),
     my_courses: Optional[bool] = Query(None, description="Только курсы текущего преподавателя"),
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     """
@@ -78,7 +78,7 @@ async def get_courses(
 )
 async def get_course_by_id(
     course_id: int,
-    current_user: UsersDTO = Depends(get_current_user),
+    current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     """
@@ -120,7 +120,7 @@ async def get_course_by_id(
 )
 async def create_course(
     data: CreateCourseDTORequest,
-    current_user: UsersDTO = Depends(get_current_teacher_user),
+    current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     """
@@ -137,7 +137,7 @@ async def create_course(
 async def update_course(
     course_id: int,
     data: UpdateCourseDTORequest,
-    current_user: UsersDTO = Depends(get_current_teacher_user),
+    current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     """
@@ -158,7 +158,7 @@ async def update_course(
 async def update_avatar(
     course_id: int,
     avatar: UploadFile = File(...),
-    current_user: UsersDTO = Depends(get_current_teacher_user),
+    current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     """
@@ -186,7 +186,7 @@ async def update_avatar(
 async def delete_course(
     course_id: int,
     hard: bool = Query(False, description="Физическое удаление вместо мягкого"),
-    current_user: UsersDTO = Depends(get_current_teacher_user),
+    current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     """

@@ -9,8 +9,8 @@ from sqlalchemy.types import DateTime
 from src.core.database.database import Base
 
 if TYPE_CHECKING:
-    from src.modules.student_courses.models import StudentCourses
-    from src.modules.teacher_couses.models import TeacherCourses
+    from src.modules.student_courses.models import StudentCourse
+    from src.modules.teacher_couses.models import TeacherCourse
 
 
 class AvatarCoursesType(str, enum.Enum):
@@ -24,7 +24,7 @@ class AvatarCoursesType(str, enum.Enum):
     RUSSIAN_LANGUAGE = "russian_language"
 
 
-class Courses(Base):
+class Course(Base):
     __tablename__ = "courses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -48,5 +48,5 @@ class Courses(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    student_courses: Mapped[List["StudentCourses"]] = relationship("StudentCourses", back_populates="course")
-    teacher_courses: Mapped[List["TeacherCourses"]] = relationship("TeacherCourses", back_populates="course")
+    student_courses: Mapped[List["StudentCourse"]] = relationship("StudentCourse", back_populates="course")
+    teacher_courses: Mapped[List["TeacherCourse"]] = relationship("TeacherCourse", back_populates="course")

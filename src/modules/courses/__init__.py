@@ -1,5 +1,5 @@
 from src.modules.courses.exception import CourseNotFound, CourseAvatarNotFound, CourseAlreadyExists
-from src.modules.courses.models import Courses, AvatarCoursesType
+from src.modules.courses.models import Course, AvatarCoursesType
 from src.modules.courses.models_dto import (
     CoursesDTO,
     CreateCourseDTO,
@@ -11,7 +11,7 @@ from src.modules.courses.repository import CourseRepository
 from src.modules.courses.service import CoursesService
 
 __all__ = [
-    "Courses",
+    "Course",
     "AvatarCoursesType",
     "CoursesDTO",
     "CreateCourseDTO",

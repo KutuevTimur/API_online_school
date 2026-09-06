@@ -7,7 +7,7 @@ from jose import jwt
 from tests.helpers import test_crypto_context
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from src.core.config import Config
-from src.modules.users.models_dto import UsersDTO
+from src.modules.users.models_dto import UserDTO
 from tests.modules.users.fixtures.factory import create_user_factory
 
 
@@ -31,12 +31,12 @@ async def create_user_fixture(
     not_open_session_db
 ):
     """
-    :return: Возвращает функцию -> функция возвращает `UsersDTO` и `access_token`
+    :return: Возвращает функцию -> функция возвращает `UserDTO` и `access_token`
     """
 
     async def _factory(
         new_user: CreateUserFixtureDTO = CreateUserFixtureDTO(),
-    ) -> Tuple[UsersDTO, str]:
+    ) -> Tuple[UserDTO, str]:
         async with not_open_session_db() as session:
             user = await create_user_factory(
                 session_db=session,
