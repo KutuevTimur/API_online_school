@@ -7,6 +7,7 @@ from src.modules.base.database_model import BaseRepository
 from src.modules.courses.models import Courses
 from src.modules.courses.models_dto import CreateCourseDTO
 from src.modules.student_courses.models import StudentCourses
+from src.modules.teacher_couses.models import TeacherCourses
 
 
 class CourseRepository(BaseRepository):
@@ -40,11 +41,21 @@ class CourseRepository(BaseRepository):
         limit: int = 100,
         offset: int = 0,
         is_active: Optional[bool] = None,
+        teacher_id: Optional[int] = None,
     ) -> List[Courses]:
-        """Получение списка всех курсов с пагинацией и опциональным фильтром активности"""
+        """Получение списка всех курсов с пагинацией и опциональным фильтром активности и учителя"""
         stmt = select(Courses)
         if is_active is not None:
             stmt = stmt.where(Courses.is_active == is_active)
+        if teacher_id is not None:
+            stmt = (
+                stmt.join(TeacherCourses, TeacherCourses.course_id == Courses.id)
+                .where(
+                    (TeacherCourses.teacher_id == teacher_id) &
+                    (TeacherCourses.is_active == True)
+                )
+            )
+
         stmt = stmt.limit(limit).offset(offset)
 
         result_db = await self.session.execute(stmt)
@@ -95,6 +106,3 @@ class CourseRepository(BaseRepository):
             .returning(Courses)
         )
         return result_db.scalar_one_or_none()
-
-
-CoursesRepository = CourseRepository

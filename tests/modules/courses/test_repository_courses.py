@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from helpers.functions import comparison_models
 from src.modules.courses.models import AvatarCoursesType
 from src.modules.courses.models_dto import CreateCourseDTO
-from src.modules.courses.repository import CourseRepository, CoursesRepository
+from src.modules.courses.repository import CourseRepository
 from src.modules.student_courses.models import StudentCourses
 from src.modules.students.models import Students
 from src.modules.users.models import UserRole
@@ -36,7 +36,7 @@ async def test_add_course_dto(session_db: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_add_course_dict(session_db: AsyncSession):
-    repo = CoursesRepository(session=session_db)
+    repo = CourseRepository(session=session_db)
 
     data = {
         "name": "Math 101",

@@ -7,7 +7,7 @@ from src.modules.courses.models_dto import (
     UpdateCourseDTO,
     UpdateCourseDTORequest,
 )
-from src.modules.courses.repository import CourseRepository, CoursesRepository
+from src.modules.courses.repository import CourseRepository
 from src.modules.courses.service import CoursesService
 
 __all__ = [
@@ -19,7 +19,6 @@ __all__ = [
     "UpdateCourseDTO",
     "UpdateCourseDTORequest",
     "CourseRepository",
-    "CoursesRepository",
     "CoursesService",
     "CourseNotFound",
     "CourseAvatarNotFound",
