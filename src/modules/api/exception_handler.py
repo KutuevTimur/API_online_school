@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
+from src.modules.courses.exception import CourseAlreadyExists
 from src.modules.users.exception import InvalidRole
 from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
@@ -41,6 +42,10 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(PermissionErrorService)
     async def service_handler(request, exc):
         return JSONResponse(status_code=403, content={"detail": "Not permission"})
+
+    @app.exception_handler(CourseAlreadyExists)
+    async def course_already_exists_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc) or "Course already exists"})
 
     @app.exception_handler(InvalidImageFormat)
     async def invalid_image_format_handler(request, exc):

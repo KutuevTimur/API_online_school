@@ -19,6 +19,7 @@ from src.modules.courses.repository import CourseRepository
 from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
 from src.modules.path_builder import PathBuilder
+from src.modules.student_courses.repository import StudentCoursesRepository
 from src.modules.students.repository import StudentRepository
 from src.modules.students.service import StudentService
 from src.modules.teachers.repository import TeacherRepository
@@ -34,6 +35,7 @@ class CoursesService:
         teacher_service: TeacherService,
         student_repo: StudentRepository,
         student_service: StudentService,
+        student_courses_repo: StudentCoursesRepository,
         path_builder: PathBuilder,
         handler_images: HandlerImages,
         compression_images: CompressionImages,
@@ -44,6 +46,7 @@ class CoursesService:
         self.teacher_service = teacher_service
         self.student_repo = student_repo
         self.student_service = student_service
+        self.student_courses_repo = student_courses_repo
         self.path_builder = path_builder
         self.handler_images = handler_images
         self.compression_images = compression_images
@@ -113,14 +116,16 @@ class CoursesService:
         limit: int = 100,
         offset: int = 0,
         is_active: Optional[bool] = None,
+        teacher_id: Optional[int] = None,
     ) -> List[CoursesDTO]:
         """
-        Получение всех курсов с пагинацией (limit, offset) и опциональным фильтром активности.
+        Получение всех курсов с пагинацией (limit, offset) и опциональным фильтром активности и учителя.
         """
         courses = await self.course_repo.get_all_courses(
             limit=limit,
             offset=offset,
             is_active=is_active,
+            teacher_id=teacher_id,
         )
         return [CoursesDTO.model_validate(course) for course in courses]
 
@@ -147,6 +152,19 @@ class CoursesService:
             limit=limit,
             offset=offset,
             is_active=is_active,
+        )
+
+    async def check_student_access(
+        self,
+        student_id: int,
+        course_id: int,
+    ) -> bool:
+        """
+        Проверка доступа студента к курсу через таблицу student_courses.
+        """
+        return await self.student_courses_repo.check_student_has_access_to_course(
+            student_id=student_id,
+            course_id=course_id,
         )
 
     async def get_course_by_id(
@@ -249,12 +267,43 @@ class CoursesService:
         await self.session_db.refresh(updated_course)
         return CoursesDTO.model_validate(updated_course)
 
+    async def soft_delete_course(
+        self,
+        course_id: int,
+    ) -> CoursesDTO:
+        """
+        Мягкое удаление курса: деактивация (is_active = False) и освобождение уникального slug.
+        Для сохранения уникальности и возможности повторного создания курса с тем же slug,
+        к старому slug добавляется суффикс '__deleted__{uuid}'.
+        :raises CourseNotFound: Если курс не найден или уже деактивирован.
+        """
+        course = await self.course_repo.get_course_by_id(course_id)
+        if not course or not course.is_active:
+            raise CourseNotFound()
+
+        deleted_suffix = f"__deleted__{uuid.uuid4().hex[:8]}"
+        max_slug_len = 255 - len(deleted_suffix)
+        deleted_slug = f"{course.slug[:max_slug_len]}{deleted_suffix}"
+        updated = await self.course_repo.update_course(
+            course_id=course_id,
+            values={
+                "is_active": False,
+                "slug": deleted_slug,
+            },
+        )
+        if not updated:
+            raise CourseNotFound()
+
+        await self.session_db.commit()
+        await self.session_db.refresh(updated)
+        return CoursesDTO.model_validate(updated)
+
     async def delete_course(
         self,
         course_id: int,
     ) -> CoursesDTO:
         """
-        Удаление курса по ID с подчисткой аватарки на диске.
+        Физическое удаление курса по ID с подчисткой аватарки на диске.
         :raises CourseNotFound: Если курс не найден.
         """
         course = await self.course_repo.get_course_by_id(course_id)
