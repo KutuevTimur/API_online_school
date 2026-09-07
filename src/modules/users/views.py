@@ -4,8 +4,8 @@ from starlette import status
 from src.modules.auth.depends import get_current_user
 from src.modules.check_permission import get_current_user_with_target_permission
 from src.modules.check_permission.exception import PermissionErrorService
-from src.modules.students.models_dto import StudentsDTO
-from src.modules.teachers.models_dto import TeachersDTO
+from src.modules.students.models_dto import StudentsResponseDTO
+from src.modules.teachers.models_dto import TeachersResponseDTO
 from src.modules.users.depends import get_user_service
 from src.modules.users.models import UserRole
 from src.modules.users.models_dto import UserResponse, UserDTO, UpdateUserDataRequestDTO
@@ -19,7 +19,7 @@ async def get_me(user: UserDTO = Depends(get_current_user)):
     return user
 
 
-@router.patch("/{user_id}", response_model=TeachersDTO | StudentsDTO, status_code=status.HTTP_200_OK)
+@router.patch("/{user_id}", response_model=TeachersResponseDTO | StudentsResponseDTO, status_code=status.HTTP_200_OK)
 async def update_user(
     user_id: int,
     data: UpdateUserDataRequestDTO,

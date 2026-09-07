@@ -17,6 +17,16 @@ class StudentsDTO(ORMDTO):
     updated_at: datetime
 
 
+class StudentsResponseDTO(ORMDTO):
+    user_id: int
+    first_name: str
+    last_name: str
+    middle_name: Optional[str] = None
+    avatar_path: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class CreateStudentDTO(BaseModel):
     user_id: int
     first_name: str
