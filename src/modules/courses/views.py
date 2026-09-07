@@ -34,17 +34,16 @@ async def get_courses(
     current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    """
-    Получение списка курсов:
-    - Учителю отдаются все курсы с поддержкой фильтрации (по активности, конкретному преподавателю или только своим).
-    - Ученику отдаются только те активные курсы, к которым ему предоставлен доступ через student_courses.
-    """
     if current_user.role == UserRole.TEACHER:
         teacher = None
         if teacher_user_id:
             teacher = await courses_service.teacher_repo.get_teacher_by_user_id(teacher_user_id)
+            if not teacher:
+                return []
         elif my_courses:
             teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+            if not teacher:
+                return []
 
         filter_teacher_id = teacher.id if teacher else None
 
@@ -60,7 +59,6 @@ async def get_courses(
         if not student:
             return []
 
-        # Для ученика отдаются только доступные ему курсы и только активные
         return await courses_service.get_courses(
             student_id=student.id,
             is_active=True,
@@ -81,11 +79,6 @@ async def get_course_by_id(
     current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    """
-    Получение информации о конкретном курсе:
-    - Учителю доступен любой курс.
-    - У ученика проверяются права доступа (наличие активной записи в student_courses и активность курса).
-    """
     course = await courses_service.get_course_by_id(course_id)
     if not course:
         raise CourseNotFound()
@@ -123,10 +116,8 @@ async def create_course(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    """
-    Создание нового курса. Доступно только учителю.
-    """
-    return await courses_service.create_course(data)
+    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+    return await courses_service.create_course(teacher_id=teacher.id, data=data)
 
 
 @router.patch(
@@ -140,10 +131,8 @@ async def update_course(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    """
-    Обновление курса. Доступно только учителю.
-    """
-    return await courses_service.update_course(course_id=course_id, data=data)
+    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+    return await courses_service.update_course(course_id=course_id, teacher_id=teacher.id, data=data)
 
 
 @router.patch(
@@ -161,13 +150,10 @@ async def update_avatar(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    """
-    Обновление аватарки курса. Доступно только учителю.
-    По аналогии с src/modules/users возвращает Response с байтами исходного файла.
-    """
     file_bytes = await avatar.read()
     await avatar.seek(0)
-    await courses_service.update_avatar(course_id=course_id, avatar=avatar)
+    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+    await courses_service.update_avatar(course_id=course_id, teacher_id=teacher.id, avatar=avatar)
 
     return Response(
         content=file_bytes,
@@ -189,12 +175,7 @@ async def delete_course(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    """
-    Удаление курса. Доступно только учителю.
-    По умолчанию выполняется мягкое удаление:
-    деактивация (is_active = False) и освобождение уникального поля slug (добавление суффикса).
-    При hard=True выполняется физическое удаление с очисткой файла аватара.
-    """
+    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
     if hard:
-        return await courses_service.delete_course(course_id=course_id)
-    return await courses_service.soft_delete_course(course_id=course_id)
+        return await courses_service.delete_course(course_id=course_id, teacher_id=teacher.id)
+    return await courses_service.soft_delete_course(course_id=course_id, teacher_id=teacher.id)

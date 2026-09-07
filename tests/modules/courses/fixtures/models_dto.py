@@ -6,6 +6,7 @@ from src.modules.courses.models import AvatarCoursesType
 
 
 class CreateCourseFixtureDTO(BaseModel):
+    teacher_id: Optional[int] = None
     name: Optional[str] = None
     slug: Optional[str] = None
     description: Optional[str] = None

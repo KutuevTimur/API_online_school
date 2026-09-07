@@ -9,6 +9,7 @@ from src.modules.courses.models import AvatarCoursesType
 
 class CoursesDTO(ORMDTO):
     id: int
+    teacher_user_id: int
     name: str
     slug: str
     description: Optional[str] = None
@@ -20,10 +21,11 @@ class CoursesDTO(ORMDTO):
 
 
 class CreateCourseDTO(BaseModel):
+    teacher_id: int
     name: str
     slug: str
     description: Optional[str] = None
-    avatar_type: AvatarCoursesType = AvatarCoursesType.DEFAULT  # сперва всегда должна создаваться дефолтная затычка
+    avatar_type: AvatarCoursesType = AvatarCoursesType.DEFAULT
     avatar_path: Optional[str] = None
     is_active: bool = True
 

@@ -6,7 +6,7 @@ from typing import Optional, List
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.courses.exception import CourseNotFound, CourseAvatarNotFound, CourseAlreadyExists
+from src.modules.courses.exception import CourseNotFound, CourseAvatarNotFound, CourseAlreadyExists, CourseAccessDenied
 from src.modules.courses.models import AvatarCoursesType
 from src.modules.courses.models_dto import (
     CreateCourseDTORequest,
@@ -56,9 +56,6 @@ class CoursesService:
         """
         Преобразовывает в формат .webp и сжимает фото до 512x512.
         :return: Путь к аватарке
-        :raises InvalidImageFormat: Если расширение или формат файла недопустимы / повреждены.
-        :raises ImageConversionError: При ошибке в процессе конвертации.
-        :raises ImageCompressionError: При ошибке сжатия / сохранения.
         """
         temp_webp: Path | None = None
         result_file_path: Path | None = None
@@ -81,10 +78,7 @@ class CoursesService:
         return str(result_file_path)
 
     def delete_avatar(self, course_id: int) -> None:
-        """
-        Удаление аватарки курса на диске
-        :raises CourseAvatarNotFound: Если аватар не найден
-        """
+        """Удаление аватарки курса на диске"""
         avatar_path = self.path_builder.get_avatar_course(course_id)
         if avatar_path.is_file():
             shutil.rmtree(avatar_path.parent)
@@ -93,17 +87,18 @@ class CoursesService:
 
     async def create_course(
         self,
+        teacher_id: int,
         data: CreateCourseDTORequest | CreateCourseDTO,
     ) -> CoursesDTO:
         """
-        Создание нового курса.
-        :raises CourseAlreadyExists: Если курс с таким slug уже существует.
+        Создание нового курса. Привязанного к конкретному учителю.
         """
         existing = await self.course_repo.get_course_by_slug(data.slug)
         if existing:
             raise CourseAlreadyExists(f"Course with slug '{data.slug}' already exists")
 
         course_data = data if isinstance(data, CreateCourseDTO) else CreateCourseDTO(
+            teacher_id=teacher_id,
             **(data.model_dump(exclude_unset=True, exclude_none=True))
         )
         course = await self.course_repo.add_course(data=course_data)
@@ -159,9 +154,7 @@ class CoursesService:
         student_id: int,
         course_id: int,
     ) -> bool:
-        """
-        Проверка доступа студента к курсу через таблицу student_courses.
-        """
+        """Проверка доступа студента к курсу через таблицу student_courses."""
         return await self.student_courses_repo.check_student_has_access_to_course(
             student_id=student_id,
             course_id=course_id,
@@ -171,9 +164,7 @@ class CoursesService:
         self,
         course_id: int,
     ) -> CoursesDTO | None:
-        """
-        Получение конкретного курса по ID.
-        """
+        """Получение конкретного курса по ID."""
         course = await self.course_repo.get_course_by_id(course_id)
         return CoursesDTO.model_validate(course) if course else None
 
@@ -181,33 +172,29 @@ class CoursesService:
         self,
         slug: str,
     ) -> CoursesDTO | None:
-        """
-        Получение конкретного курса по slug.
-        """
+        """Получение конкретного курса по slug."""
         course = await self.course_repo.get_course_by_slug(slug)
         return CoursesDTO.model_validate(course) if course else None
 
     async def update_course(
         self,
         course_id: int,
+        teacher_id: int,
         data: UpdateCourseDTO | UpdateCourseDTORequest,
     ) -> CoursesDTO:
-        """
-        Обновление данных курса по ID.
-        :raises CourseNotFound: Если курс не найден.
-        :raises CourseAlreadyExists: Если новый slug уже занят.
-        """
+        """Обновление данных курса по ID."""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
+            
+        if course.teacher_id != teacher_id:
+            raise CourseAccessDenied("You can only modify your own courses")
 
-        # Проверка уникальности slug при его обновлении
-        if not data.slug is None and data.slug != course.slug:
+        if data.slug is not None and data.slug != course.slug:
             existing = await self.course_repo.get_course_by_slug(data.slug)
             if existing and existing.id != course_id:
                 raise CourseAlreadyExists(f"Course with slug '{data.slug}' already exists")
 
-        # Если avatar_type переключается со стандартного на дефолтный/иной, удаляем старый файл кастомной аватарки
         if data.avatar_type and data.avatar_type != AvatarCoursesType.CUSTOM:
             try:
                 self.delete_avatar(course_id=course_id)
@@ -234,17 +221,16 @@ class CoursesService:
     async def update_avatar(
         self,
         course_id: int,
+        teacher_id: int,
         avatar: UploadFile,
     ) -> CoursesDTO:
-        """
-        Обновление аватарки курса: конвертирует в .webp, сжимает и сохраняет на диск,
-        затем обновляет avatar_path и avatar_type на CUSTOM в БД.
-        :raises CourseNotFound: Если курс не найден.
-        :raises InvalidImageFormat: Если формат файла не поддерживается.
-        """
+        """Обновление аватарки курса."""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
+            
+        if course.teacher_id != teacher_id:
+            raise CourseAccessDenied("You can only modify your own courses")
 
         try:
             self.delete_avatar(course_id=course_id)
@@ -270,16 +256,15 @@ class CoursesService:
     async def soft_delete_course(
         self,
         course_id: int,
+        teacher_id: int,
     ) -> CoursesDTO:
-        """
-        Мягкое удаление курса: деактивация (is_active = False) и освобождение уникального slug.
-        Для сохранения уникальности и возможности повторного создания курса с тем же slug,
-        к старому slug добавляется суффикс '__deleted__{uuid}'.
-        :raises CourseNotFound: Если курс не найден или уже деактивирован.
-        """
+        """Мягкое удаление курса."""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course or not course.is_active:
             raise CourseNotFound()
+            
+        if course.teacher_id != teacher_id:
+            raise CourseAccessDenied("You can only modify your own courses")
 
         deleted_suffix = f"__deleted__{uuid.uuid4().hex[:8]}"
         max_slug_len = 255 - len(deleted_suffix)
@@ -301,14 +286,15 @@ class CoursesService:
     async def delete_course(
         self,
         course_id: int,
+        teacher_id: int,
     ) -> CoursesDTO:
-        """
-        Физическое удаление курса по ID с подчисткой аватарки на диске.
-        :raises CourseNotFound: Если курс не найден.
-        """
+        """Физическое удаление курса по ID."""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
+            
+        if course.teacher_id != teacher_id:
+            raise CourseAccessDenied("You can only modify your own courses")
 
         try:
             self.delete_avatar(course_id=course_id)

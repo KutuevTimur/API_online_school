@@ -7,7 +7,6 @@ from src.modules.base.database_model import BaseRepository
 from src.modules.courses.models import Course
 from src.modules.courses.models_dto import CreateCourseDTO
 from src.modules.student_courses.models import StudentCourse
-from src.modules.teacher_couses.models import TeacherCourse
 
 
 class CourseRepository(BaseRepository):
@@ -48,13 +47,7 @@ class CourseRepository(BaseRepository):
         if is_active is not None:
             stmt = stmt.where(Course.is_active == is_active)
         if teacher_id is not None:
-            stmt = (
-                stmt.join(TeacherCourse, TeacherCourse.course_id == Course.id)
-                .where(
-                    (TeacherCourse.teacher_id == teacher_id) &
-                    (TeacherCourse.is_active == True)
-                )
-            )
+            stmt = stmt.where(Course.teacher_id == teacher_id)
 
         stmt = stmt.limit(limit).offset(offset)
 

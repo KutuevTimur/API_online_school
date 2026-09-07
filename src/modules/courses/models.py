@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import String, func, Enum, Boolean, Integer, Text
+from sqlalchemy import String, func, Enum, Boolean, Integer, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
@@ -10,12 +10,12 @@ from src.core.database.database import Base
 
 if TYPE_CHECKING:
     from src.modules.student_courses.models import StudentCourse
-    from src.modules.teacher_couses.models import TeacherCourse
+    from src.modules.teachers.models import Teacher
 
 
 class AvatarCoursesType(str, enum.Enum):
     """
-    Если стоит CUSTOM, то необходимо использовать avatar_path. т.к. Пользователь задал кастомную аватарку
+    Если CUSTOM, то обязательно заполняется avatar_path. Т.е. заливается по кастомному пути
     """
     DEFAULT = "default"
     CUSTOM = "custom"
@@ -28,6 +28,7 @@ class Course(Base):
     __tablename__ = "courses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    teacher_id: Mapped[int] = mapped_column(Integer, ForeignKey("teachers.id"), nullable=False)
 
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     slug: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
@@ -48,5 +49,9 @@ class Course(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="courses", lazy="selectin")
     student_courses: Mapped[List["StudentCourse"]] = relationship("StudentCourse", back_populates="course")
-    teacher_courses: Mapped[List["TeacherCourse"]] = relationship("TeacherCourse", back_populates="course")
+
+    @property
+    def teacher_user_id(self) -> int | None:
+        return self.teacher.user_id if self.teacher else None

@@ -11,3 +11,7 @@ class CourseAvatarNotFound(NotFoundData):
 
 class CourseAlreadyExists(ServiceException):
     pass
+
+
+class CourseAccessDenied(ServiceException):
+    pass

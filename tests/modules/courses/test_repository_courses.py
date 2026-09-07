@@ -9,15 +9,20 @@ from src.modules.courses.repository import CourseRepository
 from src.modules.student_courses.models import StudentCourse
 from src.modules.students.models import Student
 from src.modules.users.models import UserRole
+from src.modules.teachers.models import Teacher
 from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 
 
 @pytest.mark.asyncio
-async def test_add_course_dto(session_db: AsyncSession):
+async def test_add_course_dto(session_db: AsyncSession, create_user_fixture):
     repo = CourseRepository(session=session_db)
+    
+    user1, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
+    teacher1_db = (await session_db.execute(select(Teacher).where(Teacher.user_id == user1.id))).scalar_one()
 
     dto = CreateCourseDTO(
+        teacher_id=teacher1_db.id,
         name="Python Base",
         slug="python-base",
         description="Introductory Python course",
@@ -35,10 +40,14 @@ async def test_add_course_dto(session_db: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_add_course_dict(session_db: AsyncSession):
+async def test_add_course_dict(session_db: AsyncSession, create_user_fixture):
     repo = CourseRepository(session=session_db)
 
+    user1, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
+    teacher1_db = (await session_db.execute(select(Teacher).where(Teacher.user_id == user1.id))).scalar_one()
+
     data = {
+        "teacher_id": teacher1_db.id,
         "name": "Math 101",
         "slug": "math-101",
         "description": "Basic math",

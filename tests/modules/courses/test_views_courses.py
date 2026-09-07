@@ -1,6 +1,7 @@
 import io
 import pytest
 from sqlalchemy import select
+from src.modules.teachers.models import Teacher
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.courses.models import Course, AvatarCoursesType
@@ -68,7 +69,7 @@ async def test_get_courses_as_teacher_filters(
 
     # teacher_id filter (функционал ведущего: при отсутствии привязки возвращает пустой список)
     res_teacher = await client_for_tests.get(
-        "/courses?teacher_id=9999",
+        "/courses?teacher_user_id=9999",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_teacher.status_code == 200
@@ -275,7 +276,9 @@ async def test_update_course_by_teacher(
     session_db: AsyncSession,
 ):
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
-    course = await create_course_fixture(CreateCourseFixtureDTO(name="Old Name", slug="old-slug"))
+    res_t = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
+    teacher_db = res_t.scalar_one()
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="Old Name", slug="old-slug"))
 
     dto = UpdateCourseDTORequest(
         name="Updated Name",
@@ -332,7 +335,9 @@ async def test_update_avatar_by_teacher(
     config_fix,
 ):
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
-    course = await create_course_fixture(CreateCourseFixtureDTO(name="Avatar C", slug="avatar-c"))
+    res_t = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
+    teacher_db = res_t.scalar_one()
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="Avatar C", slug="avatar-c"))
 
     image_bytes = create_image_bytes_fixture("PNG", (400, 400), "green")
     response = await client_for_tests.patch(
@@ -395,8 +400,10 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     3. Создание нового курса с тем же slug успешно выполняется без конфликта уникальности!
     """
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
+    res_t = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
+    teacher_db = res_t.scalar_one()
     orig_slug = "unique-course-slug"
-    course = await create_course_fixture(CreateCourseFixtureDTO(name="To Soft Delete", slug=orig_slug, is_active=True))
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="To Soft Delete", slug=orig_slug, is_active=True))
 
     del_response = await client_for_tests.delete(
         f"/courses/{course.id}",
@@ -442,7 +449,9 @@ async def test_hard_delete_course_by_teacher(
     config_fix,
 ):
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
-    course = await create_course_fixture(CreateCourseFixtureDTO(name="Hard Delete Me", slug="hard-del-course"))
+    res_t = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
+    teacher_db = res_t.scalar_one()
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="Hard Delete Me", slug="hard-del-course"))
 
     # Привяжем аватар
     image_bytes = create_image_bytes_fixture("PNG", (200, 200))

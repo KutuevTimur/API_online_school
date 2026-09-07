@@ -11,7 +11,7 @@ from sqlalchemy import delete
 @pytest_asyncio.fixture(scope='session', autouse=True)
 async def start_test(config_fix, app_fastapi):
     if config_fix.env.mode != "TEST":
-        raise RuntimeError("Используется основные .env настройки!")
+        raise RuntimeError("Используются основные .env настройки!")
 
     await create_database()
 
@@ -21,7 +21,6 @@ async def clearing_db(session_db: AsyncSession):
     """Очищает базу данных"""
     # удаляем обязательно в таком порядке
     await session_db.execute(delete(StudentCourse))
-    await session_db.execute(delete(TeacherCourse))
     await session_db.execute(delete(Course))
     await session_db.execute(delete(RefreshToken))
     await session_db.execute(delete(Teacher))
