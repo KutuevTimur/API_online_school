@@ -20,6 +20,7 @@ async def start_test(config_fix, app_fastapi):
 async def clearing_db(session_db: AsyncSession):
     """Очищает базу данных"""
     # удаляем обязательно в таком порядке
+    await session_db.execute(delete(Lesson))
     await session_db.execute(delete(StudentCourse))
     await session_db.execute(delete(Course))
     await session_db.execute(delete(RefreshToken))

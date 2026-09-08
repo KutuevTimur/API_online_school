@@ -10,6 +10,7 @@ from src.core.database.database import Base
 if TYPE_CHECKING:
     from src.modules.users.models import User
     from src.modules.courses.models import Course
+    from src.modules.lessons.models import Lesson
 
 
 class Teacher(Base):
@@ -30,3 +31,4 @@ class Teacher(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="teacher")
     courses: Mapped[List["Course"]] = relationship("Course", back_populates="teacher")
+    lessons: Mapped[List["Lesson"]] = relationship("Lesson", back_populates="teacher")

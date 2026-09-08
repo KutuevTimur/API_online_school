@@ -11,6 +11,7 @@ from src.core.database.database import Base
 if TYPE_CHECKING:
     from src.modules.student_courses.models import StudentCourse
     from src.modules.teachers.models import Teacher
+    from src.modules.lessons.models import Lesson
 
 
 class AvatarCoursesType(str, enum.Enum):
@@ -51,6 +52,7 @@ class Course(Base):
 
     teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="courses", lazy="selectin")
     student_courses: Mapped[List["StudentCourse"]] = relationship("StudentCourse", back_populates="course")
+    lessons: Mapped[List["Lesson"]] = relationship("Lesson", back_populates="course")
 
     @property
     def teacher_user_id(self) -> int | None:
