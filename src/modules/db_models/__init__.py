@@ -5,6 +5,9 @@ from src.modules.students.models import Student
 from src.modules.courses.models import Course
 from src.modules.student_courses.models import StudentCourse
 from src.modules.lessons.models import Lesson
+from src.modules.lesson_students.models import LessonStudent
+from src.modules.lectures.models import Lecture
+from src.modules.homeworks.models import Homework
 
 __all__ = [
     "User",
@@ -14,4 +17,7 @@ __all__ = [
     "Course",
     "StudentCourse",
     "Lesson",
+    "LessonStudent",
+    "Lecture",
+    "Homework",
 ]

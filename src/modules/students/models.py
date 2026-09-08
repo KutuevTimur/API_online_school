@@ -1,10 +1,16 @@
 from datetime import datetime
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import String, func, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
 from src.core.database.database import Base
+
+if TYPE_CHECKING:
+    from src.modules.users.models import User
+    from src.modules.student_courses.models import StudentCourse
+    from src.modules.lesson_students.models import LessonStudent
 
 
 class Student(Base):
@@ -24,3 +30,4 @@ class Student(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="student")
     student_courses: Mapped[List["StudentCourse"]] = relationship("StudentCourse", back_populates="student")
+    lesson_students: Mapped[List["LessonStudent"]] = relationship("LessonStudent", back_populates="student")

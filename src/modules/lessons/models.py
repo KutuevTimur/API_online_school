@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Integer, ForeignKey, String, Text, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import List
 
 from src.core.database.database import Base
 
@@ -10,6 +11,7 @@ from src.core.database.database import Base
 if TYPE_CHECKING:
     from src.modules.courses.models import Course
     from src.modules.teachers.models import Teacher
+    from src.modules.lesson_students.models import LessonStudent
 
 
 class Lesson(Base):
@@ -31,6 +33,8 @@ class Lesson(Base):
 
     teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="lessons", lazy="selectin")
     course: Mapped["Course"] = relationship("Course", back_populates="lessons")
+    
+    lesson_students: Mapped[List["LessonStudent"]] = relationship("LessonStudent", back_populates="lesson")
 
     @property
     def teacher_user_id(self) -> int | None:
