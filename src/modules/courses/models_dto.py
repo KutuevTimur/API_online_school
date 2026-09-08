@@ -9,6 +9,20 @@ from src.modules.courses.models import AvatarCoursesType
 
 class CoursesDTO(ORMDTO):
     id: int
+    teacher_id: int
+    teacher_user_id: int
+    name: str
+    slug: str
+    description: Optional[str] = None
+    avatar_type: AvatarCoursesType
+    avatar_path: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class CoursesResponseDTO(ORMDTO):
+    id: int
     teacher_user_id: int
     name: str
     slug: str

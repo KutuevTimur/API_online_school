@@ -9,7 +9,7 @@ from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.courses.depends import get_courses_service
 from src.modules.courses.exception import CourseNotFound
 from src.modules.courses.models_dto import (
-    CoursesDTO,
+    CoursesResponseDTO,
     CreateCourseDTORequest,
     UpdateCourseDTORequest,
 )
@@ -22,15 +22,15 @@ router = APIRouter(tags=["Course"])
 
 @router.get(
     "/courses",
-    response_model=List[CoursesDTO],
+    response_model=List[CoursesResponseDTO],
     status_code=status.HTTP_200_OK,
 )
 async def get_courses(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     is_active: Optional[bool] = Query(None),
-    teacher_user_id: Optional[int] = Query(None, description="Фильтр курсов по преподавателю"),
-    my_courses: Optional[bool] = Query(None, description="Только курсы текущего преподавателя"),
+    teacher_user_id: Optional[int] = Query(None, description="Фильтр курсов по создателю"),
+    my_courses: Optional[bool] = Query(None, description="Поиск своих только курсов"),
     current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
@@ -71,7 +71,7 @@ async def get_courses(
 
 @router.get(
     "/courses/{course_id}",
-    response_model=CoursesDTO,
+    response_model=CoursesResponseDTO,
     status_code=status.HTTP_200_OK,
 )
 async def get_course_by_id(
@@ -108,7 +108,7 @@ async def get_course_by_id(
 
 @router.post(
     "/courses",
-    response_model=CoursesDTO,
+    response_model=CoursesResponseDTO,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_course(
@@ -122,7 +122,7 @@ async def create_course(
 
 @router.patch(
     "/courses/{course_id}",
-    response_model=CoursesDTO,
+    response_model=CoursesResponseDTO,
     status_code=status.HTTP_200_OK,
 )
 async def update_course(
@@ -166,12 +166,12 @@ async def update_avatar(
 
 @router.delete(
     "/courses/{course_id}",
-    response_model=CoursesDTO,
+    response_model=CoursesResponseDTO,
     status_code=status.HTTP_200_OK,
 )
 async def delete_course(
     course_id: int,
-    hard: bool = Query(False, description="Физическое удаление вместо мягкого"),
+    hard: bool = Query(False, description="Полное удаление вместо мягкого"),
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
