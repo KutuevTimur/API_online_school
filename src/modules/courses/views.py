@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Response, Query
 from starlette import status
 
 from src.modules.auth.depends import get_current_user
+from src.modules.base.orm_dto import PaginationResponseDTO
 from src.modules.check_permission import get_current_teacher_user
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.courses.depends import get_courses_service
@@ -22,15 +23,15 @@ router = APIRouter(tags=["Course"])
 
 @router.get(
     "/courses",
-    response_model=List[CoursesResponseDTO],
+    response_model=PaginationResponseDTO[CoursesResponseDTO],
     status_code=status.HTTP_200_OK,
 )
 async def get_courses(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     is_active: Optional[bool] = Query(None),
-    teacher_user_id: Optional[int] = Query(None, description="Фильтр курсов по создателю"),
-    my_courses: Optional[bool] = Query(None, description="Поиск своих только курсов"),
+    teacher_user_id: Optional[int] = Query(None, description="Фильтр по создателю курса"),
+    my_courses: Optional[bool] = Query(None, description="Поиск только своих курсов"),
     current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
@@ -39,31 +40,43 @@ async def get_courses(
         if teacher_user_id:
             teacher = await courses_service.teacher_repo.get_teacher_by_user_id(teacher_user_id)
             if not teacher:
-                return []
+                return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
         elif my_courses:
             teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
             if not teacher:
-                return []
+                return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
 
         filter_teacher_id = teacher.id if teacher else None
 
-        return await courses_service.get_all_courses(
+        courses, total = await courses_service.get_all_courses(
             limit=limit,
             offset=offset,
             is_active=is_active,
             teacher_id=filter_teacher_id,
         )
+        return PaginationResponseDTO(
+            items=courses,
+            total=total,
+            limit=limit,
+            offset=offset
+        )
 
     if current_user.role == UserRole.STUDENT:
         student = await courses_service.student_repo.get_student_by_user_id(current_user.id)
         if not student:
-            return []
+            return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
 
-        return await courses_service.get_courses(
+        courses, total = await courses_service.get_courses(
             student_id=student.id,
             is_active=True,
             limit=limit,
             offset=offset,
+        )
+        return PaginationResponseDTO(
+            items=courses,
+            total=total,
+            limit=limit,
+            offset=offset
         )
 
     raise PermissionErrorService()

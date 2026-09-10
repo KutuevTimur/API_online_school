@@ -120,18 +120,18 @@ async def test_get_all_courses(
     c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 2", slug="c-2", is_active=False))
     c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 3", slug="c-3", is_active=True))
 
-    all_courses = await repo.get_all_courses()
+    all_courses, _ = await repo.get_all_courses()
     assert len(all_courses) == 3
 
-    active_courses = await repo.get_all_courses(is_active=True)
+    active_courses, _ = await repo.get_all_courses(is_active=True)
     assert len(active_courses) == 2
     assert all(c.is_active for c in active_courses)
 
-    inactive_courses = await repo.get_all_courses(is_active=False)
+    inactive_courses, _ = await repo.get_all_courses(is_active=False)
     assert len(inactive_courses) == 1
     assert inactive_courses[0].slug == "c-2"
 
-    paginated = await repo.get_all_courses(limit=2, offset=1)
+    paginated, _ = await repo.get_all_courses(limit=2, offset=1)
     assert len(paginated) == 2
 
 
@@ -165,18 +165,18 @@ async def test_get_courses_by_student_id(
     await session_db.commit()
 
     # Получаем все курсы студента 1
-    student1_courses = await repo.get_courses_by_student_id(student_id=student1_db.id)
+    student1_courses, _ = await repo.get_courses_by_student_id(student_id=student1_db.id)
     assert len(student1_courses) == 2
     slugs = {c.slug for c in student1_courses}
     assert slugs == {"course-a", "course-b"}
 
     # Получаем только активные курсы студента 1
-    student1_active = await repo.get_courses_by_student_id(student_id=student1_db.id, only_active=True)
+    student1_active, _ = await repo.get_courses_by_student_id(student_id=student1_db.id, only_active=True)
     assert len(student1_active) == 1
     assert student1_active[0].slug == "course-a"
 
     # Студент 2 видит только свои курсы
-    student2_courses = await repo.get_courses_by_student_id(student_id=student2_db.id)
+    student2_courses, _ = await repo.get_courses_by_student_id(student_id=student2_db.id)
     assert len(student2_courses) == 1
     assert student2_courses[0].slug == "course-c"
 

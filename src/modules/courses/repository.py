@@ -1,6 +1,6 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.database_model import BaseRepository
@@ -21,15 +21,15 @@ class CourseRepository(BaseRepository):
         self,
         data: Union[CreateCourseDTO, dict],
     ) -> Course:
-        """Добавление нового курса в сессию"""
+        """Добавляет новый курс в базу"""
         return self.add(data)
 
     async def get_course_by_id(self, course_id: int) -> Course | None:
-        """Получение курса по ID"""
+        """Находит курс по ID"""
         return await self.get_by_id(Course, course_id)
 
     async def get_course_by_slug(self, slug: str) -> Course | None:
-        """Получение курса по уникальному slug"""
+        """Находит курс по уникальному slug"""
         result_db = await self.session.execute(
             select(Course).where(Course.slug == slug)
         )
@@ -41,18 +41,23 @@ class CourseRepository(BaseRepository):
         offset: int = 0,
         is_active: Optional[bool] = None,
         teacher_id: Optional[int] = None,
-    ) -> List[Course]:
-        """Получение списка всех курсов с пагинацией и опциональным фильтром активности и учителя"""
+    ) -> Tuple[List[Course], int]:
+        """Находит все курсы с учетом пагинации и фильтров и возвращает кортеж (курсы, общее_кол-во)"""
         stmt = select(Course)
         if is_active is not None:
             stmt = stmt.where(Course.is_active == is_active)
         if teacher_id is not None:
             stmt = stmt.where(Course.teacher_id == teacher_id)
 
-        stmt = stmt.limit(limit).offset(offset)
+        # Вычисляем общее количество
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total_count = (await self.session.execute(count_stmt)).scalar() or 0
 
+        # Получаем данные с учетом лимита
+        stmt = stmt.limit(limit).offset(offset)
         result_db = await self.session.execute(stmt)
-        return list(result_db.scalars().all())
+        courses = list(result_db.scalars().all())
+        return courses, total_count
 
     async def get_courses_by_student_id(
         self,
@@ -60,8 +65,8 @@ class CourseRepository(BaseRepository):
         only_active: Optional[bool] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Course]:
-        """Получение списка курсов, к которым привязан конкретный студент"""
+    ) -> Tuple[List[Course], int]:
+        """Находит все курсы, к которым есть доступ у студента"""
         stmt = (
             select(Course)
             .join(StudentCourse, StudentCourse.course_id == Course.id)
@@ -72,17 +77,23 @@ class CourseRepository(BaseRepository):
                 StudentCourse.is_active == only_active,
                 Course.is_active == only_active,
             )
-        stmt = stmt.distinct().limit(limit).offset(offset)
+        stmt = stmt.distinct()
 
+        # Вычисляем общее количество
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total_count = (await self.session.execute(count_stmt)).scalar() or 0
+
+        stmt = stmt.limit(limit).offset(offset)
         result_db = await self.session.execute(stmt)
-        return list(result_db.scalars().all())
+        courses = list(result_db.scalars().all())
+        return courses, total_count
 
     async def update_course(
         self,
         course_id: int,
         values: dict,
     ) -> Course | None:
-        """Обновление данных курса по ID"""
+        """Обновляет данные курса по ID"""
         result_db = await self.session.execute(
             update(Course)
             .where(Course.id == course_id)
@@ -92,7 +103,7 @@ class CourseRepository(BaseRepository):
         return result_db.scalar_one_or_none()
 
     async def delete_course(self, course_id: int) -> Course | None:
-        """Удаление курса по ID"""
+        """Удаляет курс по ID"""
         result_db = await self.session.execute(
             delete(Course)
             .where(Course.id == course_id)

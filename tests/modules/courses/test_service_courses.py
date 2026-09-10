@@ -73,14 +73,14 @@ async def test_get_all_courses_pagination(
             CreateCourseFixtureDTO(name=f"Course {i}", slug=f"course-{i}", is_active=(i % 2 == 0))
         )
 
-    all_p1 = await courses_service_fixture.get_all_courses(limit=2, offset=0)
+    all_p1, _ = await courses_service_fixture.get_all_courses(limit=2, offset=0)
     assert len(all_p1) == 2
 
-    all_p2 = await courses_service_fixture.get_all_courses(limit=2, offset=2)
+    all_p2, _ = await courses_service_fixture.get_all_courses(limit=2, offset=2)
     assert len(all_p2) == 2
     assert all_p1[0].id != all_p2[0].id
 
-    active_courses = await courses_service_fixture.get_all_courses(is_active=True)
+    active_courses, _ = await courses_service_fixture.get_all_courses(is_active=True)
     assert len(active_courses) == 3
 
 

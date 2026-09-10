@@ -35,8 +35,8 @@ async def test_get_courses_as_teacher(
     )
     assert response.status_code == 200
     data = response.json()
-    assert len(data) >= 2
-    slugs = [c["slug"] for c in data]
+    assert len(data["items"]) >= 2
+    slugs = [c["slug"] for c in data["items"]]
     assert c1.slug in slugs
     assert c2.slug in slugs
 
@@ -65,7 +65,7 @@ async def test_get_courses_as_teacher_filters(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_active.status_code == 200
-    assert all(c["is_active"] is True for c in res_active.json())
+    assert all(c["is_active"] is True for c in res_active.json()["items"])
 
     # teacher_id filter (функционал ведущего: при отсутствии привязки возвращает пустой список)
     res_teacher = await client_for_tests.get(
@@ -73,7 +73,7 @@ async def test_get_courses_as_teacher_filters(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_teacher.status_code == 200
-    assert res_teacher.json() == []
+    assert res_teacher.json()["items"] == []
 
 
 @pytest.mark.asyncio
@@ -104,7 +104,7 @@ async def test_get_courses_as_student_only_enrolled(
     )
     assert response.status_code == 200
     courses = response.json()
-    slugs = {c["slug"] for c in courses}
+    slugs = {c["slug"] for c in courses["items"]}
     assert c_enrolled.slug in slugs
     assert c_not_enrolled.slug not in slugs
     # Неактивный курс студенту не возвращается

@@ -1,7 +1,7 @@
 import shutil
 import uuid
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,8 +54,8 @@ class CoursesService:
 
     async def _create_avatar(self, course_id: int, avatar: UploadFile) -> str:
         """
-        Преобразовывает в формат .webp и сжимает фото до 512x512.
-        :return: Путь к аватарке
+        Конвертирует в формат .webp и сжимает до 512x512.
+        :return: Путь к файлу
         """
         temp_webp: Path | None = None
         result_file_path: Path | None = None
@@ -78,7 +78,7 @@ class CoursesService:
         return str(result_file_path)
 
     def delete_avatar(self, course_id: int) -> None:
-        """Удаление аватарки курса на диске"""
+        """Удаляет аватар курса"""
         avatar_path = self.path_builder.get_avatar_course(course_id)
         if avatar_path.is_file():
             shutil.rmtree(avatar_path.parent)
@@ -91,7 +91,7 @@ class CoursesService:
         data: CreateCourseDTORequest | CreateCourseDTO,
     ) -> CoursesDTO:
         """
-        Создание нового курса. Привязанного к конкретному учителю.
+        Создает курс
         """
         existing = await self.course_repo.get_course_by_slug(data.slug)
         if existing:
@@ -112,17 +112,17 @@ class CoursesService:
         offset: int = 0,
         is_active: Optional[bool] = None,
         teacher_id: Optional[int] = None,
-    ) -> List[CoursesDTO]:
+    ) -> Tuple[List[CoursesDTO], int]:
         """
-        Получение всех курсов с пагинацией (limit, offset) и опциональным фильтром активности и учителя.
+        Возвращает кортеж (список курсов, общее количество).
         """
-        courses = await self.course_repo.get_all_courses(
+        courses, total = await self.course_repo.get_all_courses(
             limit=limit,
             offset=offset,
             is_active=is_active,
             teacher_id=teacher_id,
         )
-        return [CoursesDTO.model_validate(course) for course in courses]
+        return [CoursesDTO.model_validate(course) for course in courses], total
 
     async def get_courses(
         self,
@@ -130,18 +130,18 @@ class CoursesService:
         is_active: Optional[bool] = True,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[CoursesDTO]:
+    ) -> Tuple[List[CoursesDTO], int]:
         """
-        Получение курсов (с фильтрацией по студенту или всех) с пагинацией (limit, offset).
+        Возвращает кортеж (список курсов, общее количество) для студента или всех.
         """
         if student_id is not None:
-            courses = await self.course_repo.get_courses_by_student_id(
+            courses, total = await self.course_repo.get_courses_by_student_id(
                 student_id=student_id,
                 only_active=is_active,
                 limit=limit,
                 offset=offset,
             )
-            return [CoursesDTO.model_validate(course) for course in courses]
+            return [CoursesDTO.model_validate(course) for course in courses], total
 
         return await self.get_all_courses(
             limit=limit,
@@ -154,7 +154,7 @@ class CoursesService:
         student_id: int,
         course_id: int,
     ) -> bool:
-        """Проверка доступа студента к курсу через таблицу student_courses."""
+        """Проверяет доступ."""
         return await self.student_courses_repo.check_student_has_access_to_course(
             student_id=student_id,
             course_id=course_id,
@@ -164,7 +164,7 @@ class CoursesService:
         self,
         course_id: int,
     ) -> CoursesDTO | None:
-        """Получение конкретного курса по ID."""
+        """Находит курс по id"""
         course = await self.course_repo.get_course_by_id(course_id)
         return CoursesDTO.model_validate(course) if course else None
 
@@ -172,7 +172,7 @@ class CoursesService:
         self,
         slug: str,
     ) -> CoursesDTO | None:
-        """Получение конкретного курса по slug."""
+        """Находит курс по slug"""
         course = await self.course_repo.get_course_by_slug(slug)
         return CoursesDTO.model_validate(course) if course else None
 
@@ -182,7 +182,7 @@ class CoursesService:
         teacher_id: int,
         data: UpdateCourseDTO | UpdateCourseDTORequest,
     ) -> CoursesDTO:
-        """Обновление данных курса по ID."""
+        """Обновляет курс"""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
@@ -224,7 +224,7 @@ class CoursesService:
         teacher_id: int,
         avatar: UploadFile,
     ) -> CoursesDTO:
-        """Обновление аватарки курса."""
+        """Обновляет аватар"""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
@@ -258,7 +258,7 @@ class CoursesService:
         course_id: int,
         teacher_id: int,
     ) -> CoursesDTO:
-        """Мягкое удаление курса."""
+        """Мягкое удаление"""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course or not course.is_active:
             raise CourseNotFound()
@@ -288,7 +288,7 @@ class CoursesService:
         course_id: int,
         teacher_id: int,
     ) -> CoursesDTO:
-        """Физическое удаление курса по ID."""
+        """Полное удаление"""
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
