@@ -13,12 +13,11 @@ class LessonStudentDTO(ORMDTO):
 class LessonStudentResponseDTO(ORMDTO):
     id: int
     lesson_id: int
-    # Typically frontend uses student_user_id, but exposing student_id here until properties are requested.
-    student_id: int
+    student_user_id: int
     created_at: datetime
 
 
 class CreateLessonStudentRequestDTO(BaseModel):
     lesson_id: int
-    # In requests from frontend, they likely send student_user_id, but the backend converts it.
-    student_id: int
+    student_user_id: int
+

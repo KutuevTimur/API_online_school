@@ -28,7 +28,11 @@ class LessonStudent(Base):
 
     # Relationships
     lesson: Mapped["Lesson"] = relationship("Lesson", back_populates="lesson_students")
-    student: Mapped["Student"] = relationship("Student", back_populates="lesson_students")
+    student: Mapped["Student"] = relationship("Student", back_populates="lesson_students", lazy="selectin")
 
     lecture: Mapped[Optional["Lecture"]] = relationship("Lecture", back_populates="lesson_student", uselist=False)
     homework: Mapped[Optional["Homework"]] = relationship("Homework", back_populates="lesson_student", uselist=False)
+
+    @property
+    def student_user_id(self) -> int | None:
+        return self.student.user_id if self.student else None
