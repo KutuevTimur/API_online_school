@@ -6,6 +6,7 @@ from src.modules.users.exception import InvalidRole
 from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
 from src.modules.check_permission.exception import PermissionErrorService
+from src.modules.lesson_students.exception import LessonStudentAlreadyExists
 from src.modules.handlers_files.exception import (
     InvalidImageFormat,
     ImageConversionError,
@@ -14,6 +15,10 @@ from src.modules.handlers_files.exception import (
 
 
 def register_exception_handlers(app: FastAPI):
+
+    @app.exception_handler(LessonStudentAlreadyExists)
+    async def lesson_student_already_exists_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc) or "Student is already in this lesson"})
 
     @app.exception_handler(ServiceException)
     async def service_handler(request, exc):
