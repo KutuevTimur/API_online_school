@@ -7,10 +7,13 @@ from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.lesson_students.exception import LessonStudentAlreadyExists
+from src.modules.lectures.exception import LectureAlreadyExists
 from src.modules.handlers_files.exception import (
     InvalidImageFormat,
     ImageConversionError,
     ImageCompressionError,
+    InvalidDocumentFormat,
+    DocumentConversionError,
 )
 
 
@@ -19,6 +22,18 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(LessonStudentAlreadyExists)
     async def lesson_student_already_exists_handler(request, exc):
         return JSONResponse(status_code=409, content={"detail": str(exc) or "Student is already in this lesson"})
+
+    @app.exception_handler(LectureAlreadyExists)
+    async def lecture_already_exists_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc) or "Lecture already exists"})
+
+    @app.exception_handler(InvalidDocumentFormat)
+    async def invalid_document_format_handler(request, exc):
+        return JSONResponse(status_code=400, content={"detail": str(exc) or "Invalid document format"})
+
+    @app.exception_handler(DocumentConversionError)
+    async def document_conversion_error_handler(request, exc):
+        return JSONResponse(status_code=500, content={"detail": str(exc) or "Document conversion error"})
 
     @app.exception_handler(ServiceException)
     async def service_handler(request, exc):

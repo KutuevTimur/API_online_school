@@ -144,12 +144,12 @@ class TokensConfig(BaseModel):
 
 
 class AllowedExtensions(BaseModel):
-    for_convert_image: List[str] = ["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif"]
+    for_convert_image: List[str] = ["webp", "jpg", ".jpeg", "gif", ".png", "heic", "heif"]
     for_convert_pdf: List[str] = ["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif", "doc", "docx", "odt", "txt"]
 
     @classmethod
     def build(cls) -> "AllowedExtensions":
         return cls(
             for_convert_image=["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif"],
-            for_convert_pdf=["jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif", "doc", "docx", "odt", "txt"],
+            for_convert_pdf=["pdf", "jpg", ".jpeg", "gif", ".png", "webp", "heic", "heif", "doc", "docx", "odt", "txt"],
         )
