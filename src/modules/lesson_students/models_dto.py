@@ -21,3 +21,6 @@ class CreateLessonStudentRequestDTO(BaseModel):
     lesson_id: int
     student_user_id: int
 
+
+class AddStudentToLessonRequestDTO(BaseModel):
+    student_user_id: int
