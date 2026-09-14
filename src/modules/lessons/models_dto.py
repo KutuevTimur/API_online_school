@@ -36,26 +36,34 @@ class LessonResponseDTO(ORMDTO):
 
     created_at: datetime
     updated_at: datetime
+    
+    has_lecture: bool = False
+    has_homework: bool = False
 
 
-class CreateLessonDTO(BaseModel):
-    id: int
+class CreateLessonRequestDTO(BaseModel):
     course_id: int
-    teacher_id: int
-
     title: str
     topic: Optional[str] = None
     description: Optional[str] = None
-
     scheduled_at: datetime
     duration_minutes: Optional[int] = None
 
 
-class UpdateStudentDTO(BaseModel):
+class CreateLessonDTO(BaseModel):
+    course_id: int
+    teacher_id: int
+    title: str
+    topic: Optional[str] = None
+    description: Optional[str] = None
+    scheduled_at: datetime
+    duration_minutes: Optional[int] = None
+
+
+class UpdateLessonRequestDTO(BaseModel):
     title: Optional[str] = None
     topic: Optional[str] = None
     description: Optional[str] = None
-
     scheduled_at: Optional[datetime] = None
     duration_minutes: Optional[int] = None
 

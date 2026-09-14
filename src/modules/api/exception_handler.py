@@ -9,6 +9,7 @@ from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.lesson_students.exception import LessonStudentAlreadyExists
 from src.modules.lectures.exception import LectureAlreadyExists
 from src.modules.homeworks.exception import HomeworkNotFound
+from src.modules.lessons.exception import LessonNotFound
 from src.modules.handlers_files.exception import (
     InvalidImageFormat,
     ImageConversionError,
@@ -31,6 +32,10 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(HomeworkNotFound)
     async def homework_not_found_handler(request, exc):
         return JSONResponse(status_code=404, content={"detail": str(exc) or "Homework not found"})
+
+    @app.exception_handler(LessonNotFound)
+    async def lesson_not_found_handler(request, exc):
+        return JSONResponse(status_code=404, content={"detail": str(exc) or "Lesson not found"})
 
     @app.exception_handler(InvalidDocumentFormat)
     async def invalid_document_format_handler(request, exc):
