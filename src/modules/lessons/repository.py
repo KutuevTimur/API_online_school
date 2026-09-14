@@ -22,12 +22,21 @@ class LessonsRepository(BaseRepository):
         self,
         data: CreateLessonDTO,
     ) -> Lesson:
-        """Добавляет запись занятия"""
+        """Добавляет новое занятие"""
         return self.add(data)
 
     async def get_lesson_by_id(self, lesson_id: int) -> Lesson | None:
-        """Находит занятие по ID"""
-        return await self.get_by_id(Lesson, lesson_id)
+        """Получает урок по ID (с жадной загрузкой связей для формирования флагов)"""
+        stmt = (
+            select(Lesson)
+            .where(Lesson.id == lesson_id)
+            .options(
+                selectinload(Lesson.lesson_students).selectinload(LessonStudent.lectures),
+                selectinload(Lesson.lesson_students).selectinload(LessonStudent.homeworks)
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_lessons(
         self,
@@ -39,68 +48,59 @@ class LessonsRepository(BaseRepository):
         teacher_id: Optional[int] = None,
         student_id: Optional[int] = None,
     ) -> Tuple[List[Lesson], int]:
-        """Получает список занятий с фильтрацией, пагинацией и сортировкой"""
+        """Получает список уроков с фильтрацией, пагинацией и сортировкой"""
         stmt = select(Lesson)
         count_stmt = select(func.count()).select_from(Lesson)
 
-        # Фильтры
-        conditions = []
+        # Base filters
         if from_date:
-            conditions.append(Lesson.scheduled_at >= from_date)
+            stmt = stmt.where(Lesson.scheduled_at >= from_date)
+            count_stmt = count_stmt.where(Lesson.scheduled_at >= from_date)
         if to_date:
-            conditions.append(Lesson.scheduled_at <= to_date)
+            stmt = stmt.where(Lesson.scheduled_at <= to_date)
+            count_stmt = count_stmt.where(Lesson.scheduled_at <= to_date)
         if course_id:
-            conditions.append(Lesson.course_id == course_id)
+            stmt = stmt.where(Lesson.course_id == course_id)
+            count_stmt = count_stmt.where(Lesson.course_id == course_id)
         if teacher_id:
-            conditions.append(Lesson.teacher_id == teacher_id)
+            stmt = stmt.where(Lesson.teacher_id == teacher_id)
+            count_stmt = count_stmt.where(Lesson.teacher_id == teacher_id)
+            
         if student_id:
-            # Если это студент, он должен быть привязан к занятию через lesson_students
-            stmt = stmt.join(LessonStudent, Lesson.id == LessonStudent.lesson_id)
-            count_stmt = count_stmt.join(LessonStudent, Lesson.id == LessonStudent.lesson_id)
-            conditions.append(LessonStudent.student_id == student_id)
+            stmt = stmt.join(Lesson.lesson_students).where(LessonStudent.student_id == student_id)
+            count_stmt = count_stmt.join(Lesson.lesson_students).where(LessonStudent.student_id == student_id)
 
-        if conditions:
-            stmt = stmt.where(*conditions)
-            count_stmt = count_stmt.where(*conditions)
-
-        # Подгружаем зависимости для определения наличия лекций/дз
+        # Pagination & Ordering
+        stmt = stmt.order_by(Lesson.scheduled_at.desc())
+        stmt = stmt.limit(limit).offset(offset)
+        
         stmt = stmt.options(
             selectinload(Lesson.lesson_students).selectinload(LessonStudent.lectures),
             selectinload(Lesson.lesson_students).selectinload(LessonStudent.homeworks)
         )
 
-        # Сортировка по дате по убыванию, затем лимит и оффсет
-        stmt = stmt.order_by(Lesson.scheduled_at.desc()).limit(limit).offset(offset)
+        lessons = await self.session.scalars(stmt)
+        total = await self.session.scalar(count_stmt)
 
-        # Выполняем подсчет общего количества
-        total_count = await self.session.execute(count_stmt)
-        total_count = total_count.scalar() or 0
+        return list(lessons.all()), total or 0
 
-        # Получаем сами занятия
-        result = await self.session.execute(stmt)
-        items = list(result.scalars().all())
-
-        return items, total_count
-
-    async def update_lesson(
-        self,
-        lesson_id: int,
-        values: dict,
-    ) -> Lesson | None:
-        """Обновляет значения занятия по ID"""
-        result_db = await self.session.execute(
+    async def update_lesson(self, lesson_id: int, values: dict) -> Lesson:
+        """Обновляет поля у урока"""
+        stmt = (
             update(Lesson)
             .where(Lesson.id == lesson_id)
             .values(**values)
             .returning(Lesson)
         )
-        return result_db.scalar_one_or_none()
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
 
-    async def delete_lesson(self, lesson_id: int) -> Lesson | None:
-        """Удаляет занятие по ID"""
-        result_db = await self.session.execute(
+    async def delete_lesson(self, lesson_id: int) -> Lesson:
+        """Удаляет урок, возвращая удаленный объект"""
+        stmt = (
             delete(Lesson)
             .where(Lesson.id == lesson_id)
             .returning(Lesson)
         )
-        return result_db.scalar_one_or_none()
+        result = await self.session.execute(stmt)
+        return result.scalar_one()

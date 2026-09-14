@@ -21,6 +21,7 @@ from tests.modules.handlers_files.fixtures import (
     create_upload_file_fixture,
     create_image_bytes_fixture,
 )
+from tests.modules.lessons.fixtures.fixtures import create_lesson_fixture
 
 __all__ = [
     "lifespan_for_tests",
@@ -44,6 +45,7 @@ __all__ = [
     "create_user_fixture",
     "create_refresh_token_fixture",
     "create_course_fixture",
+    "create_lesson_fixture",
 
     # Хендлеры файлы
     "create_upload_file_fixture",

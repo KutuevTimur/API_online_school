@@ -1,9 +1,9 @@
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from src.modules.base.database_model import BaseRepository
 from src.modules.lesson_students.models import LessonStudent
-from src.modules.lesson_students.models_dto import CreateLessonStudentRequestDTO
 
 
 class LessonStudentsRepository(BaseRepository):
@@ -16,9 +16,9 @@ class LessonStudentsRepository(BaseRepository):
 
     async def add_student_to_lesson(
         self,
-        data: CreateLessonStudentRequestDTO,
+        data: BaseModel,
     ) -> LessonStudent:
-        """Добавляет студента на занятие"""
+        """Добавляет студента на урок"""
         return self.add(data)
 
     async def get_by_lesson_and_student(
@@ -26,30 +26,26 @@ class LessonStudentsRepository(BaseRepository):
         lesson_id: int,
         student_id: int,
     ) -> LessonStudent | None:
-        """Получает запись привязки по lesson_id и student_id"""
+        """Получает запись о прикреплении, если она существует"""
         stmt = select(LessonStudent).where(
             LessonStudent.lesson_id == lesson_id,
-            LessonStudent.student_id == student_id
+            LessonStudent.student_id == student_id,
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_by_id_lesson_students(self, lesson_student_id: int) -> LessonStudent | None:
-        return await super().get_by_id(LessonStudent, lesson_student_id)
-
-    async def delete_student_from_lesson(
+    async def remove_student_from_lesson(
         self,
         lesson_id: int,
         student_id: int,
-    ) -> LessonStudent | None:
-        """Удаляет студента с занятия"""
-        stmt = (
-            delete(LessonStudent)
-            .where(
-                LessonStudent.lesson_id == lesson_id,
-                LessonStudent.student_id == student_id
-            )
-            .returning(LessonStudent)
+    ) -> LessonStudent:
+        """Удаляет студента с урока (возвращает удаленную запись)"""
+        stmt = select(LessonStudent).where(
+            LessonStudent.lesson_id == lesson_id,
+            LessonStudent.student_id == student_id,
         )
         result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        lesson_student = result.scalar_one()
+
+        await self.session.delete(lesson_student)
+        return lesson_student

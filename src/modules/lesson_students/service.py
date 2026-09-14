@@ -4,7 +4,7 @@ from asyncpg.exceptions import UniqueViolationError
 
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.lesson_students.exception import LessonStudentAlreadyExists, LessonStudentNotFound
-from src.modules.lesson_students.models_dto import CreateLessonStudentRequestDTO, LessonStudentResponseDTO
+from src.modules.lesson_students.models_dto import CreateLessonStudentRequestDTO, LessonStudentResponseDTO, CreateLessonStudentDTO
 from src.modules.lesson_students.repository import LessonStudentsRepository
 from src.modules.lessons.exception import LessonNotFound
 from src.modules.lessons.repository import LessonsRepository
@@ -32,7 +32,7 @@ class LessonStudentsService:
         teacher_user_id: int,
         data: CreateLessonStudentRequestDTO,
     ) -> LessonStudentResponseDTO:
-        # Проверяем, что урок принадлежит учителю
+        # Проверяем, что текущий юзер-учитель существует
         teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
         if not teacher:
             raise PermissionErrorService("Teacher user not found")
@@ -49,7 +49,7 @@ class LessonStudentsService:
         if not student:
             raise PermissionErrorService("Student user not found")
 
-        # Проверяем уникальность
+        # Проверяем существование
         existing = await self.lesson_students_repo.get_by_lesson_and_student(
             lesson_id=data.lesson_id, 
             student_id=student.id
@@ -58,8 +58,12 @@ class LessonStudentsService:
             raise LessonStudentAlreadyExists()
 
         try:
+            create_dto = CreateLessonStudentDTO(
+                lesson_id=data.lesson_id,
+                student_id=student.id
+            )
             lesson_student = await self.lesson_students_repo.add_student_to_lesson(
-                data=data,
+                data=create_dto,
             )
             await self.session_db.commit()
             await self.session_db.refresh(lesson_student)
@@ -76,29 +80,33 @@ class LessonStudentsService:
         lesson_id: int,
         student_user_id: int,
     ) -> LessonStudentResponseDTO:
+        # Проверяем учителя
         teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
         if not teacher:
             raise PermissionErrorService("Teacher user not found")
 
-        # Проверяем, что урок принадлежит учителю
         lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
         if not lesson:
             raise LessonNotFound()
-        
+
         if lesson.teacher_id != teacher.id:
             raise PermissionErrorService("You do not have permission to modify this lesson")
 
-        # Находим студента
         student = await self.student_repo.get_student_by_user_id(student_user_id)
         if not student:
-            raise LessonStudentNotFound("Student user not found")
+            raise PermissionErrorService("Student user not found")
 
-        deleted = await self.lesson_students_repo.delete_student_from_lesson(
+        existing = await self.lesson_students_repo.get_by_lesson_and_student(
             lesson_id=lesson_id, 
             student_id=student.id
         )
-        if not deleted:
+        if not existing:
             raise LessonStudentNotFound()
 
+        deleted_ls = await self.lesson_students_repo.remove_student_from_lesson(
+            lesson_id=lesson_id,
+            student_id=student.id,
+        )
         await self.session_db.commit()
-        return LessonStudentResponseDTO.model_validate(deleted)
+
+        return LessonStudentResponseDTO.model_validate(deleted_ls)
