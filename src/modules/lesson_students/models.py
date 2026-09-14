@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 
 from sqlalchemy import Integer, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -30,7 +30,7 @@ class LessonStudent(Base):
     lesson: Mapped["Lesson"] = relationship("Lesson", back_populates="lesson_students")
     student: Mapped["Student"] = relationship("Student", back_populates="lesson_students", lazy="selectin")
 
-    lecture: Mapped[Optional["Lecture"]] = relationship("Lecture", back_populates="lesson_student", uselist=False)
+    lectures: Mapped[List["Lecture"]] = relationship("Lecture", back_populates="lesson_student")
     homework: Mapped[Optional["Homework"]] = relationship("Homework", back_populates="lesson_student", uselist=False)
 
     @property
