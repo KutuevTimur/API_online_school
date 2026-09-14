@@ -31,7 +31,7 @@ class LessonStudent(Base):
     student: Mapped["Student"] = relationship("Student", back_populates="lesson_students", lazy="selectin")
 
     lectures: Mapped[List["Lecture"]] = relationship("Lecture", back_populates="lesson_student")
-    homework: Mapped[Optional["Homework"]] = relationship("Homework", back_populates="lesson_student", uselist=False)
+    homeworks: Mapped[List["Homework"]] = relationship("Homework", back_populates="lesson_student")
 
     @property
     def student_user_id(self) -> int | None:

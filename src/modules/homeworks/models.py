@@ -39,5 +39,5 @@ class Homework(Base):
     # Relationships
     lesson_student: Mapped["LessonStudent"] = relationship(
         "LessonStudent",
-        back_populates="homework"
+        back_populates="homeworks"
     )
