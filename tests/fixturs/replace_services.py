@@ -6,6 +6,7 @@ from src.modules.courses.repository import CourseRepository
 from src.modules.courses.service import CoursesService
 from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
+from src.modules.handlers_files.handler_documents import HandlerDocuments
 from src.modules.path_builder import PathBuilder
 from src.modules.student_courses.repository import StudentCoursesRepository
 from src.modules.students.repository import StudentRepository
@@ -60,3 +61,8 @@ async def compression_images_fixture(config_fix) -> CompressionImages:
 @pytest_asyncio.fixture(scope="function")
 async def handler_images_fixture(config_fix) -> HandlerImages:
     return HandlerImages(config=config_fix)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def handler_documents_fixture(config_fix) -> HandlerDocuments:
+    return HandlerDocuments(config=config_fix)

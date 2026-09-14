@@ -4,6 +4,7 @@ from tests.fixturs.replace_services import (
     courses_service_fixture,
     compression_images_fixture,
     handler_images_fixture,
+    handler_documents_fixture,
 )
 from tests.fixturs.fixtures import (
     app_fastapi,
@@ -27,23 +28,24 @@ __all__ = [
     "not_open_session_db",
     "client_for_tests",
 
-    # БД фикстуры
+    # БД Файловая
     "config_fix",
     "cleaning_paths_fix",
     "session_db",
 
-    # сервисы
+    # Сервисы
     "user_service_fixture",
     "courses_service_fixture",
     "compression_images_fixture",
     "handler_images_fixture",
+    "handler_documents_fixture",
 
-    # из моделей
+    # Модели
     "create_user_fixture",
     "create_refresh_token_fixture",
     "create_course_fixture",
 
-    # хендлеры файлов
+    # Хендлеры файлы
     "create_upload_file_fixture",
     "create_image_bytes_fixture",
 ]
