@@ -36,17 +36,16 @@ class LecturesRepository(BaseRepository):
         to_date: Optional[datetime] = None,
         sort_date: str = "desc"
     ) -> Tuple[List[Lecture], int]:
-        """Получает список лекций по ID связи занятие-ученик с фильтрацией, пагинацией и сортировкой"""
-        stmt = select(Lecture).where(Lecture.lesson_student_id == lesson_student_id)
-        count_stmt = select(func.count()).select_from(Lecture).where(Lecture.lesson_student_id == lesson_student_id)
+        """Получает список лекций по ID связи занятие-ученик с фильтрацией, пагинацией и сортировкой.
+        Использует оконную функцию для гарантированной синхронности данных и счетчика."""
+        count_over = func.count().over().label('total_count')
+        stmt = select(Lecture, count_over).where(Lecture.lesson_student_id == lesson_student_id)
 
         if from_date:
             stmt = stmt.where(Lecture.created_at >= from_date)
-            count_stmt = count_stmt.where(Lecture.created_at >= from_date)
             
         if to_date:
             stmt = stmt.where(Lecture.created_at <= to_date)
-            count_stmt = count_stmt.where(Lecture.created_at <= to_date)
             
         if sort_date.lower() == "asc":
             stmt = stmt.order_by(Lecture.created_at.asc())
@@ -56,9 +55,15 @@ class LecturesRepository(BaseRepository):
         stmt = stmt.limit(limit).offset(offset)
         
         result = await self.session.execute(stmt)
-        total_result = await self.session.execute(count_stmt)
+        rows = result.all()
         
-        return list(result.scalars().all()), total_result.scalar() or 0
+        if not rows:
+            return [], 0
+            
+        total = rows[0][1]
+        lectures = [row[0] for row in rows]
+        
+        return lectures, total
 
     async def update_lecture_paths(
         self,
