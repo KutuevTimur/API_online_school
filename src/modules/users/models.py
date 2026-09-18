@@ -1,12 +1,18 @@
 import enum
 from datetime import datetime
-from typing import Optional, List
+from typing import List, TYPE_CHECKING
 
 from sqlalchemy import String, func, Enum, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
 from src.core.database.database import Base
+
+
+if TYPE_CHECKING:
+    from src.modules.refresh_tokens.models import RefreshToken
+    from src.modules.students.models import Student
+    from src.modules.teachers.models import Teacher
 
 
 class UserRole(str, enum.Enum):
