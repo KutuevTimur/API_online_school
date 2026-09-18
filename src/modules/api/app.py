@@ -9,6 +9,10 @@ from src.modules.auth.views import router as auth_router
 from src.modules.courses.views import router as courses_router
 from src.modules.users.views import router as user_router
 from src.modules.lessons.views import router as lessons_router
+from src.modules.lesson_students.views import router as lesson_students_router
+from src.modules.lectures.views import router as lectures_router
+from src.modules.homeworks.views import router as homeworks_router
+from src.modules.homework_submissions.views import router as homework_submissions_router
 
 
 def _include_routers(app: FastAPI) -> FastAPI:
@@ -16,6 +20,10 @@ def _include_routers(app: FastAPI) -> FastAPI:
     app.include_router(user_router)
     app.include_router(courses_router)
     app.include_router(lessons_router)
+    app.include_router(lesson_students_router)
+    app.include_router(lectures_router)
+    app.include_router(homeworks_router)
+    app.include_router(homework_submissions_router)
     return app
 
 

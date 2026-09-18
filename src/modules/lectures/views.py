@@ -1,0 +1,108 @@
+from typing import Optional
+from datetime import datetime
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
+from fastapi.responses import FileResponse
+from starlette import status
+
+from src.modules.base.orm_dto import PaginationResponseDTO
+from src.modules.auth.depends import get_current_user
+from src.modules.check_permission import get_current_teacher_user
+from src.modules.lectures.depends import get_lectures_service
+from src.modules.lectures.models_dto import LectureResponseDTO
+from src.modules.lectures.service import LecturesService
+from src.modules.users.models_dto import UserDTO
+
+router = APIRouter(prefix="/lectures", tags=["Lectures"])
+
+@router.post(
+    "",
+    response_model=LectureResponseDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a lecture (PDF) for a student's lesson",
+)
+async def upload_lecture(
+    lesson_id: int = Form(...),
+    student_user_id: int = Form(...),
+    file: UploadFile = File(...),
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: LecturesService = Depends(get_lectures_service),
+):
+    return await service.upload_lecture(
+        teacher_user_id=current_user.id,
+        lesson_id=lesson_id,
+        student_user_id=student_user_id,
+        file=file,
+    )
+
+@router.get(
+    "",
+    response_model=PaginationResponseDTO[LectureResponseDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get list of uploaded lectures",
+)
+async def get_lectures_list(
+    lesson_id: int = Query(..., description="Фильтр по уроку"),
+    student_user_id: int = Query(..., description="Фильтр по студенту"),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    from_date: Optional[datetime] = Query(None, description="От даты"),
+    to_date: Optional[datetime] = Query(None, description="До даты"),
+    sort_date: str = Query("desc", description="Сортировка по дате (asc/desc)"),
+    current_user: UserDTO = Depends(get_current_user),
+    service: LecturesService = Depends(get_lectures_service),
+):
+    return await service.get_lectures(
+        user_id=current_user.id,
+        lesson_id=lesson_id,
+        student_user_id=student_user_id,
+        limit=limit,
+        offset=offset,
+        from_date=from_date,
+        to_date=to_date,
+        sort_date=sort_date,
+    )
+
+@router.get(
+    "/{lecture_id}/file",
+    status_code=status.HTTP_200_OK,
+    summary="Download a specific lecture (PDF)",
+)
+async def download_lecture(
+    lecture_id: int,
+    lesson_id: int = Query(..., description="ID урока"),
+    student_user_id: int = Query(..., description="ID студента"),
+    current_user: UserDTO = Depends(get_current_user),
+    service: LecturesService = Depends(get_lectures_service),
+):
+    lecture = await service.get_lecture_by_id(
+        user_id=current_user.id,
+        lesson_id=lesson_id,
+        student_user_id=student_user_id,
+        lecture_id=lecture_id,
+    )
+    
+    return FileResponse(
+        path=lecture.pdf_file_path,
+        media_type="application/pdf",
+        filename=lecture.pdf_file_name,
+    )
+
+@router.delete(
+    "/{lecture_id}",
+    response_model=LectureResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Delete a specific lecture",
+)
+async def delete_lecture(
+    lecture_id: int,
+    lesson_id: int = Query(..., description="ID урока"),
+    student_user_id: int = Query(..., description="ID студента"),
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: LecturesService = Depends(get_lectures_service),
+):
+    return await service.delete_lecture(
+        teacher_user_id=current_user.id,
+        lesson_id=lesson_id,
+        student_user_id=student_user_id,
+        lecture_id=lecture_id,
+    )
