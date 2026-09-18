@@ -8,7 +8,7 @@ from src.modules.lessons.models import Lesson
 from src.modules.lesson_students.models import LessonStudent
 from src.modules.lectures.models import Lecture
 from src.modules.homeworks.models import Homework
-from src.modules.homework_submissions.models import HomeworkSubmission
+from src.modules.homework_submissions.models import HomeworkSubmission, HomeworkSubmissionFile
 
 __all__ = [
     "User",
@@ -22,4 +22,5 @@ __all__ = [
     "Lecture",
     "Homework",
     "HomeworkSubmission",
+    "HomeworkSubmissionFile",
 ]

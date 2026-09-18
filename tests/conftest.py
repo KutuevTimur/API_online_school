@@ -20,6 +20,7 @@ async def start_test(config_fix, app_fastapi):
 async def clearing_db(session_db: AsyncSession):
     """Очиста бд перед тестами"""
     # Удаляем зависимости в нужном порядке
+    await session_db.execute(delete(HomeworkSubmissionFile))
     await session_db.execute(delete(HomeworkSubmission))
     await session_db.execute(delete(Homework))
     await session_db.execute(delete(Lecture))
