@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 
 from sqlalchemy import Integer, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -9,6 +9,7 @@ from src.core.database.database import Base
 
 if TYPE_CHECKING:
     from src.modules.lesson_students.models import LessonStudent
+    from src.modules.homework_submissions.models import HomeworkSubmission
 
 
 class Homework(Base):
@@ -40,4 +41,9 @@ class Homework(Base):
     lesson_student: Mapped["LessonStudent"] = relationship(
         "LessonStudent",
         back_populates="homeworks"
+    )
+    submissions: Mapped[List["HomeworkSubmission"]] = relationship(
+        "HomeworkSubmission",
+        back_populates="homework",
+        cascade="all, delete-orphan",
     )
