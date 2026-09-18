@@ -47,6 +47,7 @@ class LessonsRepository(BaseRepository):
         course_id: Optional[int] = None,
         teacher_id: Optional[int] = None,
         student_id: Optional[int] = None,
+        sort_date: str = "desc",
     ) -> Tuple[List[Lesson], int]:
         """Получает список уроков с фильтрацией, пагинацией и сортировкой"""
         stmt = select(Lesson)
@@ -70,8 +71,11 @@ class LessonsRepository(BaseRepository):
             stmt = stmt.join(Lesson.lesson_students).where(LessonStudent.student_id == student_id)
             count_stmt = count_stmt.join(Lesson.lesson_students).where(LessonStudent.student_id == student_id)
 
-        # Pagination & Ordering
-        stmt = stmt.order_by(Lesson.scheduled_at.desc())
+        if sort_date.lower() == "asc":
+            stmt = stmt.order_by(Lesson.scheduled_at.asc())
+        else:
+            stmt = stmt.order_by(Lesson.scheduled_at.desc())
+            
         stmt = stmt.limit(limit).offset(offset)
         
         stmt = stmt.options(

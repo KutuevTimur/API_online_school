@@ -52,7 +52,7 @@ async def create_lesson(
     response_model=PaginationResponseDTO[LessonResponseDTO],
     status_code=status.HTTP_200_OK,
     summary="Get list of lessons",
-    description="Get lessons with pagination, date filtering, and course_id filter. For students, returns enrolled lessons. For teachers, returns created lessons."
+    description="Get lessons with pagination, date filtering, sorting and course_id filter. For students, returns enrolled lessons. For teachers, returns created lessons."
 )
 async def get_lessons(
     limit: int = Query(100, ge=1, le=1000),
@@ -60,6 +60,7 @@ async def get_lessons(
     from_date: Optional[datetime] = Query(None, description="От даты"),
     to_date: Optional[datetime] = Query(None, description="До даты"),
     course_id: Optional[int] = Query(None, description="Фильтр по курсу"),
+    sort_date: str = Query("desc", description="Сортировка по дате (asc/desc)"),
     current_user: UserDTO = Depends(get_current_user),
     service: LessonsService = Depends(get_lessons_service),
 ):
@@ -70,6 +71,7 @@ async def get_lessons(
         from_date=from_date,
         to_date=to_date,
         course_id=course_id,
+        sort_date=sort_date,
     )
 
 
@@ -191,13 +193,18 @@ async def upload_lecture(
 
 @router.get(
     "/lessons/{lesson_id}/students/{student_user_id}/lectures",
-    response_model=List[LectureResponseDTO],
+    response_model=PaginationResponseDTO[LectureResponseDTO],
     status_code=status.HTTP_200_OK,
     summary="Get list of uploaded lectures for a student's lesson",
 )
 async def get_lectures_list(
     lesson_id: int,
     student_user_id: int,
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    from_date: Optional[datetime] = Query(None, description="От даты"),
+    to_date: Optional[datetime] = Query(None, description="До даты"),
+    sort_date: str = Query("desc", description="Сортировка по дате (asc/desc)"),
     current_user: UserDTO = Depends(get_current_user),
     service: LecturesService = Depends(get_lectures_service),
 ):
@@ -205,6 +212,11 @@ async def get_lectures_list(
         user_id=current_user.id,
         lesson_id=lesson_id,
         student_user_id=student_user_id,
+        limit=limit,
+        offset=offset,
+        from_date=from_date,
+        to_date=to_date,
+        sort_date=sort_date,
     )
 
 

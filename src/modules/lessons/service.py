@@ -42,6 +42,7 @@ class LessonsService:
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
         course_id: Optional[int] = None,
+        sort_date: str = "desc",
     ) -> PaginationResponseDTO[LessonResponseDTO]:
         
         teacher_id = None
@@ -64,6 +65,7 @@ class LessonsService:
             course_id=course_id,
             teacher_id=teacher_id,
             student_id=student_id,
+            sort_date=sort_date,
         )
 
         dtos = []

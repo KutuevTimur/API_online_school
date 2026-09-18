@@ -1,5 +1,6 @@
-from typing import List
-from sqlalchemy import select, delete, update
+from typing import List, Tuple, Optional
+from datetime import datetime
+from sqlalchemy import select, delete, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.database_model import BaseRepository
@@ -26,11 +27,38 @@ class LecturesRepository(BaseRepository):
         """Получает лекцию по ее ID"""
         return await super().get_by_id(Lecture, lecture_id)
 
-    async def get_all_by_lesson_student_id(self, lesson_student_id: int) -> List[Lecture]:
-        """Получает список лекций по ID связи занятие-ученик"""
+    async def get_all_by_lesson_student_id(
+        self, 
+        lesson_student_id: int,
+        limit: int = 100,
+        offset: int = 0,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+        sort_date: str = "desc"
+    ) -> Tuple[List[Lecture], int]:
+        """Получает список лекций по ID связи занятие-ученик с фильтрацией, пагинацией и сортировкой"""
         stmt = select(Lecture).where(Lecture.lesson_student_id == lesson_student_id)
+        count_stmt = select(func.count()).select_from(Lecture).where(Lecture.lesson_student_id == lesson_student_id)
+
+        if from_date:
+            stmt = stmt.where(Lecture.created_at >= from_date)
+            count_stmt = count_stmt.where(Lecture.created_at >= from_date)
+            
+        if to_date:
+            stmt = stmt.where(Lecture.created_at <= to_date)
+            count_stmt = count_stmt.where(Lecture.created_at <= to_date)
+            
+        if sort_date.lower() == "asc":
+            stmt = stmt.order_by(Lecture.created_at.asc())
+        else:
+            stmt = stmt.order_by(Lecture.created_at.desc())
+            
+        stmt = stmt.limit(limit).offset(offset)
+        
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        total_result = await self.session.execute(count_stmt)
+        
+        return list(result.scalars().all()), total_result.scalar() or 0
 
     async def update_lecture_paths(
         self,

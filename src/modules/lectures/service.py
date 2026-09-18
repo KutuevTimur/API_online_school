@@ -1,12 +1,14 @@
 import os
 import uuid
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 from pathlib import Path
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from asyncpg.exceptions import UniqueViolationError
 
+from src.modules.base.orm_dto import PaginationResponseDTO
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.handlers_files.handler_documents import HandlerDocuments
 from src.modules.lectures.exception import LectureAlreadyExists, LectureNotFound
@@ -134,7 +136,12 @@ class LecturesService:
         user_id: int,
         lesson_id: int,
         student_user_id: int,
-    ) -> List[LectureResponseDTO]:
+        limit: int = 100,
+        offset: int = 0,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+        sort_date: str = "desc",
+    ) -> PaginationResponseDTO[LectureResponseDTO]:
         """Возвращает список лекций для занятия"""
         student = await self.student_repo.get_student_by_user_id(student_user_id)
         if not student:
@@ -156,8 +163,23 @@ class LecturesService:
         if not is_teacher_owner and not is_student_owner:
             raise PermissionErrorService("Access denied to view these lectures")
 
-        lectures = await self.lectures_repo.get_all_by_lesson_student_id(lesson_student.id)
-        return [LectureResponseDTO.model_validate(l) for l in lectures]
+        lectures, total = await self.lectures_repo.get_all_by_lesson_student_id(
+            lesson_student_id=lesson_student.id,
+            limit=limit,
+            offset=offset,
+            from_date=from_date,
+            to_date=to_date,
+            sort_date=sort_date,
+        )
+        
+        dtos = [LectureResponseDTO.model_validate(l) for l in lectures]
+        
+        return PaginationResponseDTO(
+            items=dtos,
+            total=total,
+            limit=limit,
+            offset=offset
+        )
 
     async def get_lecture_by_id(
         self,
