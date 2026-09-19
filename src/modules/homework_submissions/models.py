@@ -51,7 +51,11 @@ class HomeworkSubmission(Base):
     text_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     status: Mapped[HomeworkSubmissionStatus] = mapped_column(
-        Enum(HomeworkSubmissionStatus, name="homework_submission_status_enum", create_type=False),
+        Enum(
+            HomeworkSubmissionStatus, 
+            values_callable=lambda x: [e.value for e in x],
+            name="homework_submission_status_enum"
+        ),
         nullable=False,
         default=HomeworkSubmissionStatus.DRAFT
     )
