@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
 from src.modules.courses.exception import CourseAlreadyExists
+from src.modules.student_courses.exception import EnrollmentExistsException, EnrollmentNotFoundException, CourseAccessDeniedException
 from src.modules.users.exception import InvalidRole
 from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
@@ -72,6 +73,18 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(PermissionErrorService)
     async def service_handler(request, exc):
         return JSONResponse(status_code=403, content={"detail": "Not permission"})
+
+    @app.exception_handler(EnrollmentExistsException)
+    async def course_already_exists_handler(request, exc):
+        return JSONResponse(status_code=400, content={"detail": "Student is already enrolled in this course"})
+
+    @app.exception_handler(EnrollmentNotFoundException)
+    async def course_already_exists_handler(request, exc):
+        return JSONResponse(status_code=404, content={"detail": "Enrollment not found"})
+
+    @app.exception_handler(CourseAccessDeniedException)
+    async def course_already_exists_handler(request, exc):
+        return JSONResponse(status_code=403, content={"detail": "You can only manage your own courses"})
 
     @app.exception_handler(CourseAlreadyExists)
     async def course_already_exists_handler(request, exc):
