@@ -89,7 +89,6 @@ class HomeworksService:
         file_name = Path(file.filename).stem if has_file else None
         file_type = Path(file.filename).suffix.lstrip('.') if has_file else None
 
-        # Создаем запись в БД (пока без путей к файлам)
         dto = CreateHomeworkRequestDTO(
             lesson_student_id=lesson_student.id,
             title=title,
@@ -102,7 +101,6 @@ class HomeworksService:
             pdf_file_name=f"{file_name}.pdf" if file_name else None,
         )
 
-        # Если файла нет, поля с путями останутся None/пустыми
         if not has_file:
             dto.original_file_path = None
             dto.pdf_file_path = None
@@ -111,7 +109,6 @@ class HomeworksService:
         await self.session_db.flush()
 
         if has_file:
-            # Если был передан файл - сохраняем его и обновляем запись ДЗ
             original_dest = self.path_builder.get_homework_original(
                 homework_id=homework.id,
                 file_name=file_name,
@@ -166,6 +163,14 @@ class HomeworksService:
             raise PermissionErrorService("Access denied to view these homeworks")
 
         homeworks = await self.homeworks_repo.get_all_by_lesson_student_id(lesson_student.id)
+        return [HomeworkResponseDTO.model_validate(h) for h in homeworks]
+
+    async def get_my_homeworks(self, student_user_id: int) -> List[HomeworkResponseDTO]:
+        student = await self.student_repo.get_student_by_user_id(student_user_id)
+        if not student:
+            raise PermissionErrorService("Student user not found")
+            
+        homeworks = await self.homeworks_repo.get_all_by_student_id(student.id)
         return [HomeworkResponseDTO.model_validate(h) for h in homeworks]
 
     async def get_homework_file(

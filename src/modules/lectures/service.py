@@ -5,13 +5,11 @@ from datetime import datetime
 from pathlib import Path
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
-from asyncpg.exceptions import UniqueViolationError
 
 from src.modules.base.orm_dto import PaginationResponseDTO
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.handlers_files.handler_documents import HandlerDocuments
-from src.modules.lectures.exception import LectureAlreadyExists, LectureNotFound
+from src.modules.lectures.exception import LectureNotFound
 from src.modules.lectures.models_dto import CreateLectureRequestDTO, LectureResponseDTO, LectureDTO
 from src.modules.lectures.repository import LecturesRepository
 from src.modules.lesson_students.repository import LessonStudentsRepository
@@ -88,7 +86,6 @@ class LecturesService:
         file_name = Path(file.filename).stem if file.filename else uuid.uuid4().hex
         file_type = Path(file.filename).suffix.lstrip('.') if file.filename else "pdf"
 
-        # 1. Создаем запись в БД, чтобы получить уникальный lecture_id
         dto = CreateLectureRequestDTO(
             lesson_student_id=lesson_student.id,
             original_file_path="",
@@ -99,9 +96,8 @@ class LecturesService:
         )
 
         lecture = await self.lectures_repo.add_lecture(dto)
-        await self.session_db.flush() # Получаем lecture.id
+        await self.session_db.flush() 
 
-        # 2. Формируем пути используя lecture.id
         original_dest = self.path_builder.get_lecture_original(
             lecture_id=lecture.id,
             file_name=file_name,
@@ -112,14 +108,12 @@ class LecturesService:
             file_name=file_name,
         )
 
-        # 3. Сохраняем файл на диск
         original_path, pdf_path = await self.handler_documents.save_document(
             document=file,
             original_dest=original_dest,
             pdf_dest=pdf_dest,
         )
 
-        # 4. Обновляем пути в БД
         updated_lecture = await self.lectures_repo.update_lecture_paths(
             lecture_id=lecture.id,
             original_file_path=str(original_path),
@@ -142,7 +136,6 @@ class LecturesService:
         to_date: Optional[datetime] = None,
         sort_date: str = "desc",
     ) -> PaginationResponseDTO[LectureResponseDTO]:
-        """Возвращает список лекций для занятия"""
         student = await self.student_repo.get_student_by_user_id(student_user_id)
         if not student:
             raise PermissionErrorService("Student user not found")
@@ -172,6 +165,36 @@ class LecturesService:
             sort_date=sort_date,
         )
         
+        dtos = [LectureResponseDTO.model_validate(l) for l in lectures]
+        
+        return PaginationResponseDTO(
+            items=dtos,
+            total=total,
+            limit=limit,
+            offset=offset
+        )
+
+    async def get_my_lectures(
+        self,
+        student_user_id: int,
+        limit: int = 100,
+        offset: int = 0,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+        sort_date: str = "desc",
+    ) -> PaginationResponseDTO[LectureResponseDTO]:
+        student = await self.student_repo.get_student_by_user_id(student_user_id)
+        if not student:
+            raise PermissionErrorService("Student user not found")
+            
+        lectures, total = await self.lectures_repo.get_all_by_student_id(
+            student_id=student.id,
+            limit=limit,
+            offset=offset,
+            from_date=from_date,
+            to_date=to_date,
+            sort_date=sort_date,
+        )
         dtos = [LectureResponseDTO.model_validate(l) for l in lectures]
         
         return PaginationResponseDTO(

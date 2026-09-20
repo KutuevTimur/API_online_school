@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from starlette import status
 
 from src.modules.auth.depends import get_current_user
-from src.modules.check_permission import get_current_teacher_user
+from src.modules.check_permission import get_current_teacher_user, get_current_student_user
 from src.modules.homeworks.depends import get_homeworks_service
 from src.modules.homeworks.models_dto import HomeworkResponseDTO
 from src.modules.homeworks.service import HomeworksService
@@ -56,6 +56,20 @@ async def get_homeworks_list(
         user_id=current_user.id,
         lesson_id=lesson_id,
         student_user_id=student_user_id,
+    )
+
+@router.get(
+    "/my",
+    response_model=List[HomeworkResponseDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get all homeworks for the current student across all lessons",
+)
+async def get_my_homeworks(
+    current_user: UserDTO = Depends(get_current_student_user),
+    service: HomeworksService = Depends(get_homeworks_service),
+):
+    return await service.get_my_homeworks(
+        student_user_id=current_user.id,
     )
 
 @router.get(

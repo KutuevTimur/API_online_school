@@ -167,3 +167,41 @@ async def test_delete_lecture(
     )
     res_dto_after = PaginationResponseDTO[LectureResponseDTO].model_validate(res_list_after.json())
     assert res_dto_after.total == 0
+
+
+@pytest.mark.asyncio
+async def test_get_my_lectures(
+    client_for_tests,
+    create_user_fixture,
+    create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_lecture_fixture,
+    not_open_session_db,
+    session_db,
+):
+    teacher, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
+    student, s_token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
+    
+    async with not_open_session_db() as session:
+        t_db = await session.scalar(select(Teacher).where(Teacher.user_id == teacher.id))
+        teacher_table_id = t_db.id
+        s_db = await session.scalar(select(Student).where(Student.user_id == student.id))
+        student_table_id = s_db.id
+
+    lesson1 = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
+    lesson2 = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
+    
+    ls1 = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson1.id, student_id=student_table_id))
+    ls2 = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson2.id, student_id=student_table_id))
+    
+    await create_lecture_fixture(CreateLectureFixtureDTO(lesson_student_id=ls1.id))
+    await create_lecture_fixture(CreateLectureFixtureDTO(lesson_student_id=ls2.id))
+
+    res_list = await client_for_tests.get(
+        "/lectures/my",
+        headers={"Authorization": f"Bearer {s_token}"},
+    )
+    
+    assert res_list.status_code == 200
+    res_dto = PaginationResponseDTO[LectureResponseDTO].model_validate(res_list.json())
+    assert res_dto.total == 2

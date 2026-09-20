@@ -1,10 +1,11 @@
 from typing import List, Tuple, Optional
 from datetime import datetime
-from sqlalchemy import select, delete, update, func
+from sqlalchemy import select, delete, update, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.database_model import BaseRepository
 from src.modules.lectures.models import Lecture
+from src.modules.lesson_students.models import LessonStudent
 from src.modules.lectures.models_dto import CreateLectureRequestDTO
 
 
@@ -20,50 +21,84 @@ class LecturesRepository(BaseRepository):
         self,
         data: CreateLectureRequestDTO,
     ) -> Lecture:
-        """Добавляет запись лекции"""
         return self.add(data)
 
     async def get_by_id(self, lecture_id: int) -> Lecture | None:
-        """Получает лекцию по ее ID"""
         return await super().get_by_id(Lecture, lecture_id)
 
     async def get_all_by_lesson_student_id(
-        self, 
+        self,
         lesson_student_id: int,
         limit: int = 100,
         offset: int = 0,
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
-        sort_date: str = "desc"
+        sort_date: str = "desc",
     ) -> Tuple[List[Lecture], int]:
         """Получает список лекций по ID связи занятие-ученик с фильтрацией, пагинацией и сортировкой.
         Использует оконную функцию для гарантированной синхронности данных и счетчика."""
-        count_over = func.count().over().label('total_count')
-        stmt = select(Lecture, count_over).where(Lecture.lesson_student_id == lesson_student_id)
-
+        filters = [Lecture.lesson_student_id == lesson_student_id]
         if from_date:
-            stmt = stmt.where(Lecture.created_at >= from_date)
-            
+            filters.append(Lecture.created_at >= from_date)
         if to_date:
-            stmt = stmt.where(Lecture.created_at <= to_date)
+            filters.append(Lecture.created_at <= to_date)
+
+        conditions = and_(*filters) if filters else True
+
+        count_stmt = select(func.count()).select_from(Lecture).where(conditions)
+        total = (await self.session.execute(count_stmt)).scalar() or 0
+
+        stmt = select(Lecture).where(conditions)
+
+        if sort_date.lower() == "asc":
+            stmt = stmt.order_by(Lecture.created_at.asc())
+        else:
+            stmt = stmt.order_by(Lecture.created_at.desc())
+
+        stmt = stmt.limit(limit).offset(offset)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all()), total
+        
+    async def get_all_by_student_id(
+        self,
+        student_id: int,
+        limit: int = 100,
+        offset: int = 0,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+        sort_date: str = "desc",
+    ) -> Tuple[List[Lecture], int]:
+        """Получить все лекции студента по всем курсам (JOIN к lesson_students)"""
+        filters = [LessonStudent.student_id == student_id]
+        if from_date:
+            filters.append(Lecture.created_at >= from_date)
+        if to_date:
+            filters.append(Lecture.created_at <= to_date)
             
+        conditions = and_(*filters) if filters else True
+        
+        count_stmt = (
+            select(func.count())
+            .select_from(Lecture)
+            .join(LessonStudent, Lecture.lesson_student_id == LessonStudent.id)
+            .where(conditions)
+        )
+        total = (await self.session.execute(count_stmt)).scalar() or 0
+        
+        stmt = (
+            select(Lecture)
+            .join(LessonStudent, Lecture.lesson_student_id == LessonStudent.id)
+            .where(conditions)
+        )
+        
         if sort_date.lower() == "asc":
             stmt = stmt.order_by(Lecture.created_at.asc())
         else:
             stmt = stmt.order_by(Lecture.created_at.desc())
             
         stmt = stmt.limit(limit).offset(offset)
-        
         result = await self.session.execute(stmt)
-        rows = result.all()
-        
-        if not rows:
-            return [], 0
-            
-        total = rows[0][1]
-        lectures = [row[0] for row in rows]
-        
-        return lectures, total
+        return list(result.scalars().all()), total
 
     async def update_lecture_paths(
         self,
@@ -77,7 +112,7 @@ class LecturesRepository(BaseRepository):
             .where(Lecture.id == lecture_id)
             .values(
                 original_file_path=original_file_path,
-                pdf_file_path=pdf_file_path
+                pdf_file_path=pdf_file_path,
             )
             .returning(Lecture)
         )

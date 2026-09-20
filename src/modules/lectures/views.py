@@ -6,7 +6,7 @@ from starlette import status
 
 from src.modules.base.orm_dto import PaginationResponseDTO
 from src.modules.auth.depends import get_current_user
-from src.modules.check_permission import get_current_teacher_user
+from src.modules.check_permission import get_current_teacher_user, get_current_student_user
 from src.modules.lectures.depends import get_lectures_service
 from src.modules.lectures.models_dto import LectureResponseDTO
 from src.modules.lectures.service import LecturesService
@@ -55,6 +55,30 @@ async def get_lectures_list(
         user_id=current_user.id,
         lesson_id=lesson_id,
         student_user_id=student_user_id,
+        limit=limit,
+        offset=offset,
+        from_date=from_date,
+        to_date=to_date,
+        sort_date=sort_date,
+    )
+
+@router.get(
+    "/my",
+    response_model=PaginationResponseDTO[LectureResponseDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get list of uploaded lectures for the current student across all lessons",
+)
+async def get_my_lectures(
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    from_date: Optional[datetime] = Query(None, description="От даты"),
+    to_date: Optional[datetime] = Query(None, description="До даты"),
+    sort_date: str = Query("desc", description="Сортировка по дате (asc/desc)"),
+    current_user: UserDTO = Depends(get_current_student_user),
+    service: LecturesService = Depends(get_lectures_service),
+):
+    return await service.get_my_lectures(
+        student_user_id=current_user.id,
         limit=limit,
         offset=offset,
         from_date=from_date,
