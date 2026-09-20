@@ -167,10 +167,11 @@ async def test_update_user_is_active_forbidden_for_student(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
     )
 
+    update_dto = UpdateUserDataRequestDTO(is_active=False)
     response = await client_for_tests.patch(
         f"/users/{student.id}",
         headers={"Authorization": f"Bearer {access_token}"},
-        json={"is_active": False},
+        json=update_dto.model_dump(exclude_unset=True),
     )
 
     assert response.status_code == 403
@@ -189,10 +190,11 @@ async def test_update_user_forbidden_for_other_student(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
     )
 
+    update_dto = UpdateUserDataRequestDTO(first_name="HackedName")
     response = await client_for_tests.patch(
         f"/users/{student_2.id}",
         headers={"Authorization": f"Bearer {token_1}"},
-        json={"first_name": "HackedName"},
+        json=update_dto.model_dump(exclude_unset=True),
     )
 
     assert response.status_code == 403
@@ -201,9 +203,10 @@ async def test_update_user_forbidden_for_other_student(
 
 @pytest.mark.asyncio
 async def test_update_user_unauthorized(client_for_tests):
+    update_dto = UpdateUserDataRequestDTO(first_name="NoAuth")
     response = await client_for_tests.patch(
         "/users/1",
-        json={"first_name": "NoAuth"},
+        json=update_dto.model_dump(exclude_unset=True),
     )
     assert response.status_code == 401
 
@@ -217,10 +220,11 @@ async def test_update_user_not_found(
         new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
     )
 
+    update_dto = UpdateUserDataRequestDTO(first_name="Ghost")
     response = await client_for_tests.patch(
         "/users/99999",
         headers={"Authorization": f"Bearer {teacher_token}"},
-        json={"first_name": "Ghost"},
+        json=update_dto.model_dump(exclude_unset=True),
     )
 
     assert response.status_code == 404

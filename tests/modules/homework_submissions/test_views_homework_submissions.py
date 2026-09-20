@@ -1,6 +1,6 @@
 import pytest
 from src.modules.users.models import UserRole
-from src.modules.homework_submissions.models import HomeworkSubmissionStatus, HomeworkSubmission, HomeworkSubmissionFile
+from src.modules.homework_submissions.models import HomeworkSubmissionStatus
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
 from tests.modules.lesson_students.fixtures.models_dto import CreateLessonStudentFixtureDTO
@@ -9,9 +9,6 @@ from tests.modules.homework_submissions.fixtures.models_dto import CreateHomewor
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
-from src.modules.homeworks.models import Homework
-from src.modules.lesson_students.models import LessonStudent
-from datetime import datetime, timezone
 from src.modules.homework_submissions.models_dto import (
     UpdateSubmissionStudentRequestDTO,
     UpdateSubmissionTeacherRequestDTO,

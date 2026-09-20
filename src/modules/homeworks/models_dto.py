@@ -41,3 +41,10 @@ class CreateHomeworkRequestDTO(BaseModel):
     pdf_file_path: Optional[str] = None
     pdf_file_name: Optional[str] = None
     deadline: datetime
+
+class CreateHomeworkFormRequestDTO(BaseModel):
+    lesson_id: int
+    student_user_id: int
+    title: str
+    deadline: datetime
+    description: Optional[str] = None

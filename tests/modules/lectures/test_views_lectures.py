@@ -7,7 +7,7 @@ from tests.modules.lectures.fixtures.models_dto import CreateLectureFixtureDTO
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
-from src.modules.lectures.models_dto import LectureResponseDTO
+from src.modules.lectures.models_dto import LectureResponseDTO, CreateLectureFormRequestDTO
 from src.modules.base.orm_dto import PaginationResponseDTO
 
 
@@ -34,17 +34,17 @@ async def test_upload_lecture(
 
     await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
-    form_data = {
-        "lesson_id": lesson.id,
-        "student_user_id": student.id,
-    }
+    lec_dto = CreateLectureFormRequestDTO(
+        lesson_id=lesson.id,
+        student_user_id=student.id,
+    )
     files = {
         "file": ("lecture1.pdf", b"dummy lecture content", "application/pdf")
     }
 
     res_upload = await client_for_tests.post(
         "/lectures",
-        data=form_data,
+        data=lec_dto.model_dump(mode="json"),
         files=files,
         headers={"Authorization": f"Bearer {t_token}"},
     )
@@ -111,9 +111,10 @@ async def test_download_lecture(
 
     await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
+    lec_dto = CreateLectureFormRequestDTO(lesson_id=lesson.id, student_user_id=student.id)
     upload_res = await client_for_tests.post(
         "/lectures",
-        data={"lesson_id": lesson.id, "student_user_id": student.id},
+        data=lec_dto.model_dump(mode="json"),
         files={"file": ("lecture1.pdf", b"dummy lecture content", "application/pdf")},
         headers={"Authorization": f"Bearer {t_token}"},
     )

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import pytest
 from typing import List
 from src.modules.users.models import UserRole
@@ -8,8 +9,7 @@ from tests.modules.homeworks.fixtures.models_dto import CreateHomeworkFixtureDTO
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
-from datetime import datetime, timezone
-from src.modules.homeworks.models_dto import HomeworkResponseDTO
+from src.modules.homeworks.models_dto import HomeworkResponseDTO, CreateHomeworkFormRequestDTO
 from pydantic import TypeAdapter
 
 
@@ -36,13 +36,13 @@ async def test_create_homework(
 
     await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
-    hw_data = {
-        "lesson_id": lesson.id,
-        "student_user_id": student.id,
-        "title": "Math Homework",
-        "deadline": "2030-12-31T23:59:59Z",
-        "description": "Calculate 2+2"
-    }
+    hw_dto = CreateHomeworkFormRequestDTO(
+        lesson_id=lesson.id,
+        student_user_id=student.id,
+        title="Math Homework",
+        deadline=datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
+        description="Calculate 2+2"
+    )
 
     files = {
         "file": ("test_hw.pdf", b"dummy pdf content", "application/pdf")
@@ -50,7 +50,7 @@ async def test_create_homework(
     
     res_hw = await client_for_tests.post(
         "/homeworks",
-        data=hw_data,
+        data=hw_dto.model_dump(mode="json", exclude_none=True),
         files=files,
         headers={"Authorization": f"Bearer {t_token}"},
     )
@@ -118,14 +118,15 @@ async def test_download_homework_file(
 
     await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
+    hw_dto = CreateHomeworkFormRequestDTO(
+        lesson_id=lesson.id,
+        student_user_id=student.id,
+        title="Title",
+        deadline=datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
+    )
     upload_res = await client_for_tests.post(
         "/homeworks",
-        data={
-            "lesson_id": lesson.id,
-            "student_user_id": student.id,
-            "title": "Title",
-            "deadline": "2030-12-31T23:59:59Z",
-        },
+        data=hw_dto.model_dump(mode="json", exclude_none=True),
         files={"file": ("test_hw.pdf", b"dummy pdf content", "application/pdf")},
         headers={"Authorization": f"Bearer {t_token}"},
     )

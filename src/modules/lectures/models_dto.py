@@ -31,3 +31,7 @@ class CreateLectureRequestDTO(BaseModel):
     original_file_type: str
     pdf_file_path: str
     pdf_file_name: str
+
+class CreateLectureFormRequestDTO(BaseModel):
+    lesson_id: int
+    student_user_id: int

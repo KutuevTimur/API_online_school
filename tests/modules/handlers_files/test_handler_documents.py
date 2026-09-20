@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from src.modules.handlers_files.handler_documents import HandlerDocuments
-from src.modules.handlers_files.exception import InvalidDocumentFormat, DocumentConversionError
+from src.modules.handlers_files.exception import InvalidDocumentFormat
 
 
 def test_validate_extension_success(handler_documents_fixture: HandlerDocuments):
