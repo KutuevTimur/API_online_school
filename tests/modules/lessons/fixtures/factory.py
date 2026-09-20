@@ -1,15 +1,10 @@
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-
 from src.modules.lessons.models import Lesson
 from src.modules.lessons.models_dto import LessonDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
 from tests.modules.courses.fixtures.factory import create_course_factory
 from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
-from tests.modules.users.fixtures.factory import create_user_factory
-from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
-from src.modules.users.models import UserRole
 
 
 async def create_lesson_factory(
@@ -17,7 +12,6 @@ async def create_lesson_factory(
     crypto_context: CryptContext,
     new_lesson: CreateLessonFixtureDTO,
 ) -> LessonDTO:
-    # Ensure there is a course/teacher if not provided
     if new_lesson.course_id is None:
         dto = CreateCourseFixtureDTO()
         if new_lesson.teacher_id is not None:

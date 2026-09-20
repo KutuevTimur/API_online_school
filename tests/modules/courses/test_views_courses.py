@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.courses.models import Course, AvatarCoursesType
 from src.modules.courses.models_dto import CreateCourseDTORequest, UpdateCourseDTORequest, CoursesResponseDTO
 from src.modules.base.orm_dto import PaginationResponseDTO
-from src.modules.path_builder import PathBuilder
 from src.modules.student_courses.models import StudentCourse
 from src.modules.students.models import Student
 from src.modules.users.models import UserRole
@@ -41,7 +40,6 @@ async def test_get_courses_as_teacher(
     assert c1.slug in slugs
     assert c2.slug in slugs
 
-    # _????????? alias /courses
     alias_res = await client_for_tests.get(
         "/courses",
         headers={"Authorization": f"Bearer {token}"},
@@ -69,7 +67,6 @@ async def test_get_courses_as_teacher_filters(
     res_dto = PaginationResponseDTO[CoursesResponseDTO].model_validate(res_active.json())
     assert all(c.is_active is True for c in res_dto.items)
 
-    # teacher_id filter (_?????????? +>????>?: ??? >???''??? ??????>? >???'??? ???>'? ????>?)
     res_teacher = await client_for_tests.get(
         "/courses?teacher_user_id=9999",
         headers={"Authorization": f"Bearer {token}"},
@@ -94,7 +91,6 @@ async def test_get_courses_as_student_only_enrolled(
     c_not_enrolled = await create_course_fixture(CreateCourseFixtureDTO(name="Other Course", slug="other", is_active=True))
     c_inactive = await create_course_fixture(CreateCourseFixtureDTO(name="Inactive Course", slug="inactive-enrolled", is_active=False))
 
-    # _???'>?"??? ?'????'  c_enrolled ? c_inactive
     session_db.add_all([
         StudentCourse(student_id=student.id, course_id=c_enrolled.id, is_active=True),
         StudentCourse(student_id=student.id, course_id=c_inactive.id, is_active=True),
@@ -110,7 +106,6 @@ async def test_get_courses_as_student_only_enrolled(
     slugs = {c.slug for c in res_dto.items}
     assert c_enrolled.slug in slugs
     assert c_not_enrolled.slug not in slugs
-    # _+?<?>"??? ???  ?'????'  ?? >???'???
     assert c_inactive.slug not in slugs
 
 
@@ -227,7 +222,6 @@ async def test_create_course_by_teacher(
     assert res_dto.slug == "new-fastapi-course"
     assert res_dto.avatar_type == AvatarCoursesType.DEFAULT
 
-    # _?????????  ""
     res_db = await session_db.execute(select(Course).where(Course.slug == "new-fastapi-course"))
     course_db = res_db.scalar_one_or_none()
     assert course_db is not None
@@ -301,7 +295,6 @@ async def test_update_course_by_teacher(
     assert res_dto.description == "Updated Description"
     assert res_dto.is_active is False
 
-    # _?????????  ""
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
     assert db_course.name == "Updated Name"
@@ -336,6 +329,7 @@ async def test_update_avatar_by_teacher(
     create_user_fixture,
     create_course_fixture,
     create_image_bytes_fixture,
+    path_builder_fixture,
     session_db: AsyncSession,
     config_fix,
 ):
@@ -356,11 +350,9 @@ async def test_update_avatar_by_teacher(
     assert response.headers.get("content-type") == "image/png"
     assert response.headers.get("content-disposition") == 'inline; filename="cover.png"'
 
-    # _????????? ?"??>???? ??+?  ????
-    avatar_file = PathBuilder(config=config_fix).get_avatar_course(course.id)
+    avatar_file = path_builder_fixture.get_avatar_course(course.id)
     assert avatar_file.is_file()
 
-    # _????????? >?>?"???? <?>???  ""
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
     assert db_course.avatar_type == AvatarCoursesType.CUSTOM
@@ -398,12 +390,6 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     create_course_fixture,
     session_db: AsyncSession,
 ):
-    """
-    _????????? <'?+> ?> "?'??:
-    1. _??? ?' >"?is_active = False.
-    2. _+?+?"+?:  slug >?? ?"????? (> "+?? __deleted__).
-    3. _>?' "+ ? ?> >+> ????  '+ ?  slug ?" :? >?'> ? ?"??+  ? ?>"?" ?>++ ?' ???+?"+?>'?!
-    """
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
     res_t = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
     teacher_db = res_t.scalar_one()
@@ -421,20 +407,17 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     assert res_dto.slug.startswith(orig_slug)
     assert "__deleted__" in res_dto.slug
 
-    # _?????????  "": ' ?"?? ? +"' ?, > ?>+'??? > "?
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one_or_none()
     assert db_course is not None
     assert db_course.is_active is False
 
-    # _? ?">? ?> "?'?? >??'?? 404 Not Found
     del_again = await client_for_tests.delete(
         f"/courses/{course.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert del_again.status_code == 404
 
-    # _>?' '+ ? ?>? ???  _ _ _ slug - ??+?"+?>' ?" ) "' "?!
     create_res = await client_for_tests.post(
         "/courses",
         headers={"Authorization": f"Bearer {token}"},
@@ -451,6 +434,7 @@ async def test_hard_delete_course_by_teacher(
     create_user_fixture,
     create_course_fixture,
     create_image_bytes_fixture,
+    path_builder_fixture,
     session_db: AsyncSession,
     config_fix,
 ):
@@ -459,7 +443,6 @@ async def test_hard_delete_course_by_teacher(
     teacher_db = res_t.scalar_one()
     course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="Hard Delete Me", slug="hard-del-course"))
 
-    # _??' '  ?'?
     image_bytes = create_image_bytes_fixture("PNG", (200, 200))
     avatar_res = await client_for_tests.patch(
         f"/courses/{course.id}/avatar",
@@ -467,20 +450,17 @@ async def test_hard_delete_course_by_teacher(
         files={"avatar": ("avatar.png", io.BytesIO(image_bytes), "image/png")},
     )
     assert avatar_res.status_code == 200
-    avatar_path = PathBuilder(config=config_fix).get_avatar_course(course.id)
+    avatar_path = path_builder_fixture.get_avatar_course(course.id)
     assert avatar_path.is_file()
 
-    # _?-??+' ?> "?'?? ? ?) ?hard=true
     del_res = await client_for_tests.delete(
         f"/courses/{course.id}?hard=true",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert del_res.status_code == 200
 
-    # _?? ?' ? ?> 
     assert not avatar_path.exists()
 
-    # _' ?"?? ?> "?  1  ""
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     assert res_db.scalar_one_or_none() is None
 

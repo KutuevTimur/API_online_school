@@ -66,3 +66,9 @@ async def handler_images_fixture(config_fix) -> HandlerImages:
 @pytest_asyncio.fixture(scope="function")
 async def handler_documents_fixture(config_fix) -> HandlerDocuments:
     return HandlerDocuments(config=config_fix)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def path_builder_fixture(config_fix) -> PathBuilder:
+    return PathBuilder(config=config_fix)
+

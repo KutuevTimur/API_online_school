@@ -5,6 +5,7 @@ from tests.fixturs.replace_services import (
     compression_images_fixture,
     handler_images_fixture,
     handler_documents_fixture,
+    path_builder_fixture,
 )
 from tests.fixturs.fixtures import (
     app_fastapi,
@@ -40,6 +41,7 @@ __all__ = [
     "compression_images_fixture",
     "handler_images_fixture",
     "handler_documents_fixture",
+    "path_builder_fixture",
 
     # Модели
     "create_user_fixture",
