@@ -23,7 +23,7 @@ from src.modules.users.depends import get_user_service
 from src.modules.users.models_dto import UserDTO, RegisterUserRequestDTO, RegisterUserByAdminRequestDTO
 from src.modules.users.service import UsersService
 
-router = APIRouter(prefix="/auth")
+router = APIRouter(prefix="/auth",  tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserDTO, status_code=status.HTTP_200_OK)
@@ -80,7 +80,7 @@ async def change_password(
     )
 
 
-@router.post('/login', response_model=TokenResponse, tags=["Authentication"])
+@router.post('/login', response_model=TokenResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     auth_service: AuthService = Depends(get_auth_service)
@@ -91,7 +91,7 @@ async def login(
     )
 
 
-@router.post('/refresh_tokens', response_model=TokenResponse, tags=["Authentication"])
+@router.post('/refresh_tokens', response_model=TokenResponse)
 async def refresh_tokens(
     token: RefreshTokenRequest,
     token_service: TokenService = Depends(get_token_service)

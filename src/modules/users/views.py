@@ -11,7 +11,7 @@ from src.modules.users.models import UserRole
 from src.modules.users.models_dto import UserResponse, UserDTO, UpdateUserDataRequestDTO
 from src.modules.users.service import UsersService
 
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users",  tags=["User"])
 
 
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
