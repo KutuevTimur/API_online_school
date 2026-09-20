@@ -1,6 +1,7 @@
 import shutil
 import uuid
 from pathlib import Path
+from typing import Tuple, List
 
 from fastapi import UploadFile
 from passlib.context import CryptContext
@@ -24,6 +25,7 @@ from src.modules.users.models_dto import (
     CreateUserDTO,
     UserAvatarResponseDTO,
     UpdateUserDataRequestDTO,
+    PublicProfileResponseDTO,
 )
 from src.modules.users.repository import UsersRepository
 
@@ -319,3 +321,34 @@ class UsersService:
         await self.session_db.commit()
         await self.session_db.refresh(updated_user)
         return UserDTO.model_validate(updated_user)
+
+    async def get_students(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Tuple[int, List[PublicProfileResponseDTO]]:
+        """Получить список всех студентов."""
+        total, students = await self.users_repo.get_users_by_role(
+            role=UserRole.STUDENT, limit=limit, offset=offset
+        )
+        return total, [PublicProfileResponseDTO.model_validate(user) for user in students]
+
+    async def get_teachers(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Tuple[int, List[PublicProfileResponseDTO]]:
+        """Получить список всех учителей."""
+        total, teachers = await self.users_repo.get_users_by_role(
+            role=UserRole.TEACHER, limit=limit, offset=offset
+        )
+        return total, [PublicProfileResponseDTO.model_validate(user) for user in teachers]
+
+    async def get_public_profile(self, user_id: int) -> PublicProfileResponseDTO:
+        """Получение публичного профиля по ID"""
+        user = await self.users_repo.get_user_by_id(user_id)
+        if not user:
+            raise NotFoundData()
+
+        return PublicProfileResponseDTO.model_validate(user)
+

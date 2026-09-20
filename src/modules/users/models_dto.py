@@ -4,8 +4,8 @@ from typing import Optional
 from pydantic import EmailStr, BaseModel, ConfigDict
 
 from src.modules.base.orm_dto import ORMDTO
-from src.modules.students.models_dto import UpdateStudentDTO
-from src.modules.teachers.models_dto import UpdateTeacherDTO
+from src.modules.students.models_dto import UpdateStudentDTO, StudentsResponseDTO
+from src.modules.teachers.models_dto import UpdateTeacherDTO, TeachersResponseDTO
 from src.modules.users.models import UserRole
 
 
@@ -25,6 +25,11 @@ class UserResponse(ORMDTO):
     username: str
     role: UserRole
     created_at: datetime
+
+
+class PublicProfileResponseDTO(UserResponse):
+    teacher: Optional[TeachersResponseDTO] = None
+    student: Optional[StudentsResponseDTO] = None
 
 
 class UserAvatarResponseDTO(BaseModel):
