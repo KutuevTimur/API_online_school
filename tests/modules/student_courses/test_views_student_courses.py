@@ -10,6 +10,7 @@ from src.modules.student_courses.models_dto import EnrollStudentRequestDTO, Stud
 
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
+from tests.modules.student_courses.fixtures.models_dto import CreateStudentCourseFixtureDTO
 
 
 @pytest.mark.asyncio
@@ -17,6 +18,7 @@ async def test_enroll_student_to_course(
     client_for_tests,
     create_user_fixture,
     create_course_fixture,
+    create_student_course_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -47,30 +49,25 @@ async def test_unenroll_student_from_course(
     client_for_tests,
     create_user_fixture,
     create_course_fixture,
+    create_student_course_fixture,
     not_open_session_db,
     session_db,
 ):
-    teacher, t_token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
-    student, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
+    teacher_user, t_token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
+    student_user, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
 
     async with not_open_session_db() as session:
-        t_db = await session.scalar(select(Teacher).where(Teacher.user_id == teacher.id))
+        t_db = await session.scalar(select(Teacher).where(Teacher.user_id == teacher_user.id))
         teacher_table_id = t_db.id
-        s_db = await session.scalar(select(Student).where(Student.user_id == student.id))
+        s_db = await session.scalar(select(Student).where(Student.user_id == student_user.id))
         student_table_id = s_db.id
 
     course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_table_id))
 
-    enrollment = StudentCourse(
-        student_id=student_table_id,
-        course_id=course.id,
-        is_active=True,
-    )
-    session_db.add(enrollment)
-    await session_db.commit()
+    await create_student_course_fixture(CreateStudentCourseFixtureDTO(student_id=student_table_id, course_id=course.id))
 
     res = await client_for_tests.delete(
-        f"/courses/{course.id}/students/{student.id}",
+        f"/courses/{course.id}/students/{student_user.id}",
         headers={"Authorization": f"Bearer {t_token}"},
     )
 
@@ -82,6 +79,7 @@ async def test_get_students_for_course(
     client_for_tests,
     create_user_fixture,
     create_course_fixture,
+    create_student_course_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -96,13 +94,7 @@ async def test_get_students_for_course(
 
     course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_table_id))
 
-    enrollment = StudentCourse(
-        student_id=student_table_id,
-        course_id=course.id,
-        is_active=True,
-    )
-    session_db.add(enrollment)
-    await session_db.commit()
+    await create_student_course_fixture(CreateStudentCourseFixtureDTO(student_id=student_table_id, course_id=course.id))
 
     res = await client_for_tests.get(
         f"/courses/{course.id}/students",

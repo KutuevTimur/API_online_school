@@ -1,14 +1,12 @@
-import io
 import pytest
 from src.modules.users.models import UserRole
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
+from tests.modules.lesson_students.fixtures.models_dto import CreateLessonStudentFixtureDTO
+from tests.modules.lectures.fixtures.models_dto import CreateLectureFixtureDTO
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
-from src.modules.lectures.models import Lecture
-from src.modules.lesson_students.models import LessonStudent
-from datetime import datetime, timezone
 from src.modules.lectures.models_dto import LectureResponseDTO
 from src.modules.base.orm_dto import PaginationResponseDTO
 
@@ -18,6 +16,8 @@ async def test_upload_lecture(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_lecture_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -32,8 +32,7 @@ async def test_upload_lecture(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    session_db.add(LessonStudent(lesson_id=lesson.id, student_id=student_table_id))
-    await session_db.commit()
+    await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
     form_data = {
         "lesson_id": lesson.id,
@@ -60,6 +59,8 @@ async def test_get_lectures_list(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_lecture_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -74,21 +75,8 @@ async def test_get_lectures_list(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
     
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
-
-    lecture = Lecture(
-        lesson_student_id=ls.id,
-        original_file_path="/tmp/lecture1.pdf",
-        original_file_name="lecture1.pdf",
-        original_file_type="application/pdf",
-        pdf_file_path="/tmp/lecture1.pdf",
-        pdf_file_name="lecture1.pdf",
-    )
-    session_db.add(lecture)
-    await session_db.commit()
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    lecture = await create_lecture_fixture(CreateLectureFixtureDTO(lesson_student_id=ls.id))
 
     res_list = await client_for_tests.get(
         f"/lectures?lesson_id={lesson.id}&student_user_id={student.id}",
@@ -105,6 +93,8 @@ async def test_download_lecture(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_lecture_fixture,
     not_open_session_db,
     session_db
 ):
@@ -119,8 +109,7 @@ async def test_download_lecture(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    session_db.add(LessonStudent(lesson_id=lesson.id, student_id=student_table_id))
-    await session_db.commit()
+    await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
     upload_res = await client_for_tests.post(
         "/lectures",
@@ -145,6 +134,8 @@ async def test_delete_lecture(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_lecture_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -159,21 +150,8 @@ async def test_delete_lecture(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=s_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
-
-    lecture = Lecture(
-        lesson_student_id=ls.id,
-        original_file_path="/tmp/lecture1.pdf",
-        original_file_name="lecture1.pdf",
-        original_file_type="application/pdf",
-        pdf_file_path="/tmp/lecture1.pdf",
-        pdf_file_name="lecture1.pdf",
-    )
-    session_db.add(lecture)
-    await session_db.commit()
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=s_table_id))
+    lecture = await create_lecture_fixture(CreateLectureFixtureDTO(lesson_student_id=ls.id))
 
     res_del = await client_for_tests.delete(
         f"/lectures/{lecture.id}?lesson_id={lesson.id}&student_user_id={student.id}",

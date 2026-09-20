@@ -2,6 +2,7 @@ import pytest
 from src.modules.users.models import UserRole
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
+from tests.modules.lesson_students.fixtures.models_dto import CreateLessonStudentFixtureDTO
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
@@ -14,6 +15,7 @@ async def test_add_student_to_lesson(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -48,6 +50,7 @@ async def test_remove_student_from_lesson(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -62,8 +65,7 @@ async def test_remove_student_from_lesson(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    session_db.add(LessonStudent(lesson_id=lesson.id, student_id=student_table_id))
-    await session_db.commit()
+    await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
     del_res = await client_for_tests.delete(
         f"/lessons/{lesson.id}/students/{student.id}",

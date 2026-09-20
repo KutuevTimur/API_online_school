@@ -3,6 +3,9 @@ from src.modules.users.models import UserRole
 from src.modules.homework_submissions.models import HomeworkSubmissionStatus, HomeworkSubmission, HomeworkSubmissionFile
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
+from tests.modules.lesson_students.fixtures.models_dto import CreateLessonStudentFixtureDTO
+from tests.modules.homeworks.fixtures.models_dto import CreateHomeworkFixtureDTO
+from tests.modules.homework_submissions.fixtures.models_dto import CreateHomeworkSubmissionFixtureDTO
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
@@ -20,6 +23,9 @@ async def test_create_homework_submission(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
+    create_homework_submission_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -34,18 +40,8 @@ async def test_create_homework_submission(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
-
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="Test HW",
-        deadline=datetime.now(timezone.utc),
-    )
-    session_db.add(homework)
-    await session_db.commit()
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
     
     sub_data = {
         "text_content": "Here is my homework response!"
@@ -65,6 +61,9 @@ async def test_get_homework_submissions(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
+    create_homework_submission_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -79,27 +78,12 @@ async def test_get_homework_submissions(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
 
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="Test HW",
-        deadline=datetime.now(timezone.utc),
+    submission = await create_homework_submission_fixture(
+        CreateHomeworkSubmissionFixtureDTO(homework_id=homework.id, status=HomeworkSubmissionStatus.DRAFT)
     )
-    session_db.add(homework)
-    await session_db.commit()
-
-    submission = HomeworkSubmission(
-        homework_id=homework.id,
-        attempt_number=1,
-        text_content="content",
-        status=HomeworkSubmissionStatus.DRAFT
-    )
-    session_db.add(submission)
-    await session_db.commit()
 
     res_get_all = await client_for_tests.get(
         f"/homeworks/{homework.id}/submissions",
@@ -115,6 +99,9 @@ async def test_get_homework_submission_by_id(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
+    create_homework_submission_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -129,27 +116,12 @@ async def test_get_homework_submission_by_id(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
 
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="Test HW",
-        deadline=datetime.now(timezone.utc),
+    submission = await create_homework_submission_fixture(
+        CreateHomeworkSubmissionFixtureDTO(homework_id=homework.id,status=HomeworkSubmissionStatus.DRAFT)
     )
-    session_db.add(homework)
-    await session_db.commit()
-
-    submission = HomeworkSubmission(
-        homework_id=homework.id,
-        attempt_number=1,
-        text_content="content",
-        status=HomeworkSubmissionStatus.DRAFT
-    )
-    session_db.add(submission)
-    await session_db.commit()
 
     res_get_one = await client_for_tests.get(
         f"/submissions/{submission.id}?homework_id={homework.id}",
@@ -165,6 +137,9 @@ async def test_update_homework_submission_student(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
+    create_homework_submission_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -179,27 +154,12 @@ async def test_update_homework_submission_student(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
 
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="Test HW",
-        deadline=datetime.now(timezone.utc),
+    submission = await create_homework_submission_fixture(
+        CreateHomeworkSubmissionFixtureDTO(homework_id=homework.id, status=HomeworkSubmissionStatus.DRAFT)
     )
-    session_db.add(homework)
-    await session_db.commit()
-
-    submission = HomeworkSubmission(
-        homework_id=homework.id,
-        attempt_number=1,
-        text_content="content",
-        status=HomeworkSubmissionStatus.DRAFT
-    )
-    session_db.add(submission)
-    await session_db.commit()
 
     update_dto = UpdateSubmissionStudentRequestDTO(text_content="Updated response")
     
@@ -218,6 +178,9 @@ async def test_update_homework_submission_teacher(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
+    create_homework_submission_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -232,27 +195,12 @@ async def test_update_homework_submission_teacher(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
 
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="Test HW",
-        deadline=datetime.now(timezone.utc),
+    submission = await create_homework_submission_fixture(
+        CreateHomeworkSubmissionFixtureDTO(homework_id=homework.id, status=HomeworkSubmissionStatus.SUBMITTED)
     )
-    session_db.add(homework)
-    await session_db.commit()
-
-    submission = HomeworkSubmission(
-        homework_id=homework.id,
-        attempt_number=1,
-        text_content="content",
-        status=HomeworkSubmissionStatus.SUBMITTED
-    )
-    session_db.add(submission)
-    await session_db.commit()
 
     update_dto = UpdateSubmissionTeacherRequestDTO(
         status=HomeworkSubmissionStatus.CHECKED,
@@ -276,6 +224,9 @@ async def test_delete_homework_submission(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
+    create_homework_submission_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -290,27 +241,12 @@ async def test_delete_homework_submission(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
 
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="Test HW",
-        deadline=datetime.now(timezone.utc),
+    submission = await create_homework_submission_fixture(
+        CreateHomeworkSubmissionFixtureDTO(homework_id=homework.id, status=HomeworkSubmissionStatus.DRAFT)
     )
-    session_db.add(homework)
-    await session_db.commit()
-
-    submission = HomeworkSubmission(
-        homework_id=homework.id,
-        attempt_number=1,
-        text_content="content",
-        status=HomeworkSubmissionStatus.DRAFT
-    )
-    session_db.add(submission)
-    await session_db.commit()
 
     res_del = await client_for_tests.delete(
         f"/submissions/{submission.id}?homework_id={homework.id}",

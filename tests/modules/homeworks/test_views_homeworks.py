@@ -3,11 +3,11 @@ from typing import List
 from src.modules.users.models import UserRole
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
+from tests.modules.lesson_students.fixtures.models_dto import CreateLessonStudentFixtureDTO
+from tests.modules.homeworks.fixtures.models_dto import CreateHomeworkFixtureDTO
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
-from src.modules.homeworks.models import Homework
-from src.modules.lesson_students.models import LessonStudent
 from datetime import datetime, timezone
 from src.modules.homeworks.models_dto import HomeworkResponseDTO
 from pydantic import TypeAdapter
@@ -18,6 +18,8 @@ async def test_create_homework(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -32,8 +34,7 @@ async def test_create_homework(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    session_db.add(LessonStudent(lesson_id=lesson.id, student_id=student_table_id))
-    await session_db.commit()
+    await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
     hw_data = {
         "lesson_id": lesson.id,
@@ -65,6 +66,8 @@ async def test_get_homeworks_list(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -79,18 +82,8 @@ async def test_get_homeworks_list(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
-
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="Test list",
-        deadline=datetime.now(timezone.utc),
-    )
-    session_db.add(homework)
-    await session_db.commit()
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
 
     res_list = await client_for_tests.get(
         f"/homeworks?lesson_id={lesson.id}&student_user_id={student.id}",
@@ -107,6 +100,8 @@ async def test_download_homework_file(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -121,8 +116,7 @@ async def test_download_homework_file(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    session_db.add(LessonStudent(lesson_id=lesson.id, student_id=student_table_id))
-    await session_db.commit()
+    await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
     upload_res = await client_for_tests.post(
         "/homeworks",
@@ -152,6 +146,8 @@ async def test_delete_homework(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_lesson_student_fixture,
+    create_homework_fixture,
     not_open_session_db,
     session_db,
 ):
@@ -166,18 +162,8 @@ async def test_delete_homework(
 
     lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
 
-    ls = LessonStudent(lesson_id=lesson.id, student_id=student_table_id)
-    session_db.add(ls)
-    await session_db.commit()
-    await session_db.refresh(ls)
-
-    homework = Homework(
-        lesson_student_id=ls.id,
-        title="To be deleted",
-        deadline=datetime.now(timezone.utc),
-    )
-    session_db.add(homework)
-    await session_db.commit()
+    ls = await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
+    homework = await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
 
     res_del = await client_for_tests.delete(
         f"/homeworks/{homework.id}?lesson_id={lesson.id}&student_user_id={student.id}",
