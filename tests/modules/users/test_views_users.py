@@ -7,9 +7,9 @@ from sqlalchemy import select
 from helpers.functions import comparison_models
 from src.modules.path_builder import PathBuilder
 from src.modules.students.models import Student
-from src.modules.students.models_dto import StudentsDTO
+from src.modules.students.models_dto import StudentsDTO, StudentsResponseDTO
 from src.modules.teachers.models import Teacher
-from src.modules.teachers.models_dto import TeachersDTO
+from src.modules.teachers.models_dto import TeachersDTO, TeachersResponseDTO
 from src.modules.users.models import User, UserRole
 from src.modules.users.models_dto import UpdateUserDataRequestDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
@@ -59,11 +59,11 @@ async def test_update_user_self_student(
     )
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["first_name"] == "Ivan_Updated"
-    assert data["last_name"] == "Petrov_Updated"
-    assert data["middle_name"] == "Alexandrovich"
-    assert data["user_id"] == student.id
+    res_dto = StudentsResponseDTO.model_validate(response.json())
+    assert res_dto.first_name == "Ivan_Updated"
+    assert res_dto.last_name == "Petrov_Updated"
+    assert res_dto.middle_name == "Alexandrovich"
+    assert res_dto.user_id == student.id
 
     result_student = await session_db.execute(select(Student).where(Student.user_id == student.id))
     student_db = result_student.scalar_one_or_none()
@@ -101,12 +101,12 @@ async def test_update_user_self_teacher(
     )
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["first_name"] == "Prof_Updated"
-    assert data["last_name"] == "Smith_Updated"
-    assert data["middle_name"] == "John"
-    assert data["description"] == "Senior Mathematics Professor"
-    assert data["user_id"] == teacher.id
+    res_dto = TeachersResponseDTO.model_validate(response.json())
+    assert res_dto.first_name == "Prof_Updated"
+    assert res_dto.last_name == "Smith_Updated"
+    assert res_dto.middle_name == "John"
+    assert res_dto.description == "Senior Mathematics Professor"
+    assert res_dto.user_id == teacher.id
 
     result_teacher = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
     teacher_db = result_teacher.scalar_one_or_none()
@@ -145,9 +145,9 @@ async def test_update_user_by_teacher_for_student(
     )
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["first_name"] == "Changed_By_Teacher"
-    assert data["last_name"] == "Student_New_Last"
+    res_dto = StudentsResponseDTO.model_validate(response.json())
+    assert res_dto.first_name == "Changed_By_Teacher"
+    assert res_dto.last_name == "Student_New_Last"
 
     result_student = await session_db.execute(select(Student).where(Student.user_id == student.id))
     student_db = result_student.scalar_one_or_none()
@@ -252,14 +252,14 @@ async def test_update_avatar_by_self_student(
     assert response.headers.get("content-type") == "image/png"
     assert response.headers.get("content-disposition") == 'inline; filename="photo.png"'
 
-    # Проверяем сохраненный файл на диске
+    # _?????? ??>?????? +?? ? ????
     avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
     assert avatar_file.is_file()
     with Image.open(avatar_file) as img:
         assert img.format == "WEBP"
         assert img.size[0] <= 512 and img.size[1] <= 512
 
-    # Проверяем запись в БД
+    # _?????? ??????  ""
     result_db = await session_db.execute(select(Student).where(Student.user_id == student.id))
     student_db = result_db.scalar_one_or_none()
     assert student_db is not None
@@ -292,7 +292,7 @@ async def test_update_avatar_by_teacher_for_student(
     assert response.headers.get("content-type") == "image/jpeg"
     assert response.headers.get("content-disposition") == 'inline; filename="avatar.jpg"'
 
-    # Проверяем сохраненный файл и БД
+    # _?????? ??>?????? +??  ""
     avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
     assert avatar_file.is_file()
 
@@ -313,7 +313,7 @@ async def test_update_avatar_replaces_existing_avatar(
         new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
     )
 
-    # Первая загрузка
+    # _???? ??"????
     first_bytes = _generate_test_image_bytes("PNG", (300, 300))
     response_1 = await client_for_tests.patch(
         f"/users/{teacher.id}/avatar",
@@ -325,7 +325,7 @@ async def test_update_avatar_replaces_existing_avatar(
     avatar_file = PathBuilder(config=config_fix).get_avatar_user(teacher.id)
     assert avatar_file.is_file()
 
-    # Вторая загрузка (замена)
+    # _'??? ??"???? (?????)
     second_bytes = _generate_test_image_bytes("JPEG", (400, 400))
     response_2 = await client_for_tests.patch(
         f"/users/{teacher.id}/avatar",
@@ -424,7 +424,7 @@ async def test_delete_avatar_by_self_student(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
     )
 
-    # Загружаем аватар
+    # _?"????? ?'?
     image_bytes = _generate_test_image_bytes("PNG")
     upload_res = await client_for_tests.patch(
         f"/users/{student.id}/avatar",
@@ -436,7 +436,7 @@ async def test_delete_avatar_by_self_student(
     avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
     assert avatar_file.is_file()
 
-    # Удаляем аватар
+    # _'?>?? ?'?
     delete_res = await client_for_tests.delete(
         f"/users/{student.id}/avatar",
         headers={"Authorization": f"Bearer {token}"},
@@ -458,7 +458,7 @@ async def test_delete_avatar_by_teacher_for_student(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
     )
 
-    # Загружаем аватар студенту
+    # _?"????? ?'? ???'???
     image_bytes = _generate_test_image_bytes("PNG")
     upload_res = await client_for_tests.patch(
         f"/users/{student.id}/avatar",
@@ -470,7 +470,7 @@ async def test_delete_avatar_by_teacher_for_student(
     avatar_file = PathBuilder(config=config_fix).get_avatar_user(student.id)
     assert avatar_file.is_file()
 
-    # Учитель удаляет аватар студента
+    # _????> ?'?>?? ?'? ???'???
     delete_res = await client_for_tests.delete(
         f"/users/{student.id}/avatar",
         headers={"Authorization": f"Bearer {teacher_token}"},
@@ -492,7 +492,7 @@ async def test_delete_avatar_forbidden_for_other_student(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
     )
 
-    # Загружаем аватар студенту 2
+    # _?"????? ?'? ???'??? 2
     image_bytes = _generate_test_image_bytes("PNG")
     upload_res = await client_for_tests.patch(
         f"/users/{student_2.id}/avatar",
@@ -501,7 +501,7 @@ async def test_delete_avatar_forbidden_for_other_student(
     )
     assert upload_res.status_code == 200
 
-    # Студент 1 пытается удалить аватар студента 2
+    # _???'?? 1 ?<????? ?'?>?? ?'? ???'??? 2
     delete_res = await client_for_tests.delete(
         f"/users/{student_2.id}/avatar",
         headers={"Authorization": f"Bearer {token_1}"},
@@ -519,7 +519,7 @@ async def test_delete_avatar_not_found(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
     )
 
-    # Пытаемся удалить несуществующий аватар
+    # _<????? ?'?>?? ????????????? ?'?
     delete_res = await client_for_tests.delete(
         f"/users/{student.id}/avatar",
         headers={"Authorization": f"Bearer {token}"},

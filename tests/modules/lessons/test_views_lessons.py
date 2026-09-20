@@ -6,7 +6,8 @@ from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
-from src.modules.lessons.models_dto import CreateLessonRequestDTO, UpdateLessonRequestDTO
+from src.modules.lessons.models_dto import CreateLessonRequestDTO, UpdateLessonRequestDTO, LessonResponseDTO
+from src.modules.base.orm_dto import PaginationResponseDTO
 
 
 @pytest.mark.asyncio
@@ -41,11 +42,11 @@ async def test_create_lesson(
     )
     
     assert response.status_code == 201
-    data = response.json()
-    assert data["id"] > 0
-    assert data["title"] == create_dto.title
-    assert data["course_id"] == create_dto.course_id
-    assert data["teacher_user_id"] == teacher.id
+    res_dto = LessonResponseDTO.model_validate(response.json())
+    assert res_dto.id > 0
+    assert res_dto.title == create_dto.title
+    assert res_dto.course_id == create_dto.course_id
+    assert res_dto.teacher_user_id == teacher.id
 
 
 @pytest.mark.asyncio
@@ -70,10 +71,10 @@ async def test_get_lessons(
     )
     
     assert response.status_code == 200
-    data = response.json()
-    assert data["total"] == 2
-    assert "has_lecture" in data["items"][0]
-    assert "has_homework" in data["items"][0]
+    res_dto = PaginationResponseDTO[LessonResponseDTO].model_validate(response.json())
+    assert res_dto.total == 2
+    assert res_dto.items[0].has_lecture is not None
+    assert res_dto.items[0].has_homework is not None
 
 
 @pytest.mark.asyncio
@@ -97,7 +98,8 @@ async def test_get_lesson_by_id(
     )
     
     assert response.status_code == 200
-    assert response.json()["title"] == "Get Me"
+    res_dto = LessonResponseDTO.model_validate(response.json())
+    assert res_dto.title == "Get Me"
 
 
 @pytest.mark.asyncio
@@ -127,9 +129,9 @@ async def test_update_lesson(
     )
     
     assert response.status_code == 200
-    data = response.json()
-    assert data["title"] == update_dto.title
-    assert data["duration_minutes"] == update_dto.duration_minutes
+    res_dto = LessonResponseDTO.model_validate(response.json())
+    assert res_dto.title == update_dto.title
+    assert res_dto.duration_minutes == update_dto.duration_minutes
 
 
 @pytest.mark.asyncio

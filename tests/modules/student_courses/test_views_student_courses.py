@@ -1,12 +1,12 @@
 import pytest
 from sqlalchemy import select
-from datetime import datetime, timezone
 
 from src.modules.users.models import UserRole
 from src.modules.students.models import Student
 from src.modules.teachers.models import Teacher
 from src.modules.student_courses.models import StudentCourse
-from src.modules.student_courses.models_dto import EnrollStudentRequestDTO
+from src.modules.base.orm_dto import PaginationResponseDTO
+from src.modules.student_courses.models_dto import EnrollStudentRequestDTO, StudentCourseResponseDTO
 
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
@@ -38,7 +38,8 @@ async def test_enroll_student_to_course(
     )
 
     assert res.status_code == 201
-    assert res.json()["course_id"] == course.id
+    res_dto = StudentCourseResponseDTO.model_validate(res.json())
+    assert res_dto.course_id == course.id
 
 
 @pytest.mark.asyncio
@@ -109,8 +110,9 @@ async def test_get_students_for_course(
     )
 
     assert res.status_code == 200
-    assert res.json()["total"] == 1
+    res_dto = PaginationResponseDTO[StudentCourseResponseDTO].model_validate(res.json())
+    assert res_dto.total == 1
     
-    items = res.json()["items"]
+    items = res_dto.items
     assert len(items) == 1
-    assert items[0]["student_id"] == student_table_id
+    assert items[0].student_id == student_table_id

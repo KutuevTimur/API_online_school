@@ -1,4 +1,5 @@
 import pytest
+from typing import List
 from src.modules.users.models import UserRole
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
 from tests.modules.lessons.fixtures.models_dto import CreateLessonFixtureDTO
@@ -8,6 +9,8 @@ from src.modules.students.models import Student
 from src.modules.homeworks.models import Homework
 from src.modules.lesson_students.models import LessonStudent
 from datetime import datetime, timezone
+from src.modules.homeworks.models_dto import HomeworkResponseDTO
+from pydantic import TypeAdapter
 
 
 @pytest.mark.asyncio
@@ -52,9 +55,9 @@ async def test_create_homework(
     )
     
     assert res_hw.status_code == 201
-    hw = res_hw.json()
-    assert hw["title"] == "Math Homework"
-    assert hw["pdf_file_name"] is not None
+    res_dto = HomeworkResponseDTO.model_validate(res_hw.json())
+    assert res_dto.title == "Math Homework"
+    assert res_dto.pdf_file_name is not None
 
 
 @pytest.mark.asyncio
@@ -95,7 +98,8 @@ async def test_get_homeworks_list(
     )
     
     assert res_list.status_code == 200
-    assert len(res_list.json()) == 1
+    res_dto_list = TypeAdapter(List[HomeworkResponseDTO]).validate_python(res_list.json())
+    assert len(res_dto_list) == 1
 
 
 @pytest.mark.asyncio
@@ -131,7 +135,8 @@ async def test_download_homework_file(
         files={"file": ("test_hw.pdf", b"dummy pdf content", "application/pdf")},
         headers={"Authorization": f"Bearer {t_token}"},
     )
-    homework_id = upload_res.json()["id"]
+    res_dto = HomeworkResponseDTO.model_validate(upload_res.json())
+    homework_id = res_dto.id
 
     res_download = await client_for_tests.get(
         f"/homeworks/{homework_id}/file?lesson_id={lesson.id}&student_user_id={student.id}",
@@ -185,4 +190,5 @@ async def test_delete_homework(
         f"/homeworks?lesson_id={lesson.id}&student_user_id={student.id}",
         headers={"Authorization": f"Bearer {t_token}"},
     )
-    assert len(res_list_after.json()) == 0
+    res_dto_list = TypeAdapter(List[HomeworkResponseDTO]).validate_python(res_list_after.json())
+    assert len(res_dto_list) == 0

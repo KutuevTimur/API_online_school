@@ -5,7 +5,8 @@ from src.modules.teachers.models import Teacher
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.courses.models import Course, AvatarCoursesType
-from src.modules.courses.models_dto import CreateCourseDTORequest, UpdateCourseDTORequest
+from src.modules.courses.models_dto import CreateCourseDTORequest, UpdateCourseDTORequest, CoursesResponseDTO
+from src.modules.base.orm_dto import PaginationResponseDTO
 from src.modules.path_builder import PathBuilder
 from src.modules.student_courses.models import StudentCourse
 from src.modules.students.models import Student
@@ -34,13 +35,13 @@ async def test_get_courses_as_teacher(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    data = response.json()
-    assert len(data["items"]) >= 2
-    slugs = [c["slug"] for c in data["items"]]
+    res_dto = PaginationResponseDTO[CoursesResponseDTO].model_validate(response.json())
+    assert len(res_dto.items) >= 2
+    slugs = [c.slug for c in res_dto.items]
     assert c1.slug in slugs
     assert c2.slug in slugs
 
-    # Проверка alias /courses
+    # _????????? alias /courses
     alias_res = await client_for_tests.get(
         "/courses",
         headers={"Authorization": f"Bearer {token}"},
@@ -65,15 +66,17 @@ async def test_get_courses_as_teacher_filters(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_active.status_code == 200
-    assert all(c["is_active"] is True for c in res_active.json()["items"])
+    res_dto = PaginationResponseDTO[CoursesResponseDTO].model_validate(res_active.json())
+    assert all(c.is_active is True for c in res_dto.items)
 
-    # teacher_id filter (функционал ведущего: при отсутствии привязки возвращает пустой список)
+    # teacher_id filter (_?????????? +>????>?: ??? >???''??? ??????>? >???'??? ???>'? ????>?)
     res_teacher = await client_for_tests.get(
         "/courses?teacher_user_id=9999",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_teacher.status_code == 200
-    assert res_teacher.json()["items"] == []
+    res_teach_dto = PaginationResponseDTO[CoursesResponseDTO].model_validate(res_teacher.json())
+    assert res_teach_dto.items == []
 
 
 @pytest.mark.asyncio
@@ -91,7 +94,7 @@ async def test_get_courses_as_student_only_enrolled(
     c_not_enrolled = await create_course_fixture(CreateCourseFixtureDTO(name="Other Course", slug="other", is_active=True))
     c_inactive = await create_course_fixture(CreateCourseFixtureDTO(name="Inactive Course", slug="inactive-enrolled", is_active=False))
 
-    # Привязываем студента к c_enrolled и c_inactive
+    # _???'>?"??? ?'????'  c_enrolled ? c_inactive
     session_db.add_all([
         StudentCourse(student_id=student.id, course_id=c_enrolled.id, is_active=True),
         StudentCourse(student_id=student.id, course_id=c_inactive.id, is_active=True),
@@ -103,11 +106,11 @@ async def test_get_courses_as_student_only_enrolled(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    courses = response.json()
-    slugs = {c["slug"] for c in courses["items"]}
+    res_dto = PaginationResponseDTO[CoursesResponseDTO].model_validate(response.json())
+    slugs = {c.slug for c in res_dto.items}
     assert c_enrolled.slug in slugs
     assert c_not_enrolled.slug not in slugs
-    # Неактивный курс студенту не возвращается
+    # _+?<?>"??? ???  ?'????'  ?? >???'???
     assert c_inactive.slug not in slugs
 
 
@@ -135,7 +138,8 @@ async def test_get_course_by_id_as_teacher(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    assert response.json()["id"] == course.id
+    res_dto = CoursesResponseDTO.model_validate(response.json())
+    assert res_dto.id == course.id
 
 
 @pytest.mark.asyncio
@@ -158,7 +162,8 @@ async def test_get_course_by_id_as_student_allowed(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    assert response.json()["id"] == course.id
+    res_dto = CoursesResponseDTO.model_validate(response.json())
+    assert res_dto.id == course.id
 
 
 @pytest.mark.asyncio
@@ -217,12 +222,12 @@ async def test_create_course_by_teacher(
         json=dto.model_dump(),
     )
     assert response.status_code == 201
-    data = response.json()
-    assert data["name"] == "New FastApi Course"
-    assert data["slug"] == "new-fastapi-course"
-    assert data["avatar_type"] == AvatarCoursesType.DEFAULT
+    res_dto = CoursesResponseDTO.model_validate(response.json())
+    assert res_dto.name == "New FastApi Course"
+    assert res_dto.slug == "new-fastapi-course"
+    assert res_dto.avatar_type == AvatarCoursesType.DEFAULT
 
-    # Проверяем в БД
+    # _?????????  ""
     res_db = await session_db.execute(select(Course).where(Course.slug == "new-fastapi-course"))
     course_db = res_db.scalar_one_or_none()
     assert course_db is not None
@@ -291,12 +296,12 @@ async def test_update_course_by_teacher(
         json=dto.model_dump(exclude_unset=True),
     )
     assert response.status_code == 200
-    data = response.json()
-    assert data["name"] == "Updated Name"
-    assert data["description"] == "Updated Description"
-    assert data["is_active"] is False
+    res_dto = CoursesResponseDTO.model_validate(response.json())
+    assert res_dto.name == "Updated Name"
+    assert res_dto.description == "Updated Description"
+    assert res_dto.is_active is False
 
-    # Проверка в БД
+    # _?????????  ""
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
     assert db_course.name == "Updated Name"
@@ -351,11 +356,11 @@ async def test_update_avatar_by_teacher(
     assert response.headers.get("content-type") == "image/png"
     assert response.headers.get("content-disposition") == 'inline; filename="cover.png"'
 
-    # Проверяем сохранение файла на диске
+    # _????????? ?"??>???? ??+?  ????
     avatar_file = PathBuilder(config=config_fix).get_avatar_course(course.id)
     assert avatar_file.is_file()
 
-    # Проверяем обновление модели в БД
+    # _????????? >?>?"???? <?>???  ""
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
     assert db_course.avatar_type == AvatarCoursesType.CUSTOM
@@ -394,10 +399,10 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     session_db: AsyncSession,
 ):
     """
-    Проверяем мягкое удаление:
-    1. Курс становится is_active = False.
-    2. Уникальный slug освобождается (суффикс __deleted__).
-    3. Создание нового курса с тем же slug успешно выполняется без конфликта уникальности!
+    _????????? <'?+> ?> "?'??:
+    1. _??? ?' >"?is_active = False.
+    2. _+?+?"+?:  slug >?? ?"????? (> "+?? __deleted__).
+    3. _>?' "+ ? ?> >+> ????  '+ ?  slug ?" :? >?'> ? ?"??+  ? ?>"?" ?>++ ?' ???+?"+?>'?!
     """
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
     res_t = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
@@ -410,33 +415,34 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert del_response.status_code == 200
-    deleted_data = del_response.json()
-    assert deleted_data["id"] == course.id
-    assert deleted_data["is_active"] is False
-    assert deleted_data["slug"].startswith(orig_slug)
-    assert "__deleted__" in deleted_data["slug"]
+    res_dto = CoursesResponseDTO.model_validate(del_response.json())
+    assert res_dto.id == course.id
+    assert res_dto.is_active is False
+    assert res_dto.slug.startswith(orig_slug)
+    assert "__deleted__" in res_dto.slug
 
-    # Проверяем в БД: запись сохранилась, но деактивирована
+    # _?????????  "": ' ?"?? ? +"' ?, > ?>+'??? > "?
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one_or_none()
     assert db_course is not None
     assert db_course.is_active is False
 
-    # Повторное удаление возвращает 404 Not Found
+    # _? ?">? ?> "?'?? >??'?? 404 Not Found
     del_again = await client_for_tests.delete(
         f"/courses/{course.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert del_again.status_code == 404
 
-    # Создаём новый курс с ТЕМ ЖЕ slug - уникальность не нарушена!
+    # _>?' '+ ? ?>? ???  _ _ _ slug - ??+?"+?>' ?" ) "' "?!
     create_res = await client_for_tests.post(
         "/courses",
         headers={"Authorization": f"Bearer {token}"},
         json={"name": "Recreated Course", "slug": orig_slug},
     )
     assert create_res.status_code == 201
-    assert create_res.json()["slug"] == orig_slug
+    create_dto = CoursesResponseDTO.model_validate(create_res.json())
+    assert create_dto.slug == orig_slug
 
 
 @pytest.mark.asyncio
@@ -453,7 +459,7 @@ async def test_hard_delete_course_by_teacher(
     teacher_db = res_t.scalar_one()
     course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="Hard Delete Me", slug="hard-del-course"))
 
-    # Привяжем аватар
+    # _??' '  ?'?
     image_bytes = create_image_bytes_fixture("PNG", (200, 200))
     avatar_res = await client_for_tests.patch(
         f"/courses/{course.id}/avatar",
@@ -464,17 +470,17 @@ async def test_hard_delete_course_by_teacher(
     avatar_path = PathBuilder(config=config_fix).get_avatar_course(course.id)
     assert avatar_path.is_file()
 
-    # Физическое удаление через ?hard=true
+    # _?-??+' ?> "?'?? ? ?) ?hard=true
     del_res = await client_for_tests.delete(
         f"/courses/{course.id}?hard=true",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert del_res.status_code == 200
 
-    # Файл аватара удалён
+    # _?? ?' ? ?> 
     assert not avatar_path.exists()
 
-    # Запись удалена из БД
+    # _' ?"?? ?> "?  1  ""
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     assert res_db.scalar_one_or_none() is None
 

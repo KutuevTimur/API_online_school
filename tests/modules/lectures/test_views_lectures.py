@@ -9,6 +9,8 @@ from src.modules.students.models import Student
 from src.modules.lectures.models import Lecture
 from src.modules.lesson_students.models import LessonStudent
 from datetime import datetime, timezone
+from src.modules.lectures.models_dto import LectureResponseDTO
+from src.modules.base.orm_dto import PaginationResponseDTO
 
 
 @pytest.mark.asyncio
@@ -49,8 +51,8 @@ async def test_upload_lecture(
     )
     
     assert res_upload.status_code == 201
-    lecture = res_upload.json()
-    assert lecture["pdf_file_name"] is not None
+    res_dto = LectureResponseDTO.model_validate(res_upload.json())
+    assert res_dto.pdf_file_name is not None
 
 
 @pytest.mark.asyncio
@@ -94,7 +96,8 @@ async def test_get_lectures_list(
     )
     
     assert res_list.status_code == 200
-    assert res_list.json()["total"] == 1
+    res_dto = PaginationResponseDTO[LectureResponseDTO].model_validate(res_list.json())
+    assert res_dto.total == 1
 
 
 @pytest.mark.asyncio
@@ -125,7 +128,8 @@ async def test_download_lecture(
         files={"file": ("lecture1.pdf", b"dummy lecture content", "application/pdf")},
         headers={"Authorization": f"Bearer {t_token}"},
     )
-    lecture_id = upload_res.json()["id"]
+    res_dto = LectureResponseDTO.model_validate(upload_res.json())
+    lecture_id = res_dto.id
 
     res_download = await client_for_tests.get(
         f"/lectures/{lecture_id}/file?lesson_id={lesson.id}&student_user_id={student.id}",
@@ -182,4 +186,5 @@ async def test_delete_lecture(
         f"/lectures?lesson_id={lesson.id}&student_user_id={student.id}",
         headers={"Authorization": f"Bearer {t_token}"},
     )
-    assert res_list_after.json()["total"] == 0
+    res_dto_after = PaginationResponseDTO[LectureResponseDTO].model_validate(res_list_after.json())
+    assert res_dto_after.total == 0
