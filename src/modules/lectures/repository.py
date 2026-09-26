@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import select, delete, update, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.lectures.models import Lecture
 from src.modules.lesson_students.models import LessonStudent
 from src.modules.lectures.models_dto import CreateLectureRequestDTO

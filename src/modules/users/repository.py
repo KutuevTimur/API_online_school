@@ -4,7 +4,7 @@ from sqlalchemy import select, or_, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.users.models import User, UserRole
 from src.modules.users.models_dto import CreateUserDTO
 

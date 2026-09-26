@@ -5,7 +5,7 @@ from sqlalchemy import select, update, delete, func, desc, asc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.homework_submissions.models import HomeworkSubmission, HomeworkSubmissionFile
 from src.modules.homework_submissions.models_dto import HomeworkSubmissionRequestDTO, HomeworkSubmissionFileRequestDTO
 

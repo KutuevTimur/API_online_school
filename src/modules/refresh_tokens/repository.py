@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.refresh_tokens.models import RefreshToken
 from src.modules.refresh_tokens.models_dto import CreateRefreshTokenDTO
 

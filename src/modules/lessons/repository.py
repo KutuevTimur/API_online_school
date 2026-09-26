@@ -4,7 +4,7 @@ from sqlalchemy import update, delete, select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.lessons.models import Lesson
 from src.modules.lesson_students.models import LessonStudent
 from src.modules.lessons.models_dto import CreateLessonDTO

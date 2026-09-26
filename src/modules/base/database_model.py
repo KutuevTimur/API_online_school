@@ -1,8 +1,9 @@
-from typing import TypeVar, Type, Union
+from datetime import datetime, UTC
+from typing import TypeVar
 from pydantic import BaseModel
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import Boolean, DateTime
+from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database.database import Base
 
@@ -11,25 +12,14 @@ ModelType = TypeVar("ModelType", bound=Base)
 DTOType = TypeVar("DTOType", bound="BaseModel")
 
 
-class BaseRepository:
+class SoftDeleteMixin:
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    def __init__(self, session: AsyncSession, model: Type[ModelType]):
-        self.session = session
-        self.model = model
+    def soft_delete(self):
+        self.is_deleted = True
+        self.deleted_at = datetime.now(UTC)
 
-    def add(self, data: Union[DTOType, dict]) -> ModelType:
-        if isinstance(data, dict):
-            instance = self.model(**data)
-        elif hasattr(data, "model_dump"):
-            instance = self.model(**data.model_dump())
-        else:
-            instance = self.model(**dict(data))
-        self.session.add(instance)
-        return instance
-
-    async def get_by_id(self, model: ModelType, obj_id: int) -> ModelType | None:
-        stmt = select(model).where(model.id == obj_id)
-
-        result = await self.session.execute(stmt)
-
-        return result.scalar_one_or_none()
+    def restore(self):
+        self.is_deleted = False
+        self.deleted_at = None

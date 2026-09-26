@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.students.models import Student
 from src.modules.students.models_dto import CreateStudentDTO
 

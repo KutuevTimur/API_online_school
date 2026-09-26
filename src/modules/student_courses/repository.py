@@ -3,7 +3,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.student_courses.models import StudentCourse
 from src.modules.student_courses.models_dto import CreateStudentCoursesDTO
 

@@ -2,7 +2,7 @@ from typing import List
 from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.base.database_model import BaseRepository
+from src.modules.base.repository_model import BaseRepository
 from src.modules.homeworks.models import Homework
 from src.modules.lesson_students.models import LessonStudent
 from src.modules.homeworks.models_dto import CreateHomeworkRequestDTO
