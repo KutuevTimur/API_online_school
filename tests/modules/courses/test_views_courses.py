@@ -1,5 +1,6 @@
 import io
 import pytest
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from src.modules.teachers.models import Teacher
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,7 +94,7 @@ async def test_get_courses_as_student_only_enrolled(
 
     session_db.add_all([
         StudentCourse(student_id=student.id, course_id=c_enrolled.id),
-        StudentCourse(student_id=student.id, course_id=c_inactive.id, is_active=False),
+        StudentCourse(student_id=student.id, course_id=c_inactive.id, expires_at=datetime.now(timezone.utc) - timedelta(days=1)),
     ])
     await session_db.commit()
 

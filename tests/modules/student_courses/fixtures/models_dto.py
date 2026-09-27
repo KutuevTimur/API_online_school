@@ -5,6 +5,6 @@ from pydantic import BaseModel, Field
 class CreateStudentCourseFixtureDTO(BaseModel):
     student_id: Optional[int] = None
     course_id: Optional[int] = None
-    is_active: bool = True
+    is_deleted: bool = False
     started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None

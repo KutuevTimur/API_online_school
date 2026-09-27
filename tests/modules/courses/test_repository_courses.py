@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -159,7 +160,7 @@ async def test_get_courses_by_student_id(
 
     # Привязываем студента 1 к c1 (активен) и c2 (неактивен)
     sc1 = StudentCourse(student_id=student1_db.id, course_id=c1.id)
-    sc2 = StudentCourse(student_id=student1_db.id, course_id=c2.id, is_active=False)
+    sc2 = StudentCourse(student_id=student1_db.id, course_id=c2.id, expires_at=datetime.now(timezone.utc) - timedelta(days=1))
     # Привязываем студента 2 только к c3
     sc3 = StudentCourse(student_id=student2_db.id, course_id=c3.id)
 

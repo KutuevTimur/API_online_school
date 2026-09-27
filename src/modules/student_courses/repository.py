@@ -25,7 +25,7 @@ class StudentCoursesRepository(BaseRepository):
         stmt = select(StudentCourse).where(
             StudentCourse.student_id == student_id,
             StudentCourse.course_id == course_id,
-            StudentCourse.is_active == True,
+            StudentCourse.is_deleted == False,
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
@@ -35,7 +35,7 @@ class StudentCoursesRepository(BaseRepository):
         student_id: int,
         course_id: int,
     ) -> StudentCourse | None:
-        """Получить запись о зачислении"""
+        """Получить запись о зачислении (включая неактивные для восстановления)"""
         stmt = select(StudentCourse).where(
             StudentCourse.student_id == student_id,
             StudentCourse.course_id == course_id,
@@ -56,16 +56,22 @@ class StudentCoursesRepository(BaseRepository):
         limit: int,
         offset: int,
     ) -> tuple[int, Sequence[StudentCourse]]:
-        """Получить список всех учеников, прикрепленных к курсу"""
+        """Получить список всех активных учеников, прикрепленных к курсу"""
         # Сначала считаем общее количество
-        count_stmt = select(self.model.id).where(self.model.course_id == course_id)
+        count_stmt = select(StudentCourse.id).where(
+            StudentCourse.course_id == course_id,
+            StudentCourse.is_deleted == False
+        )
         count_res = await self.session.execute(count_stmt)
         total_count = len(count_res.scalars().all())
 
         # Потом получаем данные
         stmt = (
             select(StudentCourse)
-            .where(StudentCourse.course_id == course_id)
+            .where(
+                StudentCourse.course_id == course_id,
+                StudentCourse.is_deleted == False
+            )
             .options(selectinload(StudentCourse.student))
             .limit(limit)
             .offset(offset)
@@ -73,13 +79,3 @@ class StudentCoursesRepository(BaseRepository):
         )
         result = await self.session.execute(stmt)
         return total_count, result.scalars().all()
-
-    async def remove_student_from_course(
-        self,
-        student_id: int,
-        course_id: int,
-    ) -> None:
-        """Удалить запись о зачислении на курс"""
-        student_course = await self.get_student_course(student_id, course_id)
-        if student_course:
-            await self.session.delete(student_course)

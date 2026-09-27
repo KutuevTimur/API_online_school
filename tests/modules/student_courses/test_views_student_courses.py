@@ -74,6 +74,36 @@ async def test_unenroll_student_from_course(
 
 
 @pytest.mark.asyncio
+async def test_unenroll_student_from_student(
+    client_for_tests,
+    create_user_fixture,
+    create_course_fixture,
+    create_student_course_fixture,
+    not_open_session_db,
+    session_db,
+):
+    teacher_user, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
+    student_user, s_token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
+
+    async with not_open_session_db() as session:
+        t_db = await session.scalar(select(Teacher).where(Teacher.user_id == teacher_user.id))
+        teacher_table_id = t_db.id
+        s_db = await session.scalar(select(Student).where(Student.user_id == student_user.id))
+        student_table_id = s_db.id
+
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_table_id))
+
+    await create_student_course_fixture(CreateStudentCourseFixtureDTO(student_id=student_table_id, course_id=course.id))
+
+    res = await client_for_tests.delete(
+        f"/courses/{course.id}/students/me",
+        headers={"Authorization": f"Bearer {s_token}"},
+    )
+
+    assert res.status_code == 204
+
+
+@pytest.mark.asyncio
 async def test_get_students_for_course(
     client_for_tests,
     create_user_fixture,

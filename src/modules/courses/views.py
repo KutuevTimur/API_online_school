@@ -178,11 +178,12 @@ async def update_avatar(
 )
 async def delete_course(
     course_id: int,
-    hard: bool = Query(False),
+    hard: bool = Query(False, description="Удалить безвозвратно"),
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
     if hard:
         return await courses_service.delete_course(course_id=course_id, teacher_id=teacher.id)
-    return await courses_service.soft_delete_course(course_id=course_id, teacher_id=teacher.id)
+    else:
+        return await courses_service.soft_delete_course(course_id=course_id, teacher_id=teacher.id)

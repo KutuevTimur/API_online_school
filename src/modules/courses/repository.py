@@ -73,9 +73,13 @@ class CourseRepository(BaseRepository):
             .join(StudentCourse, StudentCourse.course_id == Course.id)
             .where(StudentCourse.student_id == student_id)
         )
-        if only_active is not None:
+        if only_active is True:
             stmt = stmt.where(
-                StudentCourse.is_active == only_active,
+                (StudentCourse.expires_at.is_(None)) | (StudentCourse.expires_at > func.now())
+            )
+        elif only_active is False:
+            stmt = stmt.where(
+                (StudentCourse.expires_at.is_not(None)) & (StudentCourse.expires_at <= func.now())
             )
             
         if not include_deleted:
