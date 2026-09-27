@@ -4,7 +4,6 @@ from sqlalchemy import select
 from src.modules.users.models import UserRole
 from src.modules.students.models import Student
 from src.modules.teachers.models import Teacher
-from src.modules.student_courses.models import StudentCourse
 from src.modules.base.orm_dto import PaginationResponseDTO
 from src.modules.student_courses.models_dto import EnrollStudentRequestDTO, StudentCourseResponseDTO
 

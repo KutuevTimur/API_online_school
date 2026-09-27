@@ -1,6 +1,7 @@
 import shutil
 import uuid
 from pathlib import Path
+from datetime import datetime, UTC
 from typing import Optional, List, Tuple
 
 from fastapi import UploadFile
@@ -110,8 +111,6 @@ class CoursesService:
         self,
         limit: int = 100,
         offset: int = 0,
-        is_active: Optional[bool] = None,
-        teacher_id: Optional[int] = None,
     ) -> Tuple[List[CoursesDTO], int]:
         """
         Возвращает кортеж (список курсов, общее количество).
@@ -119,35 +118,47 @@ class CoursesService:
         courses, total = await self.course_repo.get_all_courses(
             limit=limit,
             offset=offset,
-            is_active=is_active,
-            teacher_id=teacher_id,
+            include_deleted=True,
         )
         return [CoursesDTO.model_validate(course) for course in courses], total
 
-    async def get_courses(
+    async def get_courses_by_teacher(
         self,
-        student_id: Optional[int] = None,
-        is_active: Optional[bool] = True,
+        teacher_id: int,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Tuple[List[CoursesDTO], int]:
+        """
+        Возвращает кортеж (список курсов, общее количество).
+        """
+        courses, total = await self.course_repo.get_all_courses(
+            limit=limit,
+            offset=offset,
+            teacher_id=teacher_id,
+            include_deleted=True,
+        )
+        return [CoursesDTO.model_validate(course) for course in courses], total
+
+    async def get_courses_by_student(
+        self,
+        student_id: int,
         limit: int = 100,
         offset: int = 0,
     ) -> Tuple[List[CoursesDTO], int]:
         """
         Возвращает кортеж (список курсов, общее количество) для студента или всех.
         """
+
+        # для студента необходимо показывать удалённые курсы.
         if student_id is not None:
             courses, total = await self.course_repo.get_courses_by_student_id(
                 student_id=student_id,
-                only_active=is_active,
+                only_active=True,
+                include_deleted=True,
                 limit=limit,
                 offset=offset,
             )
             return [CoursesDTO.model_validate(course) for course in courses], total
-
-        return await self.get_all_courses(
-            limit=limit,
-            offset=offset,
-            is_active=is_active,
-        )
 
     async def check_student_access(
         self,
@@ -260,7 +271,7 @@ class CoursesService:
     ) -> CoursesDTO:
         """Мягкое удаление"""
         course = await self.course_repo.get_course_by_id(course_id)
-        if not course or not course.is_active:
+        if not course or course.is_deleted:
             raise CourseNotFound()
             
         if course.teacher_id != teacher_id:
@@ -272,7 +283,8 @@ class CoursesService:
         updated = await self.course_repo.update_course(
             course_id=course_id,
             values={
-                "is_active": False,
+                "is_deleted": True,
+                "deleted_at": datetime.now(UTC),
                 "slug": deleted_slug,
             },
         )

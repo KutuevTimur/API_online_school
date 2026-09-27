@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Response, Query
 from starlette import status
@@ -29,7 +29,6 @@ router = APIRouter(tags=["Course"])
 async def get_courses(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    is_active: Optional[bool] = Query(None),
     teacher_user_id: Optional[int] = Query(None, description="Фильтр по создателю курса"),
     my_courses: Optional[bool] = Query(None, description="Поиск только своих курсов"),
     current_user: UserDTO = Depends(get_current_user),
@@ -48,11 +47,10 @@ async def get_courses(
 
         filter_teacher_id = teacher.id if teacher else None
 
-        courses, total = await courses_service.get_all_courses(
+        courses, total = await courses_service.get_courses_by_teacher(
+            teacher_id=filter_teacher_id,
             limit=limit,
             offset=offset,
-            is_active=is_active,
-            teacher_id=filter_teacher_id,
         )
         return PaginationResponseDTO(
             items=courses,
@@ -66,9 +64,8 @@ async def get_courses(
         if not student:
             return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
 
-        courses, total = await courses_service.get_courses(
+        courses, total = await courses_service.get_courses_by_student(
             student_id=student.id,
-            is_active=True,
             limit=limit,
             offset=offset,
         )
@@ -100,9 +97,6 @@ async def get_course_by_id(
         return course
 
     if current_user.role == UserRole.STUDENT:
-        if not course.is_active:
-            raise PermissionErrorService()
-
         student = await courses_service.student_repo.get_student_by_user_id(current_user.id)
         if not student:
             raise PermissionErrorService()
@@ -184,7 +178,7 @@ async def update_avatar(
 )
 async def delete_course(
     course_id: int,
-    hard: bool = Query(False, description="Полное удаление вместо мягкого"),
+    hard: bool = Query(False),
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):

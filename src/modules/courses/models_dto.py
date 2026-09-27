@@ -16,9 +16,11 @@ class CoursesDTO(ORMDTO):
     description: Optional[str] = None
     avatar_type: AvatarCoursesType
     avatar_path: Optional[str] = None
-    is_active: bool
+
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
+    deleted_at: Optional[datetime] = None
 
 
 class CoursesResponseDTO(ORMDTO):
@@ -29,9 +31,11 @@ class CoursesResponseDTO(ORMDTO):
     description: Optional[str] = None
     avatar_type: AvatarCoursesType
     avatar_path: Optional[str] = None
-    is_active: bool
+
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
+    deleted_at: Optional[datetime] = None
 
 
 class CreateCourseDTO(BaseModel):
@@ -41,14 +45,14 @@ class CreateCourseDTO(BaseModel):
     description: Optional[str] = None
     avatar_type: AvatarCoursesType = AvatarCoursesType.DEFAULT
     avatar_path: Optional[str] = None
-    is_active: bool = True
+
 
 
 class CreateCourseDTORequest(BaseModel):
     name: str
     slug: str
     description: Optional[str] = None
-    is_active: bool = True
+
 
 
 class UpdateCourseDTO(BaseModel):
@@ -57,7 +61,7 @@ class UpdateCourseDTO(BaseModel):
     description: Optional[str] = None
     avatar_type: Optional[AvatarCoursesType] = None
     avatar_path: Optional[str] = None
-    is_active: Optional[bool] = None
+    is_deleted: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,6 +71,6 @@ class UpdateCourseDTORequest(BaseModel):
     slug: Optional[str] = None
     description: Optional[str] = None
     avatar_type: Optional[AvatarCoursesType] = None
-    is_active: Optional[bool] = None
+    is_deleted: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)

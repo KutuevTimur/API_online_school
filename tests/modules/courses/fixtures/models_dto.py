@@ -12,4 +12,3 @@ class CreateCourseFixtureDTO(BaseModel):
     description: Optional[str] = None
     avatar_type: Optional[AvatarCoursesType] = AvatarCoursesType.DEFAULT
     avatar_path: Optional[str] = None
-    is_active: Optional[bool] = True

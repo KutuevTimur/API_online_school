@@ -15,3 +15,7 @@ class CourseAlreadyExists(ServiceException):
 
 class CourseAccessDenied(ServiceException):
     pass
+
+
+class CourseRemovedException(ServiceException):
+    pass

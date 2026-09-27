@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
-from src.modules.courses.exception import CourseAlreadyExists
+from src.modules.courses.exception import CourseAlreadyExists, CourseRemovedException
 from src.modules.student_courses.exception import EnrollmentExistsException, EnrollmentNotFoundException, CourseAccessDeniedException
 from src.modules.users.exception import InvalidRole
 from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
@@ -93,6 +93,10 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(InvalidImageFormat)
     async def invalid_image_format_handler(request, exc):
         return JSONResponse(status_code=400, content={"detail": str(exc) or "Invalid image format"})
+
+    @app.exception_handler(CourseRemovedException)
+    async def invalid_image_format_handler(request, exc):
+        return JSONResponse(status_code=422, content={"detail": str(exc) or "Course removed failed"})
 
     @app.exception_handler(ImageConversionError)
     async def image_conversion_error_handler(request, exc):

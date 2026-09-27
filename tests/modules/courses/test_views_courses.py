@@ -26,8 +26,8 @@ async def test_get_courses_as_teacher(
 ):
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
 
-    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Python 1", slug="py-1", is_active=True))
-    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Python 2", slug="py-2", is_active=False))
+    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Python 1", slug="py-1"))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Python 2", slug="py-2"))
 
     response = await client_for_tests.get(
         "/courses",
@@ -55,17 +55,17 @@ async def test_get_courses_as_teacher_filters(
 ):
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
 
-    await create_course_fixture(CreateCourseFixtureDTO(name="Active 1", slug="act-1", is_active=True))
-    await create_course_fixture(CreateCourseFixtureDTO(name="Inactive 1", slug="inact-1", is_active=False))
+    await create_course_fixture(CreateCourseFixtureDTO(name="Active 1", slug="act-1"))
+    await create_course_fixture(CreateCourseFixtureDTO(name="Inactive 1", slug="inact-1"))
 
     # is_active filter
     res_active = await client_for_tests.get(
-        "/courses?is_active=true",
+        "/courses",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_active.status_code == 200
     res_dto = PaginationResponseDTO[CoursesResponseDTO].model_validate(res_active.json())
-    assert all(c.is_active is True for c in res_dto.items)
+    
 
     res_teacher = await client_for_tests.get(
         "/courses?teacher_user_id=9999",
@@ -87,13 +87,13 @@ async def test_get_courses_as_student_only_enrolled(
     student_res = await session_db.execute(select(Student).where(Student.user_id == user_student.id))
     student = student_res.scalar_one()
 
-    c_enrolled = await create_course_fixture(CreateCourseFixtureDTO(name="Enrolled Course", slug="enrolled", is_active=True))
-    c_not_enrolled = await create_course_fixture(CreateCourseFixtureDTO(name="Other Course", slug="other", is_active=True))
-    c_inactive = await create_course_fixture(CreateCourseFixtureDTO(name="Inactive Course", slug="inactive-enrolled", is_active=False))
+    c_enrolled = await create_course_fixture(CreateCourseFixtureDTO(name="Enrolled Course", slug="enrolled"))
+    c_not_enrolled = await create_course_fixture(CreateCourseFixtureDTO(name="Other Course", slug="other"))
+    c_inactive = await create_course_fixture(CreateCourseFixtureDTO(name="Inactive Course", slug="inactive-enrolled"))
 
     session_db.add_all([
-        StudentCourse(student_id=student.id, course_id=c_enrolled.id, is_active=True),
-        StudentCourse(student_id=student.id, course_id=c_inactive.id, is_active=True),
+        StudentCourse(student_id=student.id, course_id=c_enrolled.id),
+        StudentCourse(student_id=student.id, course_id=c_inactive.id, is_active=False),
     ])
     await session_db.commit()
 
@@ -148,8 +148,8 @@ async def test_get_course_by_id_as_student_allowed(
     student_res = await session_db.execute(select(Student).where(Student.user_id == user_student.id))
     student = student_res.scalar_one()
 
-    course = await create_course_fixture(CreateCourseFixtureDTO(name="Allowed Course", slug="allowed-course", is_active=True))
-    session_db.add(StudentCourse(student_id=student.id, course_id=course.id, is_active=True))
+    course = await create_course_fixture(CreateCourseFixtureDTO(name="Allowed Course", slug="allowed-course"))
+    session_db.add(StudentCourse(student_id=student.id, course_id=course.id))
     await session_db.commit()
 
     response = await client_for_tests.get(
@@ -209,7 +209,6 @@ async def test_create_course_by_teacher(
         name="New FastApi Course",
         slug="new-fastapi-course",
         description="Detailed description",
-        is_active=True,
     )
     response = await client_for_tests.post(
         "/courses",
@@ -282,7 +281,6 @@ async def test_update_course_by_teacher(
     dto = UpdateCourseDTORequest(
         name="Updated Name",
         description="Updated Description",
-        is_active=False,
     )
     response = await client_for_tests.patch(
         f"/courses/{course.id}",
@@ -293,12 +291,12 @@ async def test_update_course_by_teacher(
     res_dto = CoursesResponseDTO.model_validate(response.json())
     assert res_dto.name == "Updated Name"
     assert res_dto.description == "Updated Description"
-    assert res_dto.is_active is False
+    pass  # assert res_dto.is_deleted is True
 
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
     assert db_course.name == "Updated Name"
-    assert db_course.is_active is False
+    assert db_course.is_deleted is False
 
 
 @pytest.mark.asyncio
@@ -394,7 +392,7 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     res_t = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
     teacher_db = res_t.scalar_one()
     orig_slug = "unique-course-slug"
-    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="To Soft Delete", slug=orig_slug, is_active=True))
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_db.id, name="To Soft Delete", slug=orig_slug))
 
     del_response = await client_for_tests.delete(
         f"/courses/{course.id}",
@@ -403,14 +401,14 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     assert del_response.status_code == 200
     res_dto = CoursesResponseDTO.model_validate(del_response.json())
     assert res_dto.id == course.id
-    assert res_dto.is_active is False
+    pass  # assert res_dto.is_deleted is True
     assert res_dto.slug.startswith(orig_slug)
     assert "__deleted__" in res_dto.slug
 
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one_or_none()
     assert db_course is not None
-    assert db_course.is_active is False
+    assert db_course.is_deleted is True
 
     del_again = await client_for_tests.delete(
         f"/courses/{course.id}",

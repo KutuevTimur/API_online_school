@@ -39,15 +39,15 @@ class CourseRepository(BaseRepository):
         self,
         limit: int = 100,
         offset: int = 0,
-        is_active: Optional[bool] = None,
         teacher_id: Optional[int] = None,
+        include_deleted: Optional[bool] = False,
     ) -> Tuple[List[Course], int]:
         """Находит все курсы с учетом пагинации и фильтров и возвращает кортеж (курсы, общее_кол-во)"""
         stmt = select(Course)
-        if is_active is not None:
-            stmt = stmt.where(Course.is_active == is_active)
         if teacher_id is not None:
             stmt = stmt.where(Course.teacher_id == teacher_id)
+        if not include_deleted:
+            stmt = stmt.where(Course.is_deleted == False)
 
         # Вычисляем общее количество
         count_stmt = select(func.count()).select_from(stmt.subquery())
@@ -63,6 +63,7 @@ class CourseRepository(BaseRepository):
         self,
         student_id: int,
         only_active: Optional[bool] = None,
+        include_deleted: Optional[bool] = False,
         limit: int = 100,
         offset: int = 0,
     ) -> Tuple[List[Course], int]:
@@ -75,8 +76,11 @@ class CourseRepository(BaseRepository):
         if only_active is not None:
             stmt = stmt.where(
                 StudentCourse.is_active == only_active,
-                Course.is_active == only_active,
             )
+            
+        if not include_deleted:
+            stmt = stmt.where(Course.is_deleted == False)
+            
         stmt = stmt.distinct()
 
         # Вычисляем общее количество

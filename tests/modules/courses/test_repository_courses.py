@@ -28,7 +28,6 @@ async def test_add_course_dto(session_db: AsyncSession, create_user_fixture):
         description="Introductory Python course",
         avatar_type=AvatarCoursesType.PYTHON,
         avatar_path=None,
-        is_active=True,
     )
 
     course = await repo.add_course(dto)
@@ -52,8 +51,7 @@ async def test_add_course_dict(session_db: AsyncSession, create_user_fixture):
         "slug": "math-101",
         "description": "Basic math",
         "avatar_type": AvatarCoursesType.MATHEMATICS,
-        "is_active": True,
-    }
+        }
 
     course = await repo.add_course(data)
     await session_db.commit()
@@ -116,23 +114,27 @@ async def test_get_all_courses(
 ):
     repo = CourseRepository(session=session_db)
 
-    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 1", slug="c-1", is_active=True))
-    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 2", slug="c-2", is_active=False))
-    c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 3", slug="c-3", is_active=True))
+    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 1", slug="c-1"))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 2", slug="c-2"))
+    c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course 3", slug="c-3"))
 
-    all_courses, _ = await repo.get_all_courses()
+    all_courses, _ = await repo.get_all_courses(include_deleted=True)
     assert len(all_courses) == 3
 
-    active_courses, _ = await repo.get_all_courses(is_active=True)
-    assert len(active_courses) == 2
-    assert all(c.is_active for c in active_courses)
+    await repo.update_course(c2.id, {"is_deleted": True})
+    await session_db.commit()
 
-    inactive_courses, _ = await repo.get_all_courses(is_active=False)
-    assert len(inactive_courses) == 1
-    assert inactive_courses[0].slug == "c-2"
+    active_courses, _ = await repo.get_all_courses()
+    assert len(active_courses) == 2
+    assert len(active_courses) > 0
+
+    all_with_deleted, _ = await repo.get_all_courses(include_deleted=True)
+    assert len(all_with_deleted) == 3
+    deleted_slugs = [c.slug for c in all_with_deleted if c.is_deleted]
+    assert "c-2" in deleted_slugs
 
     paginated, _ = await repo.get_all_courses(limit=2, offset=1)
-    assert len(paginated) == 2
+    assert len(paginated) == 1
 
 
 @pytest.mark.asyncio
@@ -151,15 +153,15 @@ async def test_get_courses_by_student_id(
     student2_db = (await session_db.execute(select(Student).where(Student.user_id == user2.id))).scalar_one()
 
     # Создаем курсы через фикстуру
-    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Course A", slug="course-a", is_active=True))
-    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Course B", slug="course-b", is_active=True))
-    c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course C", slug="course-c", is_active=True))
+    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Course A", slug="course-a"))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Course B", slug="course-b"))
+    c3 = await create_course_fixture(CreateCourseFixtureDTO(name="Course C", slug="course-c"))
 
     # Привязываем студента 1 к c1 (активен) и c2 (неактивен)
-    sc1 = StudentCourse(student_id=student1_db.id, course_id=c1.id, is_active=True)
+    sc1 = StudentCourse(student_id=student1_db.id, course_id=c1.id)
     sc2 = StudentCourse(student_id=student1_db.id, course_id=c2.id, is_active=False)
     # Привязываем студента 2 только к c3
-    sc3 = StudentCourse(student_id=student2_db.id, course_id=c3.id, is_active=True)
+    sc3 = StudentCourse(student_id=student2_db.id, course_id=c3.id)
 
     session_db.add_all([sc1, sc2, sc3])
     await session_db.commit()
@@ -194,14 +196,14 @@ async def test_update_course(
 
     updated = await repo.update_course(
         course_id=course.id,
-        values={"name": "New Name", "description": "New desc", "is_active": False},
+        values={"name": "New Name", "description": "New desc", "is_deleted": True},
     )
     await session_db.commit()
 
     assert updated is not None
     assert updated.name == "New Name"
     assert updated.description == "New desc"
-    assert updated.is_active is False
+    assert updated.is_deleted is True
 
     # Обновление несуществующего курса
     not_found = await repo.update_course(course_id=99999, values={"name": "Test"})

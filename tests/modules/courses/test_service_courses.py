@@ -32,7 +32,6 @@ async def test_create_course_success(
         name="Python Basics",
         slug="python-basics",
         description="Learn Python from scratch",
-        is_active=True,
     )
     course = await courses_service_fixture.create_course(teacher_id=teacher_db.id, data=req)
 
@@ -70,7 +69,7 @@ async def test_get_all_courses_pagination(
 ):
     for i in range(5):
         await create_course_fixture(
-            CreateCourseFixtureDTO(name=f"Course {i}", slug=f"course-{i}", is_active=(i % 2 == 0))
+            CreateCourseFixtureDTO(name=f"Course {i}", slug=f"course-{i}")
         )
 
     all_p1, _ = await courses_service_fixture.get_all_courses(limit=2, offset=0)
@@ -80,8 +79,8 @@ async def test_get_all_courses_pagination(
     assert len(all_p2) == 2
     assert all_p1[0].id != all_p2[0].id
 
-    active_courses, _ = await courses_service_fixture.get_all_courses(is_active=True)
-    assert len(active_courses) == 3
+    active_courses, _ = await courses_service_fixture.get_all_courses()
+    assert len(active_courses) == 5
 
 
 @pytest.mark.asyncio
@@ -99,12 +98,12 @@ async def test_get_courses_by_student(
     await create_course_fixture(CreateCourseFixtureDTO(name="C3", slug="c3"))
 
     session_db.add_all([
-        StudentCourse(student_id=student.id, course_id=c1.id, is_active=True),
-        StudentCourse(student_id=student.id, course_id=c2.id, is_active=True),
+        StudentCourse(student_id=student.id, course_id=c1.id),
+        StudentCourse(student_id=student.id, course_id=c2.id),
     ])
     await session_db.commit()
 
-    student_courses = await courses_service_fixture.get_courses(
+    student_courses = await courses_service_fixture.get_courses_by_student(
         student_id=student.id,
         limit=10,
         offset=0,
@@ -158,7 +157,6 @@ async def test_update_course_success(
         data=UpdateCourseDTORequest(
             name="Updated Name",
             description="Updated desc",
-            is_active=False,
         ),
     )
     assert updated.name == "Updated Name"

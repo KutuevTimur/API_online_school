@@ -32,7 +32,6 @@ async def create_course_factory(
         description=new_course.description if new_course.description is not None else f"Description {random_string(10)}",
         avatar_type=new_course.avatar_type if new_course.avatar_type is not None else AvatarCoursesType.DEFAULT,
         avatar_path=new_course.avatar_path,
-        is_active=new_course.is_active if new_course.is_active is not None else True,
     )
     session_db.add(course)
     await session_db.commit()

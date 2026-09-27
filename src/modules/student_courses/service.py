@@ -2,7 +2,7 @@ from typing import List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.courses.repository import CourseRepository
-from src.modules.courses.exception import CourseNotFound
+from src.modules.courses.exception import CourseNotFound, CourseRemovedException
 from src.modules.students.repository import StudentRepository
 from src.modules.students.exception import StudentNotFound
 from src.modules.student_courses.repository import StudentCoursesRepository
@@ -37,9 +37,20 @@ class StudentCoursesService:
         course_id: int,
         data: EnrollStudentRequestDTO,
     ) -> StudentCourseResponseDTO:
+        """
+        Прикрепить студента к курсу.
+        :raises CourseNotFound:
+        :raises CourseRemovedException:
+        :raises CourseAccessDeniedException:
+        :raises StudentNotFound:
+        :raises EnrollmentExistsException:
+        """
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
+
+        if course.is_deleted:
+            raise CourseRemovedException()
 
         teacher_pk = course.teacher.user_id if course.teacher else None
         if teacher_pk != teacher_user_id:
@@ -72,6 +83,13 @@ class StudentCoursesService:
         course_id: int,
         student_user_id: int,
     ) -> None:
+        """
+        Открепить студента от курса
+        :raises CourseNotFound:
+        :raises CourseAccessDeniedException:
+        :raises StudentNotFound:
+        :raises EnrollmentNotFoundException:
+        """
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
@@ -104,6 +122,11 @@ class StudentCoursesService:
         limit: int = 100,
         offset: int = 0,
     ) -> Tuple[int, List[StudentCourseResponseDTO]]:
+        """
+        Открепить студента от курса
+        :raises CourseNotFound:
+        :raises CourseAccessDeniedException:
+        """
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
