@@ -1,21 +1,27 @@
-import os
 from pathlib import Path
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncEngine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine import URL
+from src.core.config.test_guard import require_test_target
 
 from src.core.config.base import init_env
 
 
 class Config:
-    def __init__(self):
-        init_env()
-
-        self.env = EnvConfig.build()
+    def __init__(self, *, test: bool = False, media_root: Path | None = None):
+        values = init_env(test=test)
+        self.env = EnvConfig.build(values)
+        if test and self.env.mode != "TEST":
+            raise RuntimeError("Test config requires MODE=TEST")
+        if self.env.mode == "TEST":
+            require_test_target(self.env)
+            if media_root is None:
+                raise RuntimeError("Test config requires an explicit temporary media root")
+        self.paths = PathsConfig.build(media_root=media_root or values.get("MEDIA_ROOT"))
         self.db_connection = DbConnectionConfig.build(self.env)
-        self.paths = PathsConfig.build()
         self.tokens = TokensConfig.build()
         self.allowed_extensions = AllowedExtensions.build()
 
@@ -30,31 +36,21 @@ class EnvConfig(BaseModel):
     db_password: str
     db_name: str
 
-    redis_host: str
-    redis_port: int
-    redis_url: str
-
+    redis_host: str | None = None
+    redis_port: int | None = None
+    redis_url: str | None = None
     mode: str
+    allow_test_db_reset: str = "0"
 
     @classmethod
-    def build(cls) -> "EnvConfig":
-        redis_host = os.environ['REDIS_HOST']
-        redis_port = int(os.environ['REDIS_PORT'])
-
+    def build(cls, values: dict[str, str]) -> "EnvConfig":
         return cls(
-            secret_key=os.environ['SECRET_KEY'],
-            password_for_admin=os.environ['PASSWORD_FOR_ADMIN'],
-            db_host=os.environ['DB_HOST'],
-            db_port=os.environ['DB_PORT'],
-            db_user=os.environ['DB_USER'],
-            db_password=os.environ['DB_PASSWORD'],
-            db_name=os.environ['DB_NAME'],
-
-            redis_host=redis_host,
-            redis_port=redis_port,
-            redis_url=f"redis://{redis_host}:{redis_port}",
-
-            mode=os.environ['MODE']
+            secret_key=values['SECRET_KEY'],
+            password_for_admin=values['PASSWORD_FOR_ADMIN'],
+            db_host=values['DB_HOST'], db_port=values['DB_PORT'],
+            db_user=values['DB_USER'], db_password=values['DB_PASSWORD'],
+            db_name=values['DB_NAME'], mode=values['MODE'],
+            allow_test_db_reset=values.get('ALLOW_TEST_DB_RESET', '0'),
         )
 
 
@@ -71,11 +67,16 @@ class DbConnectionConfig(BaseModel):
 
     @classmethod
     def build(cls, conf_env: EnvConfig) -> "DbConnectionConfig":
-        sql_db_url = f'postgresql+asyncpg://{conf_env.db_user}:{conf_env.db_password}@{conf_env.db_host}:{conf_env.db_port}/{conf_env.db_name}'
+        url = URL.create("postgresql+asyncpg", username=conf_env.db_user,
+                         password=conf_env.db_password, host=conf_env.db_host,
+                         port=int(conf_env.db_port), database=conf_env.db_name)
+        sql_db_url = url.render_as_string(hide_password=False)
+        if conf_env.mode == "TEST":
+            require_test_target(conf_env, sql_db_url)
         engine = create_async_engine(sql_db_url)
 
         return cls(
-            postgres_server_url=f'postgresql+asyncpg://{conf_env.db_user}:{conf_env.db_password}@{conf_env.db_host}:{conf_env.db_port}/postgres',
+            postgres_server_url=url.set(database="postgres").render_as_string(hide_password=False),
             sql_db_url=sql_db_url,
             engine=engine,
             session_local=sessionmaker(
@@ -98,10 +99,10 @@ class PathsConfig(BaseModel):
     temp: Path
 
     @classmethod
-    def build(cls, postscript: Optional[str] = '') -> "PathsConfig":
+    def build(cls, postscript: Optional[str] = '', media_root: Path | str | None = None) -> "PathsConfig":
         base = Path(__file__).resolve().parents[3]
 
-        media = base / Path(f"media{postscript}")
+        media = Path(media_root).resolve() if media_root else base / Path(f"media{postscript}")
         avatars_users = media / Path(f"avatars_users{postscript}")
         avatars_courses = media / Path(f"avatars_courses{postscript}")
         lectures = media / Path(f"lectures{postscript}")
@@ -109,7 +110,7 @@ class PathsConfig(BaseModel):
         homework_submissions = media / Path(f"homework_submissions{postscript}")
         temp = media / Path(f"temp{postscript}")
 
-        media.mkdir(exist_ok=True)
+        media.mkdir(parents=True, exist_ok=True)
         avatars_users.mkdir(exist_ok=True)
         avatars_courses.mkdir(exist_ok=True)
         lectures.mkdir(exist_ok=True)

@@ -3,12 +3,17 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text, Enum
 
 from src.core.config import Config
+from src.core.config.test_guard import require_test_config
 from src.core.database.database import Base
 import src.modules.db_models  # noqa: F401
 
 
 async def create_database(conf: Config):
     """Создает базу данных и все таблицы в ней (если существует, то ничего не произойдёт) """
+    if conf.env.mode == "TEST":
+        require_test_config(conf)
+        from src.tools.creating_db import create_database as create_test_schema
+        return await create_test_schema(conf)
     # Сначала подключаемся к серверу PostgreSQL без указания конкретной базы
     engine = create_async_engine(conf.db_connection.postgres_server_url, isolation_level="AUTOCOMMIT")
 
@@ -33,6 +38,8 @@ async def create_database(conf: Config):
         await engine.dispose()
 
     # создаем таблицы в целевой базе данных
+    if conf.env.mode == "TEST":
+        require_test_config(conf)
     engine = create_async_engine(conf.db_connection.sql_db_url, connect_args={"statement_cache_size": 0})
     try:
         async with engine.begin() as conn:
@@ -55,6 +62,8 @@ async def create_database(conf: Config):
 
 async def create_table(conf: Config):
     """создает таблицы в целевой базе данных"""
+    if conf.env.mode == "TEST":
+        require_test_config(conf)
     engine = create_async_engine(conf.db_connection.sql_db_url, connect_args={"statement_cache_size": 0})
     try:
         async with engine.begin() as conn:

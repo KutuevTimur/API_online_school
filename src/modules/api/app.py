@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from passlib.context import CryptContext
 
-from src.core.config import create_config
+from src.core.config import create_config, Config
 from src.modules.api.exception_handler import register_exception_handlers
 from src.modules.auth.views import router as auth_router
 from src.modules.courses.views import router as courses_router
@@ -29,13 +29,13 @@ def _include_routers(app: FastAPI) -> FastAPI:
     return app
 
 
-def init_fastapi_app() -> FastAPI:
+def init_fastapi_app(config: Config | None = None) -> FastAPI:
     app = FastAPI(
         title="Auth Service",
         lifespan=lifespan
     )
 
-    app.state.config = create_config()
+    app.state.config = config if config is not None else create_config()
     register_exception_handlers(app)
 
     _include_routers(app)
@@ -45,8 +45,7 @@ def init_fastapi_app() -> FastAPI:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    config = create_config()
-    app.state.config = config
+    config = app.state.config
     app.state.cr_context = CryptContext(
         schemes=["bcrypt"],
         deprecated="auto"
@@ -55,4 +54,4 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        pass
+        await config.db_connection.engine.dispose()
