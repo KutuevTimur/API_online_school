@@ -1,0 +1,8 @@
+\getenv app_user APP_DB_USER
+\getenv app_password APP_DB_PASSWORD
+\getenv db_name POSTGRES_DB
+CREATE ROLE :"app_user" LOGIN PASSWORD :'app_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+ALTER DATABASE :"db_name" OWNER TO :"app_user";
+REVOKE ALL ON DATABASE :"db_name" FROM PUBLIC;
+ALTER SCHEMA public OWNER TO :"app_user";
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
