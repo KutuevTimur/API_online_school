@@ -1,3 +1,4 @@
+from src.tools.synthetic_files import pdf_bytes
 import pytest
 from src.modules.users.models import UserRole
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
@@ -39,7 +40,7 @@ async def test_upload_lecture(
         student_user_id=student.id,
     )
     files = {
-        "file": ("lecture1.pdf", b"dummy lecture content", "application/pdf")
+        "file": ("lecture1.pdf", pdf_bytes('dummy lecture content'), "application/pdf")
     }
 
     res_upload = await client_for_tests.post(
@@ -115,7 +116,7 @@ async def test_download_lecture(
     upload_res = await client_for_tests.post(
         "/lectures",
         data=lec_dto.model_dump(mode="json"),
-        files={"file": ("lecture1.pdf", b"dummy lecture content", "application/pdf")},
+        files={"file": ("lecture1.pdf", pdf_bytes('dummy lecture content'), "application/pdf")},
         headers={"Authorization": f"Bearer {t_token}"},
     )
     res_dto = LectureResponseDTO.model_validate(upload_res.json())
@@ -127,7 +128,7 @@ async def test_download_lecture(
     )
     
     assert res_download.status_code == 200
-    assert res_download.content == b"dummy lecture content"
+    assert res_download.content == pdf_bytes('dummy lecture content')
 
 
 @pytest.mark.asyncio

@@ -24,6 +24,8 @@ class TeacherStudentService:
             if teacher is None or student is None:
                 raise NotFoundData()
             repo = TeacherStudentRepository(self.session)
+            # Course locks precede enrollment/teacher-link locks, as in homework writes.
+            course_ids = await repo.lock_courses(teacher.id, student.id)
             previous = await repo.previous_link(teacher.id, student.id)
             if previous is not None and previous.ended_at is not None:
                 from datetime import datetime, UTC
@@ -34,6 +36,9 @@ class TeacherStudentService:
                         self.session.add(EnrollmentGap(enrollment_id=membership.id,
                             started_at=previous.ended_at, ended_at=now))
             await repo.link(teacher.id, student.id)
+            from src.modules.homework_placements.service import HomeworkPlacementsService
+            for course_id in course_ids:
+                await HomeworkPlacementsService(self.session).recalculate_course(course_id, "teacher_link_restored")
             await self.session.commit()
             return TeacherStudentResponseDTO(**data.model_dump(), active=True)
         except Exception:

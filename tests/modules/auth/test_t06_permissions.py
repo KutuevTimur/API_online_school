@@ -57,7 +57,7 @@ async def world(create_user_fixture, create_course_fixture, create_lesson_fixtur
         h=await create_homework_fixture(CreateHomeworkFixtureDTO(lesson_student_id=ls.id))
         l=await create_lecture_fixture(CreateLectureFixtureDTO(lesson_student_id=ls.id))
         sub=await create_homework_submission_fixture(CreateHomeworkSubmissionFixtureDTO(homework_id=h.id))
-        path=tmp_path/f'{i}.pdf'; path.write_bytes(b'%PDF synthetic fixture')
+        path=path_builder_fixture.config.paths.homework_submissions/f'{i}.pdf'; path.write_bytes(b'%PDF synthetic fixture')
         from src.modules.homeworks.models import Homework
         from src.modules.lectures.models import Lecture
         await session_db.execute(update(Homework).where(Homework.id==h.id).values(pdf_file_path=str(path),pdf_file_name='hw.pdf'))
@@ -154,7 +154,7 @@ async def test_foreign_writes_and_parent_id_substitution(client_for_tests,world,
         ('delete',f'/lessons/{l}/students/{s}',{}),
         ('delete',f'/homeworks/{w["homeworks"][1].id}?lesson_id={l}&student_user_id={s}',{}),
         ('delete',f'/lectures/{w["lectures"][1].id}?lesson_id={l}&student_user_id={s}',{}),
-        ('patch',f'/submissions/{w["submissions"][1].id}/teacher?homework_id={w["homeworks"][1].id}',{'json':{'grade':5}}),
+        ('patch',f'/submissions/{w["submissions"][1].id}/teacher?homework_id={w["homeworks"][1].id}',{'json':{'grade':5,'expected_version':1}}),
     ]:
         r=await getattr(client_for_tests,method)(url,headers=headers,**kwargs)
         assert r.status_code==404,(url,r.status_code,r.text)
@@ -240,7 +240,7 @@ async def test_submission_write_roles_and_upload_boundaries(client_for_tests,wor
     headers=auth(w['accounts']['t2'][1])
     form={'lesson_id':str(w['lessons'][0].id),'student_user_id':str(w['accounts']['s1'][0].id)}
     assert (await client_for_tests.post('/lectures',headers=headers,data=form,files={'file':('bad.pdf',b'bad','application/pdf')})).status_code==404
-    assert (await client_for_tests.post('/homeworks',headers=headers,data={**form,'title':'bad','deadline':datetime.now(UTC).isoformat()})).status_code==404
+    assert (await client_for_tests.post('/homeworks',headers=headers,data={**form,'title':'bad'})).status_code==404
 
 
 @pytest.mark.asyncio

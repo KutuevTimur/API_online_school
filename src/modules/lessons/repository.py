@@ -134,6 +134,12 @@ class LessonsRepository(BaseRepository):
             flags.append(bool(await self.session.scalar(select(func.count()).select_from(model).join(
                 LessonStudent, LessonStudent.id == model.lesson_student_id).where(
                     LessonStudent.lesson_id == lesson_id, material_scope(model, actor.id, actor.role)))))
+        from src.modules.homework_placements.models import HomeworkPlacement
+        flags[1] = bool(await self.session.scalar(select(func.count()).select_from(HomeworkPlacement)
+            .join(LessonStudent, LessonStudent.id == HomeworkPlacement.lesson_student_id)
+            .join(Homework, Homework.id == HomeworkPlacement.homework_id).where(
+                LessonStudent.lesson_id == lesson_id, material_scope(HomeworkPlacement, actor.id, actor.role),
+                material_scope(Homework, actor.id, actor.role))))
         return tuple(flags)
 
     async def active_students(self, course_id: int, teacher_id: int,

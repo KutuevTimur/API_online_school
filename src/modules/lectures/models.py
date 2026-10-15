@@ -21,6 +21,9 @@ class Lecture(Base):
         nullable=False,
     )
 
+    original_asset_id: Mapped[int | None] = mapped_column(ForeignKey("file_assets.id"), nullable=True, index=True)
+    download_asset_id: Mapped[int | None] = mapped_column(ForeignKey("file_assets.id"), nullable=True, index=True)
+
     original_file_path: Mapped[str] = mapped_column(String, nullable=False)
     original_file_name: Mapped[str] = mapped_column(String, nullable=False)
     original_file_type: Mapped[str] = mapped_column(String, nullable=False)

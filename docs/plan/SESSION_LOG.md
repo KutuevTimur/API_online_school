@@ -294,3 +294,109 @@ Frontend/UI/E2E, production/load/backup не проверялись. Orphan reco
 секреты/закрытые ключи; env/media/дампы не включены. Повтор pytest не нужен:
 реализация после проверок T09 не менялась. Следующее T10, сначала D05;
 рекомендуется новый чат. Обязательных действий владельца сейчас нет.
+
+
+## 15.10.2026 — T10 локально
+
+T10 DONE локально по поручению владельца, D05 принят ответом «подтверждаю».
+[Контракт, результаты, ограничения и необязательные Swagger шаги](tasks/T10.md).
+Teacher review требует strict integer grade 0–5 и expected_version; stale version
+409, draft 409, checked/history 403. Общие parent→homework→submission locks
+защищают от concurrent edit/check и check/check, проверено в независимых sessions.
+checked_at UTC, внутренний checked_by teacher FK, публичный checked_by user_id.
+Queue только своих submitted working answers активных курсов/уроков/участий,
+course/student filters, SQL count/page в одном snapshot, стабильный порядок,
+текущие version/text/files/context. Итог student доступен в прежних list/detail.
+Numeric history сохранена без округления; нового DDL нет, новые review — integer.
+
+Финальный полный pytest **395 passed**, 254.54s, 0 failed/0 skipped;
+33 T10 tests включены. Migrations **20 passed**, 36.99s; guard **14 passed**,
+0.37s; AST 242/OpenAPI/diff check PASS. Guarded test upgrade head/check PASS,
+оставлена чистая test schema на 8a575436b7db. Промежуточные failures/исправления
+записаны в карточке; контракт не ослаблялся.
+Dev build/start, **29 HTTP PASS**, restart persistence **8 HTTP PASS**;
+повтор 8 retained checks на окончательном image PASS. Dev schema diff пустой,
+synthetic данные и persistent lgg-dev_media сохранены. Dev 127.0.0.1:8018/docs
+работает; credentials/IDs только ignored .env.audit-access (0600).
+Неизвестная БД не затронута. Ручная приёмка backend не обязательна; frontend/UI/E2E,
+production/load/backup не проверялись. Notifications/deadline/debt не входят в T10.
+Ветка codex/t00-t01-environment, HEAD 2dfd49c; новых commit/push/merge/deploy нет,
+PR #1 не обновлялся. Посторонние документы и rules_project.md сохранены.
+Следующее — T11 по отдельному поручению; сначала согласовать D04 на примере долга.
+
+
+## 15.10.2026 — T11 локально, D04 принят
+
+По поручению «Реализуй T11 локально; сначала согласуй D04» решение принято
+ответом «подтверждаю». Реализованы original/debt placements, автоматический
+следующий срок того же курса/ученика, журнал и freeze checked; один Homework/
+ответ/очередь, прямой file access и history scopes для debts. Атомарный пересчёт
+расписания/restore/возврата участия, исправлен MissingGreenlet updated_at при
+restore внутри архивного курса. Migration 689ceabc2b0c сохраняет legacy manual
+history и защищает downgrade. [Полный отчёт](tasks/T11.md).
+
+Проверено: полный 421 passed; после callbacks re-enroll/relink scoped 95 passed
+(25 T11 tests), migrations 23/guard 14/AST 253/diff check PASS; test upgrade/check
+и чистая схема на head. Dev final build/up, 29 HTTP, restart retained 7 T11 + 8 T10
+PASS, прежний PDF/данные/volume сохранены, schema diff пустой. UI/E2E/production/
+load/backup не проверены, ручная приёмка backend не обязательна. Ветка
+codex/t00-t01-environment, HEAD 2dfd49c, новых commit/push/merge/deploy нет, PR #1
+не обновлялся; T10 и посторонние документы сохранены. Далее T12a по отдельному
+поручению, D06 до нормализации фото. От владельца сейчас ничего.
+
+## 15.10.2026 — T12a/b/c локально
+
+Поручение: реализовать T12, начать T12a, D06 до нормализации. D06 принят вариантом 1;
+после первоначального ожидания владелец подтвердил читаемость synthetic сравнений.
+Согласование сохранено в DECISIONS; отдельные устройства/реальные фото не заявляются.
+
+Выполнено: Storage/local/read-only legacy, descriptor-safe paths, UUID immutable
+objects, FileAsset+explicit domain FK, private/Range/nosniff downloads, stream/count/
+source byte/pixel/frame/timeout limits, pre-spool multipart cap. Student quota 1GiB,
+owner/admin report и admin override/audit, cross-course lock. WebP ≤2560/q85,
+orientation/alpha/sRGB и metadata stripping, source deletion post-ready/link commit.
+Rollback защищён и при неизвестном исходе COMMIT: referenced committed bytes не
+удаляются, при недоступной БД файлы остаются для reconciliation.
+Legacy exact copy/hash + private 7-day manifest; expired duplicate cleanup сверяет
+новые hash-копии, admin purge учитывает shared retained sources. 24h orphan grace,
+durable queue, 60s DEV worker/restart. Фото старой истории не нормализовались.
+
+Проверено: полный pytest 478 passed (343.65s); после последних long-name/COMMIT-ack
+fixes профильный 181, финальный Files/T09/T07 82 passed (93.99s); полный после них
+не повторялся. Migration suite 27 passed (62.73s), unit/guards 38 passed (0.96s),
+AST 285 и diff check PASS. Три autogen revisions, final head 36a8711f7799;
+test upgrade/check и dev schema diff пустые. Все промежуточные failures/исправления
+и точный контракт — tasks/T12.md, без сокрытия ограничений.
+
+Dev build/up/healthy, HTTP T12 33 PASS (включая bounded Linux 48.77MP, 20MiB boundary,
+HEIC→WebP, Range/foreign file ID/quota). Restart T12 6/T10 8/T11 7/T00–T07 SHA256 3 PASS;
+T12 6 повторён на окончательном image. Legacy 5/5 migrated, 0 failed/remaining,
+reader off, manifests/старые bytes сохранены; dummy historical PDF импортированы
+явным synthetic-only opaque режимом без изменения bytes. Runtime flags/cleanup PASS:
+32 assets, 4 source/swap objects removed post-commit, pending cleanup 0.
+MODE=DEV теперь явный в Compose; guard сопоставляет env и настоящий engine/session.
+
+Не проверено: production/load/malware scan/backup restore, frontend/UI/E2E и реальные
+фото/конкретные устройства. Обязательной ручной backend-приёмки нет; D06 synthetic
+чтение принято. Dev DB/media и ignored credentials сохранены; test возвращается
+на чистый head. Внешняя/неизвестная БД и реальные ПД не затронуты.
+
+Git: codex/t00-t01-environment, HEAD 2dfd49c; новых commit/push/merge/deploy нет,
+PR #1 не обновлён. Прежние T10/T11 и посторонние файлы/rules_project.md сохранены.
+Следующее: отдельный локальный commit T10–T12 по поручению, затем T13 в новом чате.
+Готовый промпт: «Реализуй T13 локально; T12 завершена, D06 принят. Начни с AGENTS,
+GPT, STATUS и карточки задачи; commit/push/deploy не выполняй».
+
+Финальный preflight: guarded lgg-test head 36a8711f7799, users/courses/assets = 0/0/0;
+both Compose config --quiet и git diff --check PASS. Dev сохранён работающим.
+
+
+## 15.10.2026 — локальное сохранение T10–T12
+
+По явному поручению владельца T10–T12 сохраняются одним локальным коммитом
+в codex/t00-t01-environment; SHA коммита с этой записью: `git log -1 --oneline`.
+Включены код, миграции, проверки, README, окружение, STATUS и карточки T10–T12.
+Прежние общие untracked документы планирования и правки rules_project.md
+сохранены вне коммита, как при T02–T09; секреты и media не включены.
+Проверки реализации приведены выше и в T12; при сохранении кода не меняли.
+Push/merge/deploy не выполнялись. Далее T13 по отдельному локальному поручению.

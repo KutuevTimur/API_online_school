@@ -21,6 +21,12 @@ from src.modules.handlers_files.exception import (
 
 
 def register_exception_handlers(app: FastAPI):
+    from src.modules.handlers_files.exception import FileTooLarge
+
+    @app.exception_handler(FileTooLarge)
+    async def file_too_large_handler(request, exc):
+        return JSONResponse(status_code=413, content={"detail": str(exc)})
+
     from src.modules.lessons.exception import InvalidLessonRequest
 
     @app.exception_handler(InvalidLessonRequest)
@@ -61,6 +67,9 @@ def register_exception_handlers(app: FastAPI):
 
     from src.modules.homework_submissions.exception import SubmissionConflict, EmptySubmission
 
+    from src.modules.homework_placements.exception import HomeworkPlacementConflict
+
+    @app.exception_handler(HomeworkPlacementConflict)
     @app.exception_handler(SubmissionConflict)
     async def submission_conflict_handler(request, exc):
         return JSONResponse(status_code=409, content={"detail": str(exc)})

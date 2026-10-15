@@ -1,13 +1,14 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.modules.base.orm_dto import ORMDTO
 from src.modules.homework_submissions.models import HomeworkSubmissionStatus
 
 
 class HomeworkSubmissionFileDTO(ORMDTO):
+    download_mime: str = "application/pdf"
     id: int
     submission_id: int
     original_file_path: Optional[str] = None
@@ -58,7 +59,7 @@ class HomeworkSubmissionResponseDTO(ORMDTO):
     teacher_comment: Optional[str] = None
     submitted_at: Optional[datetime] = None
     checked_at: Optional[datetime] = None
-    checked_by: Optional[int] = None
+    checked_by: Optional[int] = Field(None, description="user_id of the reviewing teacher")
     created_at: datetime
     updated_at: datetime
     
@@ -83,6 +84,9 @@ class HomeworkSubmissionRequestDTO(BaseModel):
 
 class HomeworkSubmissionFileRequestDTO(BaseModel):
     """Схема для создания записи файла (внутренняя)"""
+    source_size: int | None = None
+    original_asset_id: int | None = None
+    download_asset_id: int | None = None
     submission_id: int
     original_file_path: str
     original_file_name: str
@@ -98,20 +102,16 @@ class UpdateSubmissionStudentRequestDTO(BaseModel):
 
 
 class UpdateSubmissionTeacherRequestDTO(BaseModel):
-    """Обновление попытки учителем"""
-    status: Optional[HomeworkSubmissionStatus] = None
-    grade: Optional[float] = None
+    """Final review of the exact answer version opened by the teacher."""
+    model_config = ConfigDict(extra="forbid")
+    expected_version: int = Field(..., ge=1, strict=True)
+    grade: int = Field(..., ge=0, le=5, strict=True)
     teacher_comment: Optional[str] = None
+    status: Literal[HomeworkSubmissionStatus.CHECKED] = HomeworkSubmissionStatus.CHECKED
 
 
-class UpdateSubmissionTeacherDTO(UpdateSubmissionTeacherRequestDTO):
-    """Обновление попытки учителем. Используется для передачи в repository layer"""
-    checked_at: Optional[datetime] = None
-    checked_by: Optional[int] = None
-    updated_at: Optional[datetime] = None
-
-    @staticmethod
-    def from_request_dto(obj: UpdateSubmissionTeacherRequestDTO) -> 'UpdateSubmissionTeacherDTO':
-        return UpdateSubmissionTeacherDTO(
-            **obj.model_dump(exclude_unset=True),
-        )
+class ReviewQueueItemDTO(HomeworkSubmissionResponseDTO):
+    course_id: int
+    lesson_id: int
+    student_user_id: int
+    homework_title: str

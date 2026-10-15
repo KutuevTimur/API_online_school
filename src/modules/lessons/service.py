@@ -1,3 +1,4 @@
+from src.modules.homework_placements.service import HomeworkPlacementsService
 from src.modules.check_permission.service import ObjectPermissionService
 from src.modules.check_permission.repository import lesson_scope
 from typing import Optional
@@ -95,6 +96,7 @@ class LessonsService:
             await LessonStudentsRepository(self.session_db).add_student_to_lesson(
                 CreateLessonStudentDTO(lesson_id=lesson.id, student_id=students[0].id))
             await self.session_db.flush()
+            await HomeworkPlacementsService(self.session_db).recalculate_course(lesson.course_id, "lesson_created")
             result = await self._write_response(lesson.id)
             await self.session_db.commit()
             return result
@@ -116,6 +118,7 @@ class LessonsService:
             if values:
                 await self.lessons_repo.update_lesson(lesson_id, values)
             await self.session_db.flush()
+            await HomeworkPlacementsService(self.session_db).recalculate_course(lesson.course_id, "lesson_updated")
             result = await self._write_response(lesson_id)
             await self.session_db.commit()
             return result
@@ -133,6 +136,8 @@ class LessonsService:
     async def _write_response(self, lesson_id: int) -> LessonResponseDTO:
         lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
         dto = self._response(lesson, None)
+        actor = await ObjectPermissionService(self.session_db).actor(lesson.teacher.user_id)
+        dto.has_lecture, dto.has_homework = await self.lessons_repo.material_flags(lesson.id, actor)
         if lesson.status != LessonStatus.CANCELLED and not lesson.is_deleted:
             conflicts = await self.lessons_repo.overlapping_ids(
                 lesson.teacher_id, lesson.scheduled_at,
@@ -160,12 +165,12 @@ class LessonsService:
         from datetime import UTC
         deleted_lesson = await self.lessons_repo.update_lesson(
             lesson_id, {"is_deleted": True, "deleted_at": datetime.now(UTC)})
+        await HomeworkPlacementsService(self.session_db).recalculate_course(lesson.course_id, "lesson_archived")
         await self.session_db.commit()
 
         return LessonResponseDTO.model_validate(deleted_lesson)
 
     async def _visible_response(self, lesson: Lesson, student_id: int | None, actor: UserDTO) -> LessonResponseDTO:
         dto = self._response(lesson, student_id)
-        if actor.role == UserRole.STUDENT:
-            dto.has_lecture, dto.has_homework = await self.lessons_repo.material_flags(lesson.id, actor)
+        dto.has_lecture, dto.has_homework = await self.lessons_repo.material_flags(lesson.id, actor)
         return dto

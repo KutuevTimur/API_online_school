@@ -132,7 +132,7 @@ async def main() -> None:
         await call('student reads lesson', 'GET', f'/lessons/{lid}', s)
         await call('teacher B lesson denied', 'GET', f'/lessons/{lid}', b, expected=404)
         hw = await call('create synthetic homework', 'POST', '/homeworks', a, expected=201,
-                        data={'lesson_id': lid, 'student_user_id': student['id'], 'title': 'Synthetic homework', 'deadline': '2026-10-21T12:00:00Z'})
+                        data={'lesson_id': lid, 'student_user_id': student['id'], 'title': 'Synthetic homework'})
         await call('student reads homework', 'GET', '/homeworks/my', s)
         image = BytesIO()
         Image.new('RGB', (64, 64), 'white').save(image, format='PNG')

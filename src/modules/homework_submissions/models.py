@@ -25,6 +25,10 @@ class HomeworkSubmissionFile(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     submission_id: Mapped[int] = mapped_column(Integer, ForeignKey("homework_submissions.id"), nullable=False)
     
+    source_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    original_asset_id: Mapped[int | None] = mapped_column(ForeignKey("file_assets.id"), nullable=True, index=True)
+    download_asset_id: Mapped[int | None] = mapped_column(ForeignKey("file_assets.id"), nullable=True, index=True)
+
     original_file_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     original_file_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     original_file_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -83,4 +87,5 @@ class HomeworkSubmission(Base):
         "HomeworkSubmissionFile",
         back_populates="submission",
         cascade="all, delete-orphan",
+        order_by="HomeworkSubmissionFile.id",
     )

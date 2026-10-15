@@ -85,8 +85,7 @@ async def main() -> None:
                              json={'call_url_override':None})
         assert cleared['effective_call_url'] == 'https://example.com/t08-new-room'
         homework = await call('create homework before cancellation', 'POST', '/homeworks', a, expected=201,
-                              data={'lesson_id':lid, 'student_user_id':uid, 'title':'T08 preserved homework',
-                                    'deadline':'2028-02-11T12:00:00Z'})
+                              data={'lesson_id':lid, 'student_user_id':uid, 'title':'T08 preserved homework'})
         for status in ('cancelled', 'completed'):
             changed = await call('mark lesson ' + status, 'PATCH', f'/lessons/{lid}', a, json={'status':status})
             assert changed['status'] == status and not changed['is_deleted']

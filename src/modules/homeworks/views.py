@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Request, HTTPException
+from src.modules.storage.download import private_download
 from starlette import status
 
 from src.modules.auth.depends import get_current_user
@@ -18,24 +18,25 @@ router = APIRouter(prefix="/homeworks", tags=["Homeworks"])
     response_model=HomeworkResponseDTO,
     status_code=status.HTTP_201_CREATED,
     summary="Create a homework for a student's lesson",
-    description="Title and deadline are required. Description and file are optional."
+    description="Deadline follows the next lesson of this course and student. Manual deadline is unavailable."
 )
 async def create_homework(
+    request: Request,
     lesson_id: int = Form(...),
     student_user_id: int = Form(...),
     title: str = Form(...),
-    deadline: datetime = Form(...),
     description: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     current_user: UserDTO = Depends(get_current_teacher_user),
     service: HomeworksService = Depends(get_homeworks_service),
 ):
+    if "deadline" in await request.form():
+        raise HTTPException(status_code=422, detail="Manual deadline is unavailable")
     return await service.create_homework(
         teacher_user_id=current_user.id,
         lesson_id=lesson_id,
         student_user_id=student_user_id,
         title=title,
-        deadline=deadline,
         description=description,
         file=file,
     )
@@ -78,6 +79,7 @@ async def get_my_homeworks(
     summary="Download a specific homework file (PDF)",
 )
 async def download_homework_file(
+    request: Request,
     homework_id: int,
     lesson_id: int = Query(...),
     student_user_id: int = Query(...),
@@ -91,9 +93,10 @@ async def download_homework_file(
         homework_id=homework_id,
     )
     
-    return FileResponse(
-        path=homework.pdf_file_path,
-        media_type="application/pdf",
+    return await private_download(
+        request=request,
+        raw=homework.pdf_file_path,
+        media_type=homework.download_mime,
         filename=homework.pdf_file_name,
     )
 

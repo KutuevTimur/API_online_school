@@ -25,6 +25,9 @@ class Homework(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    original_asset_id: Mapped[int | None] = mapped_column(ForeignKey("file_assets.id"), nullable=True, index=True)
+    download_asset_id: Mapped[int | None] = mapped_column(ForeignKey("file_assets.id"), nullable=True, index=True)
+
     original_file_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     original_file_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     original_file_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -32,7 +35,8 @@ class Homework(Base):
     pdf_file_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     pdf_file_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
-    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deadline_frozen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

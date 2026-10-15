@@ -1,3 +1,4 @@
+from src.modules.files.service import FileAssetsService, atomic_file_upload
 from src.modules.check_permission.service import ObjectPermissionService
 import os
 import uuid
@@ -18,6 +19,7 @@ from src.modules.lessons.repository import LessonsRepository
 from src.modules.students.repository import StudentRepository
 from src.modules.teachers.repository import TeacherRepository
 from src.modules.path_builder.service import PathBuilder
+from src.modules.storage.download import safe_display_name
 
 
 class LecturesService:
@@ -51,6 +53,7 @@ class LecturesService:
             teacher_user_id, lesson_id, student_user_id, write=True
         )
 
+    @atomic_file_upload
     async def upload_lecture(
         self,
         teacher_user_id: int,
@@ -64,8 +67,8 @@ class LecturesService:
             student_user_id=student_user_id,
         )
 
-        file_name = Path(file.filename).stem if file.filename else uuid.uuid4().hex
-        file_type = Path(file.filename).suffix.lstrip('.') if file.filename else "pdf"
+        file_name = Path(safe_display_name(file.filename)).stem
+        file_type = self.handler_documents._validate_extension(file.filename)
 
         dto = CreateLectureRequestDTO(
             lesson_student_id=lesson_student.id,
@@ -76,17 +79,18 @@ class LecturesService:
             pdf_file_name=f"{file_name}.pdf",
         )
 
+        storage_name = uuid.uuid4().hex
         lecture = await self.lectures_repo.add_lecture(dto)
         await self.session_db.flush() 
 
         original_dest = self.path_builder.get_lecture_original(
             lecture_id=lecture.id,
-            file_name=file_name,
+            file_name=storage_name,
             file_type=file_type,
         )
         pdf_dest = self.path_builder.get_lecture_pdf(
             lecture_id=lecture.id,
-            file_name=file_name,
+            file_name=storage_name,
         )
 
         original_path, pdf_path = await self.handler_documents.save_document(
@@ -101,7 +105,14 @@ class LecturesService:
             pdf_file_path=str(pdf_path),
         )
 
+        updated_lecture.original_asset_id, updated_lecture.download_asset_id = await FileAssetsService(
+            self.session_db, self.handler_documents).register(original_path, pdf_path, dto.original_file_name, teacher_user_id, student_user_id)
+        updated_lecture.pdf_file_name = Path(dto.original_file_name).stem + pdf_path.suffix
+        if updated_lecture.original_asset_id == updated_lecture.download_asset_id:
+            updated_lecture.original_file_path = str(pdf_path)
+
         await self.session_db.commit()
+        self.handler_documents.upload_committed = True
         await self.session_db.refresh(updated_lecture)
         
         return LectureResponseDTO.model_validate(updated_lecture)
@@ -190,7 +201,10 @@ class LecturesService:
         from src.modules.lectures.models import Lecture
         if not await ObjectPermissionService(self.session_db).repo.material_visible(Lecture, lecture.id, actor):
             raise LectureNotFound()
-        return LectureDTO.model_validate(lecture)
+        dto = LectureDTO.model_validate(lecture)
+        dto.pdf_file_path, dto.pdf_file_name, dto.download_mime = await FileAssetsService(self.session_db, self.handler_documents).download(
+            lecture.download_asset_id, lecture.pdf_file_path, lecture.pdf_file_name)
+        return dto
 
     async def delete_lecture(
         self,
@@ -209,15 +223,10 @@ class LecturesService:
         if not lecture or lecture.lesson_student_id != lesson_student.id:
             raise LectureNotFound("Lecture does not exist")
 
+        from src.modules.course_lifecycle.models import FileDeletion
+        self.session_db.add_all([FileDeletion(path=p) for p in sorted(
+            {lecture.original_file_path, lecture.pdf_file_path} - {None, ''})])
         deleted = await self.lectures_repo.delete_lecture(lecture.id)
         await self.session_db.commit()
         
-        try:
-            if os.path.exists(deleted.original_file_path):
-                os.remove(deleted.original_file_path)
-            if os.path.exists(deleted.pdf_file_path) and deleted.original_file_path != deleted.pdf_file_path:
-                os.remove(deleted.pdf_file_path)
-        except Exception:
-            pass 
-
         return LectureResponseDTO.model_validate(deleted)

@@ -149,7 +149,83 @@ class HomeworkSubmissionsRepository(BaseRepository):
         paths = {file.original_file_path, file.pdf_file_path} - {None}
         self.session.add_all([FileDeletion(path=p) for p in sorted(paths)])
         await self.session.delete(file)
+        await self.session.flush()
+        from src.modules.files.repository import FileAssetsRepository
+        await FileAssetsRepository(self.session).prune({file.original_asset_id, file.download_asset_id} - {None})
+
+    async def file_usage(self, submission_id: int, exclude_file_id: int | None = None) -> tuple[int, int]:
+        from src.modules.files.models import FileAsset
+        stmt = select(func.count(HomeworkSubmissionFile.id),
+                      func.coalesce(func.sum(func.coalesce(HomeworkSubmissionFile.source_size, FileAsset.size, 20 * 1024 * 1024)), 0)).select_from(
+                          HomeworkSubmissionFile).outerjoin(FileAsset, FileAsset.id == HomeworkSubmissionFile.original_asset_id).where(
+                              HomeworkSubmissionFile.submission_id == submission_id)
+        if exclude_file_id is not None:
+            stmt = stmt.where(HomeworkSubmissionFile.id != exclude_file_id)
+        row = (await self.session.execute(stmt)).one()
+        return int(row[0]), int(row[1])
 
     async def file_count(self, submission_id: int) -> int:
         return await self.session.scalar(select(func.count()).select_from(HomeworkSubmissionFile).where(
             HomeworkSubmissionFile.submission_id == submission_id)) or 0
+
+    async def reviewer_user_id(self, teacher_id: int | None) -> int | None:
+        from src.modules.teachers.models import Teacher
+        if teacher_id is None:
+            return None
+        return await self.session.scalar(select(Teacher.user_id).where(Teacher.id == teacher_id))
+
+    async def review_queue(
+        self, teacher_user_id: int, limit: int, offset: int,
+        course_id: int | None = None, student_user_id: int | None = None,
+    ) -> tuple[list[tuple[HomeworkSubmission, int, int, int, str]], int]:
+        from sqlalchemy import exists, or_, true
+        from src.modules.homework_submissions.models import HomeworkSubmissionStatus
+        from src.modules.homeworks.models import Homework
+        from src.modules.lesson_students.models import LessonStudent
+        from src.modules.lessons.models import Lesson
+        from src.modules.courses.models import Course
+        from src.modules.students.models import Student
+        from src.modules.teachers.models import Teacher
+        from src.modules.student_courses.models import StudentCourse
+        from src.modules.teacher_students.models import TeacherStudent
+
+        stmt = (select(HomeworkSubmission, Course.id.label("queue_course_id"),
+                       Lesson.id.label("queue_lesson_id"), Student.user_id.label("queue_student_user_id"),
+                       Homework.title.label("queue_homework_title"))
+            .join(Homework, Homework.id == HomeworkSubmission.homework_id)
+            .join(LessonStudent, LessonStudent.id == Homework.lesson_student_id)
+            .join(Lesson, Lesson.id == LessonStudent.lesson_id)
+            .join(Course, Course.id == Lesson.course_id)
+            .join(Teacher, Teacher.id == Course.teacher_id)
+            .join(Student, Student.id == LessonStudent.student_id)
+            .join(StudentCourse, (StudentCourse.course_id == Course.id) &
+                  (StudentCourse.student_id == Student.id))
+            .where(Teacher.user_id == teacher_user_id, Lesson.teacher_id == Teacher.id,
+                HomeworkSubmission.status == HomeworkSubmissionStatus.SUBMITTED,
+                HomeworkSubmission.is_working.is_(True),
+                Course.is_deleted.is_(False), Lesson.is_deleted.is_(False),
+                LessonStudent.access_ended_at.is_(None), StudentCourse.is_deleted.is_(False),
+                StudentCourse.history_revoked.is_(False), StudentCourse.access_ended_at.is_(None),
+                or_(StudentCourse.expires_at.is_(None), StudentCourse.expires_at > func.now()),
+                ~exists(select(TeacherStudent.id).where(
+                    TeacherStudent.teacher_id == Teacher.id, TeacherStudent.student_id == Student.id,
+                    TeacherStudent.ended_at.is_not(None)).correlate(Teacher, Student))))
+        if course_id is not None:
+            stmt = stmt.where(Course.id == course_id)
+        if student_user_id is not None:
+            stmt = stmt.where(Student.user_id == student_user_id)
+        # Count and page share a single statement snapshot, including an empty offset page.
+        filtered = stmt.subquery()
+        page = (stmt.order_by(HomeworkSubmission.submitted_at.asc().nulls_last(), HomeworkSubmission.id)
+                .limit(limit).offset(offset).subquery())
+        from sqlalchemy.orm import aliased
+        submission = aliased(HomeworkSubmission, page)
+        count = select(func.count()).select_from(filtered).subquery()
+        result = await self.session.execute(select(
+            submission, page.c.queue_course_id, page.c.queue_lesson_id,
+            page.c.queue_student_user_id, page.c.queue_homework_title, count.c[0]
+        ).select_from(count.outerjoin(page, true())).options(selectinload(submission.files))
+         .order_by(submission.submitted_at.asc().nulls_last(), submission.id)
+         .execution_options(populate_existing=True))
+        rows = result.all()
+        return [tuple(row[:5]) for row in rows if row[0] is not None], rows[0][-1]

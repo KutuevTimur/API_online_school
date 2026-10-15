@@ -1,3 +1,4 @@
+from src.tools.synthetic_files import pdf_bytes
 from datetime import datetime, timezone
 import pytest
 from typing import List
@@ -40,12 +41,11 @@ async def test_create_homework(
         lesson_id=lesson.id,
         student_user_id=student.id,
         title="Math Homework",
-        deadline=datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
         description="Calculate 2+2"
     )
 
     files = {
-        "file": ("test_hw.pdf", b"dummy pdf content", "application/pdf")
+        "file": ("test_hw.pdf", pdf_bytes('dummy pdf content'), "application/pdf")
     }
     
     res_hw = await client_for_tests.post(
@@ -122,12 +122,11 @@ async def test_download_homework_file(
         lesson_id=lesson.id,
         student_user_id=student.id,
         title="Title",
-        deadline=datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
     )
     upload_res = await client_for_tests.post(
         "/homeworks",
         data=hw_dto.model_dump(mode="json", exclude_none=True),
-        files={"file": ("test_hw.pdf", b"dummy pdf content", "application/pdf")},
+        files={"file": ("test_hw.pdf", pdf_bytes('dummy pdf content'), "application/pdf")},
         headers={"Authorization": f"Bearer {t_token}"},
     )
     res_dto = HomeworkResponseDTO.model_validate(upload_res.json())
@@ -139,7 +138,7 @@ async def test_download_homework_file(
     )
     
     assert res_download.status_code == 200
-    assert res_download.content == b"dummy pdf content"
+    assert res_download.content == pdf_bytes('dummy pdf content')
 
 
 @pytest.mark.asyncio

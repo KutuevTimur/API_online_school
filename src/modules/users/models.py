@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import String, func, Enum, Boolean, Integer, text
+from sqlalchemy import String, func, Enum, Boolean, Integer, BigInteger, CheckConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
@@ -23,6 +23,7 @@ class UserRole(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (CheckConstraint("file_quota_bytes >= 20971520 AND file_quota_bytes <= 1099511627776", name="ck_user_file_quota"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
@@ -38,6 +39,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_activated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    file_quota_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default=text("1073741824"))
     auth_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

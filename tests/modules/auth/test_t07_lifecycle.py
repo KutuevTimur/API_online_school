@@ -163,12 +163,13 @@ async def test_cleanup_failure_restart_retry_and_path_boundary(world,session_db,
     path=path_builder_fixture.get_lecture_pdf(999,'retry'); path.write_bytes(b'retry')
     outside=tmp_path/'outside'; outside.write_bytes(b'outside')
     session_db.add_all([FileDeletion(path=str(path)),FileDeletion(path=str(outside))]); await session_db.commit()
-    original=Path.unlink
-    def fail(self,*args,**kwargs):
-        if self==path.resolve(): raise OSError('injected')
-        return original(self,*args,**kwargs)
+    from src.modules.storage.service import LocalStorage
+    original=LocalStorage.delete
+    async def fail(self,key):
+        if self.root / key == path: raise OSError('injected')
+        return await original(self,key)
     with monkeypatch.context() as patch:
-        patch.setattr(Path,'unlink',fail)
+        patch.setattr(LocalStorage,'delete',fail)
         result=await LifecycleService(LifecycleRepository(session_db),config_fix).cleanup(a,100)
         assert result.failed==2 and path.exists()
     # New service instance represents a restarted worker; persisted jobs remain.
@@ -211,7 +212,7 @@ async def test_unenroll_preserves_reading_and_restore_does_not_reenroll(client_f
     assert enrollment.is_deleted and enrollment.access_ended_at
     assert (await client_for_tests.get(f'/courses/{c}',headers=s)).status_code==200
     h=w['homeworks'][0].id; sub=w['submissions'][0].id
-    assert (await client_for_tests.patch(f'/submissions/{sub}/teacher?homework_id={h}',headers=t,json={'grade':5})).status_code==403
+    assert (await client_for_tests.patch(f'/submissions/{sub}/teacher?homework_id={h}',headers=t,json={'grade':5,'expected_version':1})).status_code==403
     assert (await client_for_tests.patch(f'/submissions/{sub}/student?homework_id={h}',headers=s,data={'text_content':'no'})).status_code==403
     assert (await client_for_tests.delete(f'/submissions/{sub}?homework_id={h}',headers=s)).status_code==403
 

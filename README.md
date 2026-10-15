@@ -441,3 +441,108 @@ Checked и исторические ответы нельзя изменять �
 в durable `file_deletions`. Существующий admin retry cleanup удаляет их после
 проверки ссылок и PathsConfig. Автоматический scheduler отсутствует; полный
 storage contract/лимиты и reconciliation аварийных orphan uploads — T12.
+
+### T10: очередь и окончательная проверка ответа
+
+`GET /submissions/review-queue` доступен только teacher. Возвращает рабочие
+submitted ответы его активных курсов/занятий/участий; draft, checked и старые
+попытки исключены. Фильтры `course_id`, `student_user_id`; `limit` (1–1000),
+`offset`; total учитывает фильтры даже при пустой странице. Порядок — сначала
+ранее отправленные, затем ID. В каждой записи текущие текст/файлы/version,
+название ДЗ и course_id/lesson_id/student_user_id.
+
+`PATCH /submissions/{id}/teacher?homework_id=...` принимает JSON:
+
+```json
+{"expected_version": 3, "grade": 0, "teacher_comment": "Комментарий необязателен"}
+```
+
+`grade` — обязательное целое 0–5, `expected_version` — обязательное целое >=1.
+Дроби, строки, bool и пропущенные значения отвергаются (422). `status` можно
+не передавать; единственное допустимое значение — `checked`. Неизвестные поля
+запрещены. Если ученик успел изменить ответ — 409: перечитать ответ и решить,
+подтвердить ли оценку новой версии. Проверка draft — 409; checked/history,
+архив и завершённое участие доступны только для чтения (403). Проверяющий
+повторно проверяет доступ под общими с редактированием блокировками.
+
+Ответ содержит checked_at UTC и checked_by **как user_id преподавателя**;
+внутри БД checked_by остаётся FK teachers.id. Ученик читает тот же результат
+через существующие detail/list. После проверки нельзя изменить ответ,
+вложения, оценку или комментарий. Возврат на доработку отсутствует (D05).
+Numeric-колонка и прежние значения оценок сохранены без округления/миграции;
+целочисленное ограничение применяется ко всем новым review API запросам.
+
+Synthetic HTTP-проверка использует существующие локальные ignored credentials,
+создаёт отдельный T10 курс и сохраняет его для просмотра, без reset/purge:
+
+```bash
+MODE=DEV .venv/bin/python -m src.tools.smoke_t10
+MODE=DEV .venv/bin/python -m src.tools.smoke_t10 --verify-retained
+```
+
+Вторую команду запускать после restart backend для проверки сохранности.
+Секреты не выводятся. Полные факты проверок — [T10](docs/plan/tasks/T10.md).
+
+### T11 — автоматический срок и долг (локально)
+
+`POST /homeworks` больше не принимает ручной `deadline` (422). Срок следует
+следующему допустимому занятию того же курса и ученика; при отсутствии — null.
+Долг: `POST /homeworks/{homework_id}/debts` с JSON `{"lesson_id": 123}` (ID своего
+более позднего урока). `GET /homeworks/{homework_id}/placements` возвращает историю
+размещений и сроков. Checked замораживает историю, поздняя сдача разрешена.
+Контракт, migration backfill и проверки — [T11](docs/plan/tasks/T11.md).
+
+Synthetic dev smoke (существующий локальный стенд, без reset/purge):
+
+```bash
+.venv/bin/python src/tools/smoke_t11.py
+.venv/bin/python src/tools/smoke_t11.py --verify-retained
+```
+
+Скрипт читает ignored `.env.audit-access`, выводит только результаты проверок;
+не отправлять этот файл в чат/Git. Retained запуск — после healthy backend.
+
+### T12: приватные файлы (локально)
+
+Новые upload используют immutable UUID и FileAsset metadata; auth/download URL
+и file_id сохраняются. PDF хранится один раз. Лимиты: 20 MiB/file, 10 файлов и
+100 MiB исходников/ответ; unsupported/повреждённые/анимированные файлы отклоняются,
+Office upload в MVP выключен. D06 принят: фото → WebP ≤2560/q85 без EXIF/GPS,
+с исправлением поворота/alpha, без увеличения. В synthetic dev после визуальной
+приёмки новые оригиналы удаляются через очередь только после ready/link commit;
+на новом окружении PHOTO_ORIGINALS_APPROVED=0 до приёмки. Старые фото не нормализуются.
+Квота документов/ответов — 1 GiB/ученика, admin может увеличить; архивы учитываются,
+при переполнении старые downloads остаются доступны. Owner/admin report:
+GET /users/{user_id}/storage, override PATCH /admin/users/{user_id}/storage-quota
+с JSON {"limit_bytes": 2147483648}. Изменения квоты аудируются.
+
+Dev media находится в persistent volume `lgg-dev_media` (`/app/media` в backend),
+pytest — только в выделенной временной папке. Перезапуск сохраняет dev файлы;
+`docker compose down -v` удалит volume и для обычного завершения не используется.
+Просмотр — авторизованные `/lectures/{id}/file`, `/homeworks/{id}/file` и
+`/submissions/{id}/files/{file_id}?homework_id=...`, включая авторизованный Range.
+Локальное содержимое можно проверить через
+`docker compose --env-file .env -f docker-compose.yaml exec backend ls /app/media`.
+Копирование media: `docker compose --env-file .env -f docker-compose.yaml cp backend:/app/media /private/tmp/lgg-media-backup`.
+Для согласованной резервной копии нужны остановленные записи и соответствующая
+копия БД; полный backup/restore runbook и проверка восстановления — T18.
+
+После dev build + `alembic upgrade head` HTTP smoke:
+`MODE=DEV .venv/bin/python -m src.tools.smoke_t12`;
+после restart: та же команда с `--verify-retained`.
+Credentials/IDs только в ignored `.env.audit-access`, не печатать этот файл.
+
+
+T12 maintenance запускается только на проверенном local dev/test. Docker backend
+имеет явный MODE=DEV. Worker: 60s retry/cleanup, 24h grace для orphan UUID,
+DB/manifest refs перепроверяются. Migration CLI (внутри backend):
+`python -m src.tools.storage_maintenance migrate --actor-user-id ID` — dry-run;
+добавить `--apply` для копирования, `--allow-opaque-legacy` только для осознанного
+synthetic импорта старых бинарных dummy fixtures как octet-stream attachment.
+Reconciliation: `python -m src.tools.storage_maintenance reconcile`, применение
+`--apply` ставит сироты в durable deletion queue. Старые пути не выводятся в stdout;
+private manifests — /app/media/temp/migration-manifests, сохранять вместе с media.
+Rollback window 7 дней; перед удалением дубликатов проверяется новая hash-копия.
+Admin purge удаляет и свои migration backups с учётом shared refs.
+LEGACY_FILE_READS=0 включается после нулевого dry-run остатка. Не применять этот
+локальный job к неизвестной/production БД; такой target отвергается guard.

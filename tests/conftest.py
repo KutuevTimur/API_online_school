@@ -28,6 +28,8 @@ async def clearing_db(session_db: AsyncSession, config_fix):
     # Удаляем зависимости в нужном порядке
     await session_db.execute(delete(HomeworkSubmissionFile))
     await session_db.execute(delete(HomeworkSubmission))
+    await session_db.execute(delete(HomeworkDeadlineEvent))
+    await session_db.execute(delete(HomeworkPlacement))
     await session_db.execute(delete(Homework))
     await session_db.execute(delete(Lecture))
     await session_db.execute(delete(LessonStudent))
@@ -38,5 +40,6 @@ async def clearing_db(session_db: AsyncSession, config_fix):
     await session_db.execute(delete(TeacherStudent))
     await session_db.execute(delete(Teacher))
     await session_db.execute(delete(Student))
+    await session_db.execute(delete(FileAsset))
     await session_db.execute(delete(User))
     await session_db.commit()

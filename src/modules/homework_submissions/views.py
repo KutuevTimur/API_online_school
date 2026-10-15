@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Request, Depends, UploadFile, File, Form, Query
-from fastapi.responses import FileResponse
+from src.modules.storage.download import private_download
 from starlette import status
 
 from src.modules.base.orm_dto import PaginationResponseDTO
@@ -10,6 +10,7 @@ from src.modules.check_permission import get_current_teacher_user
 from src.modules.homework_submissions.depends import get_homework_submissions_service
 from src.modules.homework_submissions.models_dto import (
     HomeworkSubmissionResponseDTO,
+    ReviewQueueItemDTO,
     UpdateSubmissionStudentRequestDTO,
     UpdateSubmissionTeacherRequestDTO,
 )
@@ -62,6 +63,19 @@ async def get_homework_submissions(
     )
 
 @router.get(
+    "/submissions/review-queue", response_model=PaginationResponseDTO[ReviewQueueItemDTO],
+    status_code=status.HTTP_200_OK, summary="Current submitted answers awaiting my review",
+)
+async def get_review_queue(
+    limit: int = Query(100, ge=1, le=1000), offset: int = Query(0, ge=0),
+    course_id: int | None = Query(None, ge=1), student_user_id: int | None = Query(None, ge=1),
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: HomeworkSubmissionsService = Depends(get_homework_submissions_service),
+):
+    return await service.review_queue(current_user.id, limit, offset, course_id, student_user_id)
+
+
+@router.get(
     "/submissions/{submission_id}",
     response_model=HomeworkSubmissionResponseDTO,
     status_code=status.HTTP_200_OK,
@@ -86,6 +100,7 @@ async def get_homework_submission(
     summary="Download a specific file attached to an attempt",
 )
 async def get_homework_submission_file(
+    request: Request,
     submission_id: int,
     file_id: int,
     homework_id: int = Query(...),
@@ -100,9 +115,10 @@ async def get_homework_submission_file(
         file_id=file_id,
     )
     
-    return FileResponse(
-        path=file_record.pdf_file_path or file_record.original_file_path,
-        media_type="application/pdf",
+    return await private_download(
+        request=request,
+        raw=file_record.pdf_file_path or file_record.original_file_path,
+        media_type=file_record.download_mime,
         filename=file_record.pdf_file_name or file_record.original_file_name,
     )
 

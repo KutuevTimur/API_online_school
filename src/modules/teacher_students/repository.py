@@ -27,3 +27,8 @@ class TeacherStudentRepository(BaseRepository):
         return list((await self.session.scalars(select(StudentCourse).join(Course).where(
             Course.teacher_id == teacher_id, StudentCourse.student_id == student_id)
             .order_by(StudentCourse.id).with_for_update(of=StudentCourse))).all())
+
+    async def lock_courses(self, teacher_id: int, student_id: int) -> list[int]:
+        return list((await self.session.scalars(select(Course.id).join(StudentCourse).where(
+            Course.teacher_id == teacher_id, StudentCourse.student_id == student_id)
+            .order_by(Course.id).with_for_update(of=Course))).all())

@@ -48,6 +48,10 @@ class LifecycleRepository(BaseRepository):
             Homework: Homework.lesson_student_id.in_(recipients),
             HomeworkSubmissionFile: HomeworkSubmissionFile.submission_id.in_(submissions),
         }
+        assets = set()
+        for model in (Lecture, Homework, HomeworkSubmissionFile):
+            for column in (model.original_asset_id, model.download_asset_id):
+                assets.update(a for a in (await self.session.scalars(select(column).where(filters[model]))).all() if a)
         paths = set()
         for model, name in FILE_COLUMNS:
             if model in filters:
@@ -64,6 +68,13 @@ class LifecycleRepository(BaseRepository):
         ]:
             await self.session.execute(delete(model).where(predicate).execution_options(synchronize_session=False))
 
+        from src.modules.files.repository import FileAssetsRepository
+        await FileAssetsRepository(self.session).prune(assets)
+
+    async def asset_keys(self) -> list[str]:
+        from src.modules.files.models import FileAsset
+        return list((await self.session.scalars(select(FileAsset.key).where(FileAsset.backend == 'local'))).all())
+
     async def referenced_paths(self) -> set[str]:
         paths = set()
         for model, name in FILE_COLUMNS:
@@ -74,3 +85,7 @@ class LifecycleRepository(BaseRepository):
         return list((await self.session.scalars(select(FileDeletion).where(
             FileDeletion.completed.is_(False)).order_by(FileDeletion.attempts, FileDeletion.id)
             .limit(limit).with_for_update(skip_locked=True))).all())
+
+    async def pending_paths(self) -> set[str]:
+        return set((await self.session.scalars(select(FileDeletion.path).where(
+            FileDeletion.completed.is_(False)))).all())

@@ -66,4 +66,9 @@ class HomeworksRepository(BaseRepository):
     async def delete_homework(self, homework_id: int) -> Homework | None:
         stmt = delete(Homework).where(Homework.id == homework_id).returning(Homework)
         result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        deleted = result.scalar_one_or_none()
+        if deleted:
+            from src.modules.files.repository import FileAssetsRepository
+            await FileAssetsRepository(self.session).prune(
+                {deleted.original_asset_id, deleted.download_asset_id} - {None})
+        return deleted

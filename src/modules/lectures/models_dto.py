@@ -4,6 +4,7 @@ from src.modules.base.orm_dto import ORMDTO
 
 
 class LectureDTO(ORMDTO):
+    download_mime: str = "application/pdf"
     id: int
     lesson_student_id: int
     original_file_path: str

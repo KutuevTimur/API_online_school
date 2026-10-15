@@ -1,3 +1,4 @@
+from src.modules.files.models import FileAsset
 from src.modules.users.models import User
 from src.modules.refresh_tokens.models import RefreshToken
 from src.modules.teachers.models import Teacher
@@ -16,7 +17,11 @@ from src.modules.account_invitations.models import AccountInvitation, AccountAud
 
 from src.modules.course_lifecycle.models import EnrollmentGap, LifecycleAudit, FileDeletion
 
+from src.modules.homework_placements.models import HomeworkPlacement, HomeworkDeadlineEvent
+
 __all__ = [
+    "FileAsset",
+    "HomeworkPlacement", "HomeworkDeadlineEvent",
     "EnrollmentGap", "LifecycleAudit", "FileDeletion",
     "AccountInvitation", "AccountAudit", "AuthRateLimit",
     "TeacherStudent",

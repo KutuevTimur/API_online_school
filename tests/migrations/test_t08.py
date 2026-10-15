@@ -48,6 +48,6 @@ def test_t08_downgrade_refuses_loss_before_ddl(database, mutation):
     sql(mutation)
     result = alembic('downgrade', '811d7911d0b4', success=False)
     assert 'Cannot discard T08' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version') == [('8a575436b7db',)]
+    assert sql('SELECT version_num FROM alembic_version') == [('36a8711f7799',)]
     assert sql('SELECT count(*) FROM lesson_students') == [(1,)]
     assert_schema(conf)

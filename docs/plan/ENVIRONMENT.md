@@ -96,3 +96,50 @@ Dev остаётся 127.0.0.1:8018, файлы — прежний persistent `l
 Учётные данные и synthetic IDs только ignored `.env.audit-access` (0600).
 Test остаётся отдельной guarded lgg-test на loopback 55432. Неизвестная БД
 не затронута. Итог тестов и ограничения — [карточка T09](tasks/T09.md).
+
+
+## T10 — 15.10.2026
+
+Synthetic dev backend пересобран и запущен с T10 без reset/удаления volumes.
+29 HTTP checks PASS, restart persistence 8 PASS (повтор на окончательном build
+также PASS); dev alembic check PASS. Новый DDL отсутствует.
+Guarded lgg-test: полный pytest 395 passed, migration suite 20 passed;
+после тестов upgrade head/check PASS, чистая schema на 8a575436b7db.
+Dev 127.0.0.1:8018/docs остаётся работающим, прежний persistent media volume
+сохранён. Неизвестная БД не затронута. Подробнее — tasks/T10.md.
+
+
+## T11 — 15.10.2026
+
+Synthetic dev обновлён migration `689ceabc2b0c` без reset/удаления volumes.
+Последний build/up/healthy и 29 T11 HTTP PASS; restart retained 7 T11 + 8 T10
+HTTP PASS, прежний PDF сохранён; dev schema diff пустой. Legacy закрытые сроки
+дополнительно проверены: 0 расхождений. Dev 127.0.0.1:8018/docs, persistent
+lgg-dev_media сохранён, credentials/IDs только ignored .env.audit-access (0600).
+Guarded lgg-test отдельно на 55432: полный pytest 421, финальные scoped 95,
+migrations 23, guard 14 PASS; после migration suite upgrade/check PASS,
+пустые 21 domain tables на head 689ceabc2b0c. Неизвестная БД не затронута.
+Подробности и ограничения — tasks/T11.md.
+
+## T12 — 15.10.2026
+
+Оба isolated targets сохранены; текущий head `36a8711f7799`. Три добавочные
+миграции T12 прошли clean/prior-state/round-trip/unsafe downgrade checks.
+Полный pytest 478, финальные scoped 82, migrations 27, unit 38 PASS; подробности T12.
+Dev backend build/up/HTTP 33/restart 24 PASS, schema diff пустой. Порт 8018,
+volume lgg-dev_media (/app/media), DB 55431. Явный MODE=DEV добавлен в backend Compose
+(прежний env давал LOCAL и maintenance правильно отказывал). Test guard 55432 не
+ослаблен; maintenance сравнивает также реальный engine/session.
+
+D06 synthetic визуальная приёмка принята: dev PHOTO_ORIGINALS_APPROVED=1.
+Новые originals удаляются через durable queue после успешного ready/link commit;
+не массовая обработка старой истории. Legacy 5/5 copied/hash verified, 0 failed,
+reader LEGACY_FILE_READS=0. Старые copies/0600 manifests сохранены на 7 дней;
+повреждение новой копии блокирует expiry deletion. Worker 60s, orphan grace 24h,
+DB/shared/manifest refs защищены. Runtime assets=32, pending cleanup=0 после smoke.
+
+Секреты/IDs по-прежнему только ignored env/`.env.audit-access`; значения не выводились.
+Внешняя БД, реальные ПД, production и backup restore не затрагивались/не проверялись.
+
+Финальный preflight: guarded lgg-test head 36a8711f7799, users/courses/assets = 0/0/0;
+both Compose config --quiet и git diff --check PASS. Dev сохранён работающим.

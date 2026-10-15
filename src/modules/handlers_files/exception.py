@@ -23,3 +23,8 @@ class InvalidDocumentFormat(HandlerFileException):
 class DocumentConversionError(HandlerFileException):
     """Исключение при ошибке конвертации документа."""
     pass
+
+
+class FileTooLarge(HandlerFileException):
+    """Stream exceeded the upload limit."""
+    pass

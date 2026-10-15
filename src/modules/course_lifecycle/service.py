@@ -45,6 +45,11 @@ class LifecycleService:
             if obj.is_deleted:
                 obj.restore()
                 self.audit(actor_id, kind, object_id, 'restore')
+            from src.modules.homework_placements.service import HomeworkPlacementsService
+            await HomeworkPlacementsService(self.session).recalculate_course(
+                obj.id if kind == "course" else obj.course_id, kind + "_restored")
+            # Flush during deadline recalculation expires the server-generated timestamp.
+            await self.session.refresh(obj, attribute_names=["updated_at"])
             dto = (CoursesResponseDTO if kind == 'course' else LessonResponseDTO).model_validate(obj)
             await self.session.commit()
             return dto
@@ -82,25 +87,34 @@ class LifecycleService:
             await self.session.rollback()
             raise
         # Failures here must leave committed jobs retryable; never roll back target deletion.
+        from src.modules.files.maintenance import queue_purged_backups
+        await queue_purged_backups(self.config,self.session)
         cleanup = await self.cleanup(actor_id, 100)
         return PurgeResponse(course_id=course_id, cleanup=cleanup)
 
     def safe_path(self, raw: str) -> Path:
+        from src.modules.storage.service import LegacyStorage
         path = Path(raw)
         roots = [self.config.paths.avatars_courses, self.config.paths.lectures,
-                 self.config.paths.homework, self.config.paths.homework_submissions]
-        resolved = path.resolve()
-        if path.is_symlink() or not any(resolved.is_relative_to(root.resolve()) and resolved != root.resolve()
-                                        for root in roots):
+                 self.config.paths.homework, self.config.paths.homework_submissions, self.config.paths.temp,
+                 self.config.paths.objects]
+        LegacyStorage(self.config.paths).key(path)
+        if not any(path.is_relative_to(root) and path != root for root in roots):
             raise ValueError('unsafe_path')
-        return resolved
+        return path
 
     async def cleanup(self, actor_id: int, limit: int) -> CleanupResponse:
         await self.admin(actor_id)
+        return await self._cleanup(limit)
+
+    async def _cleanup(self, limit: int) -> CleanupResponse:
         completed = failed = 0
         try:
             jobs = await self.repo.pending(limit)
-            referenced = {Path(p).resolve() for p in await self.repo.referenced_paths()}
+            referenced = {Path(p) for p in await self.repo.referenced_paths()}
+            referenced.update(self.config.paths.media / key for key in await self.repo.asset_keys())
+            from src.modules.files.maintenance import retained_paths
+            referenced.update(await retained_paths(self.config,self.session))
             for job in jobs:
                 job.attempts += 1
                 try:
@@ -110,7 +124,8 @@ class LifecycleService:
                         job.last_error = 'referenced'
                         failed += 1
                         continue
-                    path.unlink(missing_ok=True)
+                    from src.modules.storage.service import LocalStorage, LegacyStorage
+                    await LocalStorage(self.config.paths).delete(LegacyStorage(self.config.paths).key(path))
                     job.completed = True
                     job.last_error = None
                     completed += 1

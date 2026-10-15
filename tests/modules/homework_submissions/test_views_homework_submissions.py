@@ -201,7 +201,8 @@ async def test_update_homework_submission_teacher(
 
     update_dto = UpdateSubmissionTeacherRequestDTO(
         status=HomeworkSubmissionStatus.CHECKED,
-        grade=5.0,
+        grade=5,
+        expected_version=1,
         teacher_comment="Good job"
     )
     

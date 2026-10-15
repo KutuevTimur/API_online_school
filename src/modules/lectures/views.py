@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Request
+from src.modules.storage.download import private_download
 from starlette import status
 
 from src.modules.base.orm_dto import PaginationResponseDTO
@@ -92,6 +92,7 @@ async def get_my_lectures(
     summary="Download a specific lecture (PDF)",
 )
 async def download_lecture(
+    request: Request,
     lecture_id: int,
     lesson_id: int = Query(..., description="ID урока"),
     student_user_id: int = Query(..., description="ID студента"),
@@ -105,9 +106,10 @@ async def download_lecture(
         lecture_id=lecture_id,
     )
     
-    return FileResponse(
-        path=lecture.pdf_file_path,
-        media_type="application/pdf",
+    return await private_download(
+        request=request,
+        raw=lecture.pdf_file_path,
+        media_type=lecture.download_mime,
         filename=lecture.pdf_file_name,
     )
 

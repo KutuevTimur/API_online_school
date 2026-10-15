@@ -1,3 +1,4 @@
+from src.tools.synthetic_files import pdf_bytes
 """T09: real PostgreSQL locks, preserved attachments, immutable reviewed history."""
 import asyncio
 from datetime import UTC, datetime, timedelta
@@ -30,7 +31,7 @@ def headers(w, actor='s1'):
 @pytest.mark.asyncio
 async def test_append_same_filename_preserves_ids_bytes_and_download(client_for_tests, world):
     w=world; old=w['files'][0]; content=Path(old.pdf_file_path).read_bytes()
-    for payload in (b'%PDF new one', b'%PDF new two'):
+    for payload in (pdf_bytes('%PDF new one'), pdf_bytes('%PDF new two')):
         r=await client_for_tests.patch(route(w, '/student'), headers=headers(w),
             files=[('files', ('answer.pdf', payload, 'application/pdf'))])
         assert r.status_code == 200, r.text
@@ -38,7 +39,7 @@ async def test_append_same_filename_preserves_ids_bytes_and_download(client_for_
     data=r.json(); assert data['version']==3 and len(data['files'])==3
     assert old.id in [f['id'] for f in data['files']]
     assert Path(old.pdf_file_path).read_bytes()==content
-    for f, expected in zip(data['files'], [content,b'%PDF new one',b'%PDF new two']):
+    for f, expected in zip(data['files'], [content,pdf_bytes('%PDF new one'),pdf_bytes('%PDF new two')]):
         r=await client_for_tests.get(route(w, f"/files/{f['id']}"), headers=headers(w))
         assert r.status_code==200 and r.content==expected
 
@@ -82,9 +83,9 @@ async def test_empty_draft_text_only_and_file_only(client_for_tests, world, sess
 @pytest.mark.asyncio
 async def test_point_delete_swap_and_durable_cleanup(client_for_tests, world, session_db):
     w=world; old=w['files'][0]; content=Path(old.pdf_file_path).read_bytes()
-    r=await client_for_tests.patch(route(w,'/student'),headers=headers(w),files={'files':('second.pdf',b'%PDF second','application/pdf')})
+    r=await client_for_tests.patch(route(w,'/student'),headers=headers(w),files={'files':('second.pdf',pdf_bytes('%PDF second'),'application/pdf')})
     added=next(f['id'] for f in r.json()['files'] if f['id']!=old.id)
-    r=await client_for_tests.put(route(w,f'/files/{old.id}'),headers=headers(w),files={'file':('swap.pdf',b'%PDF swap','application/pdf')})
+    r=await client_for_tests.put(route(w,f'/files/{old.id}'),headers=headers(w),files={'file':('swap.pdf',pdf_bytes('%PDF swap'),'application/pdf')})
     assert r.status_code==200, r.text
     ids=[f['id'] for f in r.json()['files']]; assert added in ids and old.id not in ids
     assert Path(old.pdf_file_path).read_bytes()==content  # Unlink is deferred until after durable commit.
@@ -110,7 +111,7 @@ async def test_checked_immutable_all_paths(client_for_tests, world, session_db, 
         for actor in ['s1','t1']:
             assert (await client_for_tests.delete(url,headers=headers(w,actor))).status_code==403
         return
-    elif operation=='teacher': r=await client_for_tests.patch(route(w,'/teacher'),headers=headers(w,'t1'),json={'grade':0})
+    elif operation=='teacher': r=await client_for_tests.patch(route(w,'/teacher'),headers=headers(w,'t1'),json={'grade':0,'expected_version':1})
     elif operation=='submit': r=await client_for_tests.post(route(w,'/submit'),headers=h)
     else: r=await client_for_tests.post(f"/homeworks/{w['homeworks'][0].id}/submissions",headers=h)
     assert r.status_code==(409 if operation=='create' else 403), r.text
@@ -135,7 +136,7 @@ async def test_upload_swap_rollback_keeps_original(client_for_tests, world, sess
     elif failure=='insert': monkeypatch.setattr(HomeworkSubmissionsRepository,'add_submission_files',fail)
     else: monkeypatch.setattr(AsyncSession,'commit',fail)
     with pytest.raises(RuntimeError,match='synthetic T09'):
-        await client_for_tests.put(route(w,f"/files/{w['files'][0].id}"),headers=headers(w),files={'file':('f.pdf',b'%PDF replacement','application/pdf')})
+        await client_for_tests.put(route(w,f"/files/{w['files'][0].id}"),headers=headers(w),files={'file':('f.pdf',pdf_bytes('%PDF replacement'),'application/pdf')})
     monkeypatch.undo()
     r=await client_for_tests.get(route(w),headers=headers(w))
     assert r.status_code==200 and r.json()['version']==1 and len(r.json()['files'])==1
@@ -186,7 +187,7 @@ async def test_concurrent_submit_edit_and_append(config_fix, world, client_for_t
             args=(w['accounts']['s1'][0].id,w['homeworks'][0].id,w['submissions'][0].id)
             if action=='submit': return await service.submit_submission(*args)
             return await service.update_submission_student(*args,UpdateSubmissionStudentRequestDTO(),
-                files=[UploadFile(BytesIO(b'%PDF '+action.encode()),filename='same.pdf')])
+                files=[UploadFile(BytesIO(pdf_bytes(action)),filename='same.pdf')])
     await asyncio.gather(run('submit'),run('one'),run('two'))
     r=await client_for_tests.get(route(w),headers=headers(w))
     assert r.json()['version']==4 and r.json()['status']=='submitted' and len(r.json()['files'])==3
@@ -224,7 +225,7 @@ async def test_create_failure_after_flush_rolls_back_answer_and_upload(client_fo
     monkeypatch.setattr(HomeworkSubmissionsRepository,'add_submission_files',fail)
     with pytest.raises(RuntimeError,match='post-flush'):
         await client_for_tests.post(f'/homeworks/{hid}/submissions',headers=headers(w),
-            files={'files':('new.pdf',b'%PDF new','application/pdf')})
+            files={'files':('new.pdf',pdf_bytes('%PDF new'),'application/pdf')})
     assert await session_db.scalar(select(func.count()).select_from(HomeworkSubmission).where(HomeworkSubmission.homework_id==hid))==0
     assert {p for p in root.rglob('*') if p.is_file()}==before
 
@@ -234,7 +235,7 @@ async def test_failed_second_append_keeps_prior_files_and_text(client_for_tests,
     w=world; root=config_fix.paths.homework_submissions
     before={p for p in root.rglob('*') if p.is_file()}
     r=await client_for_tests.patch(route(w,'/student'),headers=headers(w),data={'text_content':'rollback text'},
-        files=[('files',('same.pdf',b'%PDF valid','application/pdf')),('files',('bad.exe',b'bad','application/octet-stream'))])
+        files=[('files',('same.pdf',pdf_bytes('%PDF valid'),'application/pdf')),('files',('bad.exe',b'bad','application/octet-stream'))])
     assert r.status_code==400, r.text
     r=await client_for_tests.get(route(w),headers=headers(w))
     assert r.json()['text_content']=='Submission text' and r.json()['version']==1 and len(r.json()['files'])==1

@@ -1,5 +1,7 @@
 """Synthetic T09 HTTP smoke; fixed loopback, no reset/purge, credentials never printed."""
 import asyncio
+import hashlib
+from src.tools.synthetic_files import pdf_bytes
 import json
 from pathlib import Path
 from typing import Any
@@ -40,7 +42,7 @@ async def main() -> None:
         lesson=await call('personal lesson','POST','/lessons',a,201,json={
             'course_id':cid,'title':'T09 response lifecycle','scheduled_at':'2028-06-10T12:00:00Z'})
         homework=await call('homework','POST','/homeworks',a,201,data={
-            'lesson_id':lesson['id'],'student_user_id':uid,'title':'T09 synthetic answer','deadline':'2026-01-01T00:00:00Z'})
+            'lesson_id':lesson['id'],'student_user_id':uid,'title':'T09 synthetic answer'})
         hid=homework['id']; base=f'/homeworks/{hid}/submissions'
         # Each HTTP request obtains an independent backend AsyncSession.
         async def create():
@@ -53,13 +55,13 @@ async def main() -> None:
         assert draft['submitted_at'] is None and draft['version']==1
         await call('empty submit rejected','POST',url+'/submit'+q,s,422)
         first=await call('first file','PATCH',url+'/student'+q,s,
-            files={'files':('answer.pdf',b'%PDF T09 first','application/pdf')})
+            files={'files':('answer.pdf',pdf_bytes('%PDF T09 first'),'application/pdf')})
         fid=first['files'][0]['id']
         second=await call('append same filename','PATCH',url+'/student'+q,s,
-            files={'files':('answer.pdf',b'%PDF T09 second','application/pdf')})
+            files={'files':('answer.pdf',pdf_bytes('%PDF T09 second'),'application/pdf')})
         assert len(second['files'])==2 and fid in [f['id'] for f in second['files']]
-        assert await call('old bytes preserved','GET',url+f'/files/{fid}'+q,s)==b'%PDF T09 first'
-        sent=await call('file-only late submit','POST',url+'/submit'+q,s)
+        assert await call('old bytes preserved','GET',url+f'/files/{fid}'+q,s)==pdf_bytes('%PDF T09 first')
+        sent=await call('file-only submit','POST',url+'/submit'+q,s)
         assert sent['status']=='submitted'
         assert await call('idempotent submit','POST',url+'/submit'+q,s)==sent
         updated=await call('edit submitted text','PATCH',url+'/student'+q,s,
@@ -67,13 +69,13 @@ async def main() -> None:
         await call('stale edit denied','PATCH',url+'/student'+q,s,409,
             data={'text_content':'stale','expected_version':sent['version']})
         swapped=await call('swap single file','PUT',url+f'/files/{fid}'+q,s,
-            files={'file':('answer.pdf',b'%PDF T09 replacement','application/pdf')})
+            files={'file':('answer.pdf',pdf_bytes('%PDF T09 replacement'),'application/pdf')})
         other=next(f['id'] for f in second['files'] if f['id']!=fid)
         assert other in [f['id'] for f in swapped['files']] and fid not in [f['id'] for f in swapped['files']]
-        await call('remove one file','DELETE',url+f'/files/{other}'+q,s)
+        remaining_answer=await call('remove one file','DELETE',url+f'/files/{other}'+q,s)
         await call('foreign teacher hidden','GET',url+q,b,404)
         checked=await call('teacher checks submitted','PATCH',url+'/teacher'+q,a,
-                           json={'status':'checked','grade':5,'teacher_comment':'T09 synthetic checked'})
+                           json={'status':'checked','grade':5,'expected_version':remaining_answer['version'],'teacher_comment':'T09 synthetic checked'})
         remaining=checked['files'][0]['id']
         await call('checked text immutable','PATCH',url+'/student'+q,s,403,data={'text_content':'forbidden'})
         await call('checked append immutable','PATCH',url+'/student'+q,s,403,
@@ -82,9 +84,9 @@ async def main() -> None:
         await call('checked swap denied','PUT',url+f'/files/{remaining}'+q,s,403,
                    files={'file':('a.pdf',b'forbidden','application/pdf')})
         await call('checked answer delete denied','DELETE',url+q,s,403)
-        await call('teacher cannot reopen checked','PATCH',url+'/teacher'+q,a,403,json={'status':'draft'})
+        await call('teacher cannot reopen checked','PATCH',url+'/teacher'+q,a,403,json={'grade':5,'expected_version':checked['version']})
         await call('no resubmission','POST',base,s,409)
-        assert await call('preserved checked download','GET',url+f'/files/{remaining}'+q,s)==b'%PDF T09 replacement'
+        assert await call('preserved checked download','GET',url+f'/files/{remaining}'+q,s)==pdf_bytes('%PDF T09 replacement')
         saved['t09']={'course_id':cid,'lesson_id':lesson['id'],'homework_id':hid,
                        'submission_id':sid,'file_id':remaining,'version':checked['version']}
         access.write_text(json.dumps(saved,indent=2)); access.chmod(0o600)

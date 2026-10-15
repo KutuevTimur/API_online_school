@@ -1,3 +1,5 @@
+from src.modules.files.service import FileAssetsService, discard_uploads
+from src.modules.storage.download import safe_display_name
 from src.modules.check_permission.service import ObjectPermissionService
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -15,6 +17,7 @@ from src.modules.homework_submissions.exception import HomeworkSubmissionNotFoun
 from src.modules.homework_submissions.models import HomeworkSubmission, HomeworkSubmissionStatus
 from src.modules.homework_submissions.models_dto import (
     HomeworkSubmissionResponseDTO,
+    ReviewQueueItemDTO,
     HomeworkSubmissionRequestDTO,
     HomeworkSubmissionFileRequestDTO,
     UpdateSubmissionTeacherRequestDTO,
@@ -89,34 +92,37 @@ class HomeworkSubmissionsService:
                 homework_id=homework_id, attempt_number=attempt, text_content=text_content,
                 status=HomeworkSubmissionStatus.DRAFT, submitted_at=None))
             await self.session_db.flush()
-            await self._append_files(submission.id, files, created_paths)
+            await self._append_files(submission.id, files, created_paths, student_user_id)
             result = await self._response(submission.id, student_user_id)
         return result
 
     @asynccontextmanager
     async def _mutation(self) -> AsyncIterator[list[Path]]:
         created_paths: list[Path] = []
+        self.handler_documents.saved_objects.clear()
+        self.handler_documents.quota_pending.clear()
+        self.handler_documents.transient_objects.clear()
         try:
             yield created_paths
             await self.session_db.commit()
         except BaseException:
             await self.session_db.rollback()
-            for path in created_paths:
-                try:
-                    path.unlink(missing_ok=True)
-                except OSError:
-                    # T12 storage reconciliation covers failures removing orphan uploads.
-                    pass
+            await discard_uploads(self.session_db, self.handler_documents, list(self.handler_documents.saved_objects) + self.handler_documents.transient_objects)
             raise
 
     async def _append_files(self, submission_id: int, files: Optional[List[UploadFile]],
-                            created_paths: list[Path]) -> bool:
+                            created_paths: list[Path], uploader_user_id: int, replace_file_id: int | None = None) -> bool:
+        from src.modules.handlers_files.exception import InvalidDocumentFormat, FileTooLarge
+        incoming = [f for f in files or [] if f.filename]
+        count, total = await self.homework_submissions_repo.file_usage(submission_id, replace_file_id)
+        if incoming and count + len(incoming) > 10:
+            raise InvalidDocumentFormat("An answer supports at most 10 files")
         data = []
-        for file in files or []:
+        for file in incoming:
             if not file.filename:
                 continue
-            name = Path(file.filename).name
-            extension = Path(name).suffix.lstrip('.').lower()
+            name = safe_display_name(file.filename)
+            extension = self.handler_documents._validate_extension(file.filename)
             storage_name = uuid4().hex
             original = self.path_builder.get_homework_submission_original(
                 homework_submission_id=submission_id, file_name=storage_name, file_type=extension)
@@ -125,10 +131,17 @@ class HomeworkSubmissionsService:
             created_paths.extend([original, pdf])
             original, pdf = await self.handler_documents.save_document(
                 document=file, original_dest=original, pdf_dest=pdf)
+            total += self.handler_documents.saved_objects[original][0].size
+            if total > 100 * 1024 * 1024:
+                raise FileTooLarge("Answer source files exceed 100 MiB")
+            original_asset_id, download_asset_id = await FileAssetsService(
+                self.session_db, self.handler_documents).register(original, pdf, name, uploader_user_id)
             data.append(HomeworkSubmissionFileRequestDTO(
-                submission_id=submission_id, original_file_path=str(original),
+                original_asset_id=original_asset_id, download_asset_id=download_asset_id,
+                submission_id=submission_id, source_size=self.handler_documents.saved_objects[original][0].size,
+                original_file_path=str(pdf if original_asset_id == download_asset_id else original),
                 original_file_name=name, original_file_type=extension,
-                pdf_file_path=str(pdf), pdf_file_name=f"{Path(name).stem}.pdf"))
+                pdf_file_path=str(pdf), pdf_file_name=f"{Path(name).stem}{pdf.suffix}"))
         await self.homework_submissions_repo.add_submission_files(data)
         return bool(data)
 
@@ -136,7 +149,27 @@ class HomeworkSubmissionsService:
         await self.session_db.flush()
         actor = await ObjectPermissionService(self.session_db).actor(user_id)
         submission = await self.homework_submissions_repo.get_by_submission_id(submission_id, actor=actor, lock=True)
-        return HomeworkSubmissionResponseDTO.model_validate(submission)
+        return await self._public_response(submission)
+
+    async def _public_response(self, submission: HomeworkSubmission) -> HomeworkSubmissionResponseDTO:
+        result = HomeworkSubmissionResponseDTO.model_validate(submission)
+        result.checked_by = await self.homework_submissions_repo.reviewer_user_id(submission.checked_by)
+        return result
+
+    async def review_queue(
+        self, teacher_user_id: int, limit: int, offset: int,
+        course_id: int | None = None, student_user_id: int | None = None,
+    ) -> PaginationResponseDTO[ReviewQueueItemDTO]:
+        actor = await ObjectPermissionService(self.session_db).actor(teacher_user_id)
+        if actor.role != UserRole.TEACHER:
+            raise PermissionErrorService()
+        rows, total = await self.homework_submissions_repo.review_queue(
+            teacher_user_id, limit, offset, course_id, student_user_id)
+        items = [ReviewQueueItemDTO(
+            **(await self._public_response(submission)).model_dump(),
+            course_id=cid, lesson_id=lid, student_user_id=sid, homework_title=title,
+        ) for submission, cid, lid, sid, title in rows]
+        return PaginationResponseDTO(items=items, total=total, limit=limit, offset=offset)
 
     async def _locked(self, user_id: int, role: UserRole, homework_id: int,
                       submission_id: int, expected_version: int | None = None) -> HomeworkSubmission:
@@ -187,7 +220,7 @@ class HomeworkSubmissionsService:
             sort_date=sort_date, actor=actor
         )
 
-        items = [HomeworkSubmissionResponseDTO.model_validate(sub) for sub in submissions]
+        items = [await self._public_response(sub) for sub in submissions]
         return PaginationResponseDTO(items=items, total=total, limit=limit, offset=offset)
 
     async def get_submission(
@@ -210,7 +243,7 @@ class HomeworkSubmissionsService:
         if not submission or submission.homework_id != homework_id:
             raise HomeworkSubmissionNotFound("Homework submission not found")
             
-        return HomeworkSubmissionResponseDTO.model_validate(submission)
+        return await self._public_response(submission)
 
     async def update_submission_student(
         self, student_user_id: int, homework_id: int, submission_id: int,
@@ -224,7 +257,7 @@ class HomeworkSubmissionsService:
             if 'text_content' in update_dto.model_fields_set and submission.text_content != update_dto.text_content:
                 submission.text_content = update_dto.text_content
                 changed = True
-            changed = await self._append_files(submission_id, files, paths) or changed
+            changed = await self._append_files(submission_id, files, paths, student_user_id) or changed
             if changed:
                 self._touch(submission)
             result = await self._response(submission_id, student_user_id)
@@ -257,7 +290,7 @@ class HomeworkSubmissionsService:
             if replacement is not None:
                 if not replacement.filename:
                     raise EmptySubmission("Replacement requires a file")
-                await self._append_files(submission_id, [replacement], paths)
+                await self._append_files(submission_id, [replacement], paths, student_user_id, file.id)
             await self.homework_submissions_repo.remove_file(file)
             self._touch(submission)
             result = await self._response(submission_id, student_user_id)
@@ -270,10 +303,11 @@ class HomeworkSubmissionsService:
         update_dto: UpdateSubmissionTeacherRequestDTO,
     ) -> HomeworkSubmissionResponseDTO:
         async with self._mutation():
-            submission = await self._locked(teacher_user_id, UserRole.TEACHER, homework_id, submission_id)
+            submission = await self._locked(teacher_user_id, UserRole.TEACHER, homework_id, submission_id,
+                                            update_dto.expected_version)
             if submission.status != HomeworkSubmissionStatus.SUBMITTED:
                 raise SubmissionConflict("Only submitted answers can be reviewed")
-            data = update_dto.model_dump(exclude_unset=True)
+            data = update_dto.model_dump(exclude={"expected_version"})
             if data.get('status', HomeworkSubmissionStatus.CHECKED) != HomeworkSubmissionStatus.CHECKED:
                 raise SubmissionConflict("A review cannot reopen an answer")
             teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
@@ -282,6 +316,8 @@ class HomeworkSubmissionsService:
             submission.status = HomeworkSubmissionStatus.CHECKED
             submission.checked_at = datetime.now(UTC)
             submission.checked_by = teacher.id
+            from src.modules.homework_placements.service import HomeworkPlacementsService
+            await HomeworkPlacementsService(self.session_db).freeze(homework_id)
             self._touch(submission)
             result = await self._response(submission_id, teacher_user_id)
         return result
@@ -294,7 +330,7 @@ class HomeworkSubmissionsService:
             submission = await self._locked(user_id, user_role, homework_id, submission_id)
             if await self.homework_submissions_repo.file_count(submission_id) != len(submission.files):
                 raise PermissionErrorService("Answer contains read-only history attachments")
-            result = HomeworkSubmissionResponseDTO.model_validate(submission)
+            result = await self._public_response(submission)
             for file in list(submission.files):
                 await self.homework_submissions_repo.remove_file(file)
             await self.session_db.flush()
@@ -328,4 +364,8 @@ class HomeworkSubmissionsService:
             
         if file_id not in {f.id for f in submission.files}:
             raise HomeworkSubmissionNotFound()
-        return file_res
+        from src.modules.homework_submissions.models_dto import HomeworkSubmissionFileDTO
+        dto = HomeworkSubmissionFileDTO.model_validate(file_res)
+        dto.pdf_file_path, dto.pdf_file_name, dto.download_mime = await FileAssetsService(self.session_db, self.handler_documents).download(
+            file_res.download_asset_id, file_res.pdf_file_path or file_res.original_file_path, file_res.pdf_file_name)
+        return dto

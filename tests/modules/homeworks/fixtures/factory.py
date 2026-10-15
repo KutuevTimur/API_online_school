@@ -20,6 +20,9 @@ async def create_homework_factory(
 
     homework_db = Homework(**new_homework.model_dump())
     session_db.add(homework_db)
+    await session_db.flush()
+    from src.modules.homework_placements.service import HomeworkPlacementsService
+    await HomeworkPlacementsService(session_db).original(homework_db)
     await session_db.commit()
     await session_db.refresh(homework_db)
 

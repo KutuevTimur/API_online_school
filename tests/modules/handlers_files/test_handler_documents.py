@@ -1,3 +1,4 @@
+from src.tools.synthetic_files import pdf_bytes
 import io
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -72,20 +73,20 @@ async def test_save_document_pdf_copies_directly(
     create_upload_file_fixture,
     tmp_path: Path
 ):
-    content = b"fake pdf content"
+    content = pdf_bytes()
     upload_file = create_upload_file_fixture(content, "test.pdf")
     
-    original_dest = tmp_path / "originals" / "test.pdf"
-    pdf_dest = tmp_path / "pdfs" / "test.pdf"
+    original_dest = handler_documents_fixture.config.paths.media / "originals" / "test.pdf"
+    pdf_dest = handler_documents_fixture.config.paths.media / "pdfs" / "test.pdf"
     
     res_orig, res_pdf = await handler_documents_fixture.save_document(upload_file, original_dest, pdf_dest)
     
     assert res_orig == original_dest
-    assert res_pdf == pdf_dest
+    assert res_pdf == original_dest
     
     assert original_dest.exists()
-    assert pdf_dest.exists()
-    assert pdf_dest.read_bytes() == content
+    assert not pdf_dest.exists()
+    assert original_dest.read_bytes() == content
 
 
 @pytest.mark.asyncio
@@ -101,44 +102,24 @@ async def test_save_document_image_converts(
     
     upload_file = create_upload_file_fixture(buf.getvalue(), "photo.jpg")
     
-    original_dest = tmp_path / "originals" / "photo.jpg"
-    pdf_dest = tmp_path / "pdfs" / "photo.pdf"
+    original_dest = handler_documents_fixture.config.paths.media / "originals" / "photo.jpg"
+    pdf_dest = handler_documents_fixture.config.paths.media / "pdfs" / "photo.pdf"
     
     await handler_documents_fixture.save_document(upload_file, original_dest, pdf_dest)
     
     assert original_dest.exists()
-    assert pdf_dest.exists()
+    assert pdf_dest.with_suffix(".webp").exists()
     
     # Проверяем, что исходник - это jpeg, а получатель - pdf (просто по размеру и существованию)
     assert original_dest.read_bytes() == buf.getvalue()
-    assert pdf_dest.stat().st_size > 0
+    with Image.open(pdf_dest.with_suffix(".webp")) as normalized:
+        assert normalized.format == "WEBP"
 
 
 @pytest.mark.asyncio
-async def test_save_document_doc_converts_mocked(
-    handler_documents_fixture: HandlerDocuments,
-    create_upload_file_fixture,
-    tmp_path: Path
+async def test_save_document_office_disabled_in_mvp(
+    handler_documents_fixture: HandlerDocuments, create_upload_file_fixture, tmp_path: Path
 ):
-    content = b"fake doc content"
-    upload_file = create_upload_file_fixture(content, "document.docx")
-    
-    original_dest = tmp_path / "originals" / "document.docx"
-    pdf_dest = tmp_path / "pdfs" / "document.pdf"
-    
-    async def mock_communicate():
-        pdf_dest.parent.mkdir(parents=True, exist_ok=True)
-        pdf_dest.write_text("mocked pdf")
-        return b"ok", b""
-        
-    mock_process = AsyncMock()
-    mock_process.returncode = 0
-    mock_process.communicate = mock_communicate
-
-    with patch("asyncio.create_subprocess_exec", return_value=mock_process):
-        await handler_documents_fixture.save_document(upload_file, original_dest, pdf_dest)
-        
-    assert original_dest.exists()
-    assert original_dest.read_bytes() == content
-    assert pdf_dest.exists()
-    assert pdf_dest.read_text() == "mocked pdf"
+    document = create_upload_file_fixture(b"fake doc", "document.docx")
+    with pytest.raises(InvalidDocumentFormat):
+        await handler_documents_fixture.save_document(document, tmp_path / "original.docx", tmp_path / "out.pdf")

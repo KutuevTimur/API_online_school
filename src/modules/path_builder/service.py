@@ -12,6 +12,13 @@ class PathBuilder:
         directory.mkdir(parents=True, exist_ok=True)
         return directory
 
+    @staticmethod
+    def _component(value: str) -> str:
+        if (not value or value in {".", ".."} or "/" in value or "\\" in value
+                or "\x00" in value or Path(value).is_absolute()):
+            raise ValueError("Invalid path component")
+        return value
+
     # --- avatar ---
 
     def get_avatar_user(self, user_id: int) -> Path:
@@ -42,7 +49,7 @@ class PathBuilder:
             / "original"
         )
 
-        return root_dir / f"{file_name}.{file_type}"
+        return root_dir / f"{self._component(file_name)}.{self._component(file_type)}"
 
     def get_lecture_pdf(
         self,
@@ -53,7 +60,7 @@ class PathBuilder:
             self.config.paths.lectures / str(lecture_id)
         )
 
-        return root_dir / f"{file_name}.pdf"
+        return root_dir / f"{self._component(file_name)}.pdf"
 
     # --- homework ---
 
@@ -69,7 +76,7 @@ class PathBuilder:
             / "original"
         )
 
-        return root_dir / f"{file_name}.{file_type}"
+        return root_dir / f"{self._component(file_name)}.{self._component(file_type)}"
 
     def get_homework_pdf(
         self,
@@ -80,7 +87,7 @@ class PathBuilder:
             self.config.paths.homework / str(homework_id)
         )
 
-        return root_dir / f"{file_name}.pdf"
+        return root_dir / f"{self._component(file_name)}.pdf"
 
     # --- homework submission ---
 
@@ -96,7 +103,7 @@ class PathBuilder:
             / "original"
         )
 
-        return root_dir / f"{file_name}.{file_type}"
+        return root_dir / f"{self._component(file_name)}.{self._component(file_type)}"
 
     def get_homework_submission_pdf(
         self,
@@ -108,7 +115,7 @@ class PathBuilder:
             / str(homework_submission_id)
         )
 
-        return root_dir / f"{file_name}.pdf"
+        return root_dir / f"{self._component(file_name)}.pdf"
 
     # --- temp ---
 

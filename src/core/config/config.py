@@ -24,6 +24,10 @@ class Config:
         self.db_connection = DbConnectionConfig.build(self.env)
         self.tokens = TokensConfig.build(values)
         self.allowed_extensions = AllowedExtensions.build()
+        # Remains off until the owner visually accepts the D06 samples.
+        self.photo_originals_approved = values.get("PHOTO_ORIGINALS_APPROVED", "0") == "1"
+        self.legacy_file_reads = values.get("LEGACY_FILE_READS", "1") == "1"
+        self.file_maintenance_enabled = self.env.mode == "DEV" and values.get("FILE_MAINTENANCE_ENABLED", "1") == "1"
 
 
 class EnvConfig(BaseModel):
@@ -97,6 +101,10 @@ class PathsConfig(BaseModel):
     homework: Path
     homework_submissions: Path
     temp: Path
+
+    @property
+    def objects(self) -> Path:
+        return self.media / "objects"
 
     @classmethod
     def build(cls, postscript: Optional[str] = '', media_root: Path | str | None = None) -> "PathsConfig":

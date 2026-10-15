@@ -113,6 +113,8 @@ class StudentCoursesService:
                 existing.restore()
                 existing.access_ended_at = None
                 existing.expires_at = None
+                from src.modules.homework_placements.service import HomeworkPlacementsService
+                await HomeworkPlacementsService(self.session_db).recalculate_course(course_id, "enrollment_restored")
                 await self.session_db.commit()
                 await self.session_db.refresh(existing)
                 return StudentCourseResponseDTO.model_validate(existing)

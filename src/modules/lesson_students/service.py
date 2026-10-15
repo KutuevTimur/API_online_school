@@ -72,6 +72,9 @@ class LessonStudentsService:
             lesson_student = await self.lesson_students_repo.add_student_to_lesson(
                 data=create_dto,
             )
+            await self.session_db.flush()
+            from src.modules.homework_placements.service import HomeworkPlacementsService
+            await HomeworkPlacementsService(self.session_db).recalculate_course(lesson.course_id, "recipient_added")
             await self.session_db.commit()
             await self.session_db.refresh(lesson_student)
             return LessonStudentResponseDTO.model_validate(lesson_student)
@@ -114,6 +117,8 @@ class LessonStudentsService:
         from datetime import datetime, UTC
         existing.access_ended_at = existing.access_ended_at or datetime.now(UTC)
         deleted_ls = existing
+        from src.modules.homework_placements.service import HomeworkPlacementsService
+        await HomeworkPlacementsService(self.session_db).recalculate_course(lesson.course_id, "recipient_removed")
         await self.session_db.commit()
 
         return LessonStudentResponseDTO.model_validate(deleted_ls)
