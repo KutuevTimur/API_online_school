@@ -63,6 +63,12 @@ class HomeworksRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def has_submissions(self, homework_id: int) -> bool:
+        from sqlalchemy import exists
+        from src.modules.homework_submissions.models import HomeworkSubmission
+        return bool(await self.session.scalar(select(exists().where(
+            HomeworkSubmission.homework_id == homework_id))))
+
     async def delete_homework(self, homework_id: int) -> Homework | None:
         stmt = delete(Homework).where(Homework.id == homework_id).returning(Homework)
         result = await self.session.execute(stmt)

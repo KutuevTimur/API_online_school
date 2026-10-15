@@ -104,11 +104,11 @@ class HandlerDocuments:
         except Exception as e:
             raise DocumentConversionError(f"Ошибка конвертации документа: {e}") from e
 
-    async def inspect_document(self, source: Path, extension: str, output: Path | None = None) -> str:
+    async def inspect_document(self, source: Path, extension: str, output: Path | None = None, *, avatar: bool = False) -> str:
         async with self.config._file_processing_semaphore:
             process = await asyncio.create_subprocess_exec(
                 sys.executable, '-m', 'src.modules.handlers_files.inspect_document',
-                str(source), extension, *([str(output)] if output else []), stdout=asyncio.subprocess.PIPE,
+                str(source), extension, *([str(output)] if output else []), *(['avatar'] if avatar else []), stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL)
             try:
                 stdout, _ = await asyncio.wait_for(process.communicate(), timeout=self.processing_timeout_seconds)

@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image, ImageCms, ImageOps
 
 
-def normalize_photo(source: Path, destination: Path) -> None:
+def normalize_photo(source: Path, destination: Path, *, max_side: int = 2560) -> None:
     with Image.open(source) as opened:
         image = ImageOps.exif_transpose(opened)
         alpha = image.getchannel('A') if 'A' in image.getbands() else None
@@ -24,7 +24,7 @@ def normalize_photo(source: Path, destination: Path) -> None:
             white = Image.new('RGB', rgb.size, 'white')
             white.paste(rgb, mask=alpha)
             rgb = white
-        rgb.thumbnail((2560, 2560), Image.Resampling.LANCZOS)
+        rgb.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
         # New pixel-only image drops EXIF/GPS/XMP/comments and old ICC blobs.
         clean = Image.new('RGB', rgb.size)
         clean.paste(rgb)

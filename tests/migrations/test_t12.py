@@ -32,7 +32,7 @@ def test_t12_fk_and_metadata_downgrade_guard(database):
         sql('DELETE FROM file_assets WHERE id=1')
     result = alembic('downgrade', '689ceabc2b0c', success=False)
     assert 'Refusing to discard file asset metadata' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version') == [('36a8711f7799',)]
+    assert sql('SELECT version_num FROM alembic_version') == [('2048d2eeeaa8',)]
     assert_schema(conf)
     assert sql('SELECT count(*) FROM file_assets') == [(1,)]
 

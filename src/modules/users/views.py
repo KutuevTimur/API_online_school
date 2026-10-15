@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Response, Query
+from src.modules.storage.download import private_download
+from fastapi import APIRouter, Depends, UploadFile, File, Response, Query, Request
 from starlette import status
 from fastapi.responses import FileResponse
 
@@ -8,7 +9,7 @@ from src.modules.check_permission import get_current_user_with_target_permission
 from src.modules.students.models_dto import StudentsResponseDTO
 from src.modules.teachers.models_dto import TeachersResponseDTO
 from src.modules.users.depends import get_user_service
-from src.modules.users.models_dto import MinimalProfileResponseDTO, AdminAccountStatusRequestDTO, UserResponse, UserDTO, UpdateUserDataRequestDTO, PublicProfileResponseDTO
+from src.modules.users.models_dto import UserAvatarResponseDTO, MinimalProfileResponseDTO, AdminAccountStatusRequestDTO, UserResponse, UserDTO, UpdateUserDataRequestDTO, PublicProfileResponseDTO
 from src.modules.users.service import UsersService
 
 router = APIRouter(prefix="/users",  tags=["User"])
@@ -70,25 +71,14 @@ async def update_user(
     return await user_service.update_user(user_id=user_id, data=data, actor=current_user)
 
 
-@router.patch("/{user_id}/avatar", status_code=status.HTTP_200_OK)
+@router.patch("/{user_id}/avatar", response_model=UserAvatarResponseDTO, status_code=status.HTTP_200_OK)
 async def update_avatar(
     user_id: int,
     avatar: UploadFile = File(...),
     current_user: UserDTO = Depends(get_current_user_with_target_permission),
     user_service: UsersService = Depends(get_user_service),
 ):
-    file_bytes = await avatar.read()
-
-    await avatar.seek(0)
-    await user_service.update_avatar(user_id=user_id, avatar=avatar, actor=current_user)
-
-    return Response(
-        content=file_bytes,
-        media_type=avatar.content_type or "application/octet-stream",
-        headers={
-            "Content-Disposition": f'inline; filename="{avatar.filename}"'
-        }
-    )
+    return await user_service.update_avatar(user_id=user_id, avatar=avatar, actor=current_user)
 
 
 @router.delete("/{user_id}/avatar", status_code=status.HTTP_204_NO_CONTENT)
@@ -102,11 +92,12 @@ async def delete_avatar(
 
 @router.get("/{user_id}/avatar", response_class=FileResponse, status_code=status.HTTP_200_OK)
 async def get_avatar(
+    request: Request,
     user_id: int,
     current_user: UserDTO = Depends(get_current_user),
     service: UsersService = Depends(get_user_service),
 ):
-    return FileResponse(await service.avatar_file(current_user, user_id), media_type="image/webp")
+    return await private_download(request, str(await service.avatar_file(current_user, user_id)), "avatar.webp", "image/webp")
 
 
 @router.patch("/{user_id}/account-status", response_model=UserResponse, status_code=status.HTTP_200_OK)

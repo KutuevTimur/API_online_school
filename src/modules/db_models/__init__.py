@@ -1,3 +1,5 @@
+from src.modules.notifications.models import Notification
+from src.modules.audit_events.models import AuditEvent
 from src.modules.files.models import FileAsset
 from src.modules.users.models import User
 from src.modules.refresh_tokens.models import RefreshToken
@@ -20,6 +22,7 @@ from src.modules.course_lifecycle.models import EnrollmentGap, LifecycleAudit, F
 from src.modules.homework_placements.models import HomeworkPlacement, HomeworkDeadlineEvent
 
 __all__ = [
+    "Notification", "AuditEvent",
     "FileAsset",
     "HomeworkPlacement", "HomeworkDeadlineEvent",
     "EnrollmentGap", "LifecycleAudit", "FileDeletion",

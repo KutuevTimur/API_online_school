@@ -24,6 +24,8 @@ class Config:
         self.db_connection = DbConnectionConfig.build(self.env)
         self.tokens = TokensConfig.build(values)
         self.allowed_extensions = AllowedExtensions.build()
+        self.avatar_max_bytes = 10 * 1024 * 1024
+        self.avatar_processing_timeout_seconds = 30
         # Remains off until the owner visually accepts the D06 samples.
         self.photo_originals_approved = values.get("PHOTO_ORIGINALS_APPROVED", "0") == "1"
         self.legacy_file_reads = values.get("LEGACY_FILE_READS", "1") == "1"

@@ -113,12 +113,20 @@ class LessonsService:
             if teacher is None or lesson.teacher_id != teacher.id:
                 raise PermissionErrorService()
             values = data.model_dump(exclude_unset=True)
+            moved = "scheduled_at" in values and values["scheduled_at"] != lesson.scheduled_at
+            cancelled = values.get("status") == LessonStatus.CANCELLED and lesson.status != LessonStatus.CANCELLED
             self._end_time(values.get("scheduled_at", lesson.scheduled_at),
                            values.get("duration_minutes", lesson.duration_minutes))
             if values:
                 await self.lessons_repo.update_lesson(lesson_id, values)
             await self.session_db.flush()
             await HomeworkPlacementsService(self.session_db).recalculate_course(lesson.course_id, "lesson_updated")
+            from src.modules.notifications.service import NotificationsService
+            notifications = NotificationsService(self.session_db)
+            if cancelled:
+                await notifications.lesson_event(lesson_id, "lesson_cancelled")
+            elif moved:
+                await notifications.lesson_event(lesson_id, "lesson_rescheduled")
             result = await self._write_response(lesson_id)
             await self.session_db.commit()
             return result

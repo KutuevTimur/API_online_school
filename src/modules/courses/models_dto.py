@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import field_serializer, BaseModel, ConfigDict
+from pydantic import field_serializer, field_validator, Field, BaseModel, ConfigDict
 
 from src.modules.base.orm_dto import ORMDTO
 from src.modules.base.url_validation import CallURL
@@ -65,8 +65,8 @@ class CreateCourseDTORequest(BaseModel):
 
 
 class UpdateCourseDTO(BaseModel):
-    name: Optional[str] = None
-    slug: Optional[str] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    slug: Optional[str] = Field(default=None, min_length=1, max_length=500)
     description: Optional[str] = None
     call_url: CallURL | None = None
     avatar_type: Optional[AvatarCoursesType] = None
@@ -75,13 +75,27 @@ class UpdateCourseDTO(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    @field_validator("name", "slug", "avatar_type", "is_deleted", mode="before")
+    @classmethod
+    def non_null_fields(cls, value):
+        if value is None:
+            raise ValueError("Field may be omitted but cannot be null")
+        return value
+
 
 class UpdateCourseDTORequest(BaseModel):
-    name: Optional[str] = None
-    slug: Optional[str] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    slug: Optional[str] = Field(default=None, min_length=1, max_length=500)
     description: Optional[str] = None
     call_url: CallURL | None = None
     avatar_type: Optional[AvatarCoursesType] = None
     is_deleted: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("name", "slug", "avatar_type", "is_deleted", mode="before")
+    @classmethod
+    def non_null_fields(cls, value):
+        if value is None:
+            raise ValueError("Field may be omitted but cannot be null")
+        return value

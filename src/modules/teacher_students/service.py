@@ -12,8 +12,12 @@ class TeacherStudentService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def link(self, data: LinkTeacherStudentRequestDTO) -> TeacherStudentResponseDTO:
+    async def link(self, data: LinkTeacherStudentRequestDTO, actor_user_id: int) -> TeacherStudentResponseDTO:
         try:
+            from src.modules.check_permission.service import ObjectPermissionService
+            from src.modules.check_permission.exception import PermissionErrorService
+            if (await ObjectPermissionService(self.session).actor(actor_user_id)).role != UserRole.ADMIN:
+                raise PermissionErrorService()
             users = UsersRepository(self.session)
             teacher_user = await users.get_user_by_id(data.teacher_user_id)
             student_user = await users.get_user_by_id(data.student_user_id)
@@ -35,10 +39,12 @@ class TeacherStudentService:
                     if previous.ended_at < now:
                         self.session.add(EnrollmentGap(enrollment_id=membership.id,
                             started_at=previous.ended_at, ended_at=now))
-            await repo.link(teacher.id, student.id)
+            link = await repo.link(teacher.id, student.id)
             from src.modules.homework_placements.service import HomeworkPlacementsService
             for course_id in course_ids:
                 await HomeworkPlacementsService(self.session).recalculate_course(course_id, "teacher_link_restored")
+            from src.modules.audit_events.service import AuditEventsService
+            AuditEventsService(self.session).stage(actor_user_id, "teacher_student_link", "teacher_student", link.id)
             await self.session.commit()
             return TeacherStudentResponseDTO(**data.model_dump(), active=True)
         except Exception:

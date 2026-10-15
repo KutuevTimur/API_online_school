@@ -2,6 +2,14 @@
 
 Новые записи сверху; подробные тесты в карточке/TEST_BASELINE, не копировать сюда всё. Журнал не заменяет STATUS.
 
+## 2026-10-15 — независимая проверка после T13
+
+- Проверены план/решения/карточки, критичные слои кода, все 305 Python AST, 54 OpenAPI paths/71 operation и локальные ссылки.
+- Текущий полный guarded pytest: **508 passed, 369.76s** (440 functional/30 migrations/38 unit). Dev OpenAPI HTTP200, T13 routes есть. После временных probes disposable test DB возвращена clean Alembic head, check без diff.
+- Дополнительные API probes подтвердили Q01 avatar filename traversal (удаление чужого synthetic avatar), Q03 DELETE ДЗ+draft → FK error и Q04 PATCH course name=null → NOT NULL error. Q02 потеря прежнего avatar при неуспешной замене подтверждена двумя unit-пробами. Эти failures не маскировались и код пока не исправлен.
+- Отчёт CHECKUP_T13.md, следующая задача T13R, затем D07/T14. Исторические DONE не стерты; новые находки явно открыты. Полный исторический STATUS ещё требует сокращения без потери доказательств.
+- Изменены только документы/инструкции. Dev данные/media и внешняя БД не тронуты, commit/push/deploy не выполнялись. Первичный sandbox-запуск без DB доступа остановлен; он не считается результатом продукта.
+
 ## 2026-10-15 — ручная приёмка и своевременные решения владельца
 
 AGENTS/GPT/WORKFLOW/PROMPTS обновлены: агент сам зовёт на полезный ручной тест, даёт проверенный запуск/шаги/результат, отдельно отмечает ожидающую приёмку; настройки сервера/хранилища спрашивает только перед зависимым шагом, предлагает подходящий вариант и объясняет компромиссы. Фактическое локальное хранение объясняется по конфигурации. Изменены только инструкции; статусы реализации и существующие изменения другой сессии сохранены. Проверка: git diff --check и целостность локальных Markdown-ссылок.
@@ -400,3 +408,82 @@ both Compose config --quiet и git diff --check PASS. Dev сохранён ра�
 сохранены вне коммита, как при T02–T09; секреты и media не включены.
 Проверки реализации приведены выше и в T12; при сохранении кода не меняли.
 Push/merge/deploy не выполнялись. Далее T13 по отдельному локальному поручению.
+
+
+## Выполнение T13 — 15.10.2026
+
+T13 DONE локально по поручению владельца; [контракт/проверки/Swagger шаги](tasks/T13.md).
+Notification recipient scope без admin bypass; SQL page/count в одном snapshot,
+unread и идемпотентный read_at. Assigned/submitted/checked/rescheduled/cancelled
+в транзакции доменного действия, unique dedupe, submitted edit/retry без спама.
+Parent locks + независимые sessions защищают повтор PATCH; event key использует
+сохранённую версию изменения урока. Target повторно проверяет object/submission
+scope; purge/закрытая история дают available=false с сообщением, запись читается.
+Audit admin-only объединяет новые AuditEvent с прежними AccountAudit/LifecycleAudit,
+filters/count/page/source+id. Account creation/teacher-student linking аудируются;
+прежние reset/profile/status/quota/restore/history/purge records не переписаны.
+Секретов/контактов/решений в payload нет; rollback проверен для учебных и admin действий.
+
+Полный pytest **504 passed**, 388.50s; после финальных уточнений **42 scoped passed**,
+30.39s, включая все 25 T13 tests. Полный после этих уточнений не повторялся.
+Отдельные migrations: **30 passed in 66.10s (0:01:06)**; unit **38 passed**, AST **305**, diff check PASS.
+Autogenerate migration `2048d2eeeaa8`: clean/prior-state/round-trip и refusal потери
+новых records. Test upgrade/check PASS; чистая guarded lgg-test на этом head.
+Промежуточные test fixture/collection исправления записаны в карточке.
+
+Dev окончательный build/up/healthy; **27 HTTP PASS**, повтор на final image PASS;
+restart **9 T13 + 8 T10 + 7 T11 + 6 T12 HTTP PASS**, T13 9 повторён после последнего
+restart. Dev alembic check PASS; прежние synthetic DB/media/PDF сохранены.
+Dev http://127.0.0.1:8018/docs работает. Credentials/IDs только ignored .env.audit-access.
+Ни неизвестная БД, ни реальные ПД не затронуты. Frontend/polling/UI/E2E/production/
+load/backup restore не проверялись. Обязательной ручной backend-приёмки нет.
+
+Ветка codex/t00-t01-environment, HEAD f6d41fd; новых commit/push/merge/deploy нет,
+PR #1 не обновлялся. Посторонние документы и прежние правки rules_project.md сохранены.
+Следующее T14 по отдельному поручению, сначала D07. От владельца сейчас ничего.
+
+
+## 15.10.2026 — T13R, Q01–Q04 локально исправлены
+
+По явному поручению владельца, без commit/push/deploy и без перехода к T14.
+Прочитаны AGENTS/GPT/STATUS/T13R/CHECKUP/rules и relevant PRODUCT/ARCHITECTURE.
+Q01: имя клиента не участвует в ключах; private scratch, T12 no-follow storage и
+bounded decoder, static WebP ≤512, bytes 10MiB/pixels50MP/frame1/timeout30s.
+Upload JSON URL вместо raw bytes, GET private/no-store/nosniff.
+Q02: immutable новый объект, row lock, pointer/audit/retire queue в одной транзакции;
+commit/write/decode/cancellation rollback, uncertain COMMIT и cleanup retry защищены.
+Q03: любая попытка/история → 409; concurrency test выявил stale parent после ожидания
+course lock — повторная проверка lock_homework теперь даёт 404 вместо FK 500.
+Q04: mandatory explicit null → 422, name/slug1–500; nullable clearing/duplicate slug сохранены.
+
+Постоянные новые regressions: 36; прежние converter/users/courses/T11 tests обновлены.
+До исправлений 15 failed/4 passed (20.89s); первый sandbox запуск упёрся в loopback,
+повтор выполнен только на guarded lgg-test. Intermediate scoped выявили lazy profile,
+symlink error code, checked DELETE expectation и concurrency stale parent; исправлены.
+Полный `MODE=TEST .venv/bin/python -m pytest -q --tb=short`: **544 passed in 406.68s (0:06:46)**.
+Финальный scoped auth/test_t13r + converter: **48 passed in 38.29s** после усиления
+AccountAudit/GET bytes/сохранности Homework+answer+file+placement+event+queue assertions.
+Implementation после full не менялся. Migration tests входят в full; затем guarded
+`src.tools.drop_schema` → upgrade head/check PASS, schema diff отсутствует.
+AST **307** и diff check PASS; отдельное чтение файлового diff выполнено.
+Lgg-test оставлена пустой на head 2048d2eeeaa8. Dev DB/media/image и неизвестная БД
+не тронуты; реальные ПД не использовались. UI/E2E/load/production не проверены.
+
+Обновлены README/T13R/CHECKUP/STATUS/GPT/TASKS. T13R DONE локально;
+ветка codex/t00-t01-environment, HEAD f6d41fd, PR #1 не обновлён.
+Прежние изменения T13 и посторонние документы сохранены.
+От владельца сейчас ничего; далее отдельное поручение сохранить T13/T13R.
+T14 не начат. Чат продолжить здесь для Git-сохранения; функциональную T14 — только
+после нового явного запроса (и D07), её промпт сейчас не выдаётся как начатая работа.
+
+
+## Локальное сохранение T13/T13R — 15.10.2026
+
+Владелец явно разрешил локальный commit T13 и T13R; push/merge/deploy и T14
+не разрешены. Код после проверок не менялся: full 544 passed, final scoped 48 passed,
+migration head/check, AST 307 и diff PASS. Повтор pytest для одного сохранения не нужен.
+В commit входят implementation/migration/tests/smoke, README, карточки T13/T13R,
+CHECKUP_T13, STATUS и SESSION_LOG. Общие untracked planning/design/instruction
+документы и прежние rules_project.md оставлены вне commit; secrets/media исключены.
+Ветка codex/t00-t01-environment; SHA этого commit — `git log -1 --oneline`.
+PR #1 не обновляется. Следующий шаг — ждать поручения владельца; T14 не начат.

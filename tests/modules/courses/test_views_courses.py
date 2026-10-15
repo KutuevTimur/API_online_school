@@ -1,3 +1,4 @@
+from pathlib import Path
 import io
 import pytest
 from datetime import datetime, timezone, timedelta
@@ -349,11 +350,9 @@ async def test_update_avatar_by_teacher(
     )
 
     assert response.status_code == 200
-    assert response.content == image_bytes
-    assert response.headers.get("content-type") == "image/png"
-    assert response.headers.get("content-disposition") == 'inline; filename="cover.png"'
+    assert response.json()["avatar_path"] == f"/courses/{course.id}/avatar"
 
-    avatar_file = path_builder_fixture.get_avatar_course(course.id)
+    avatar_file = Path(await session_db.scalar(select(Course.avatar_path).where(Course.id == course.id)))
     assert avatar_file.is_file()
 
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
@@ -450,7 +449,7 @@ async def test_hard_delete_course_by_teacher(
         files={"avatar": ("avatar.png", io.BytesIO(image_bytes), "image/png")},
     )
     assert avatar_res.status_code == 200
-    avatar_path = path_builder_fixture.get_avatar_course(course.id)
+    avatar_path = Path(await session_db.scalar(select(Course.avatar_path).where(Course.id == course.id)))
     assert avatar_path.is_file()
 
     del_res = await client_for_tests.delete(

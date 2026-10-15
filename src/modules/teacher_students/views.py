@@ -14,4 +14,4 @@ async def link_teacher_student(
     current_user: UserDTO = Depends(get_current_admin_user),
     service: TeacherStudentService = Depends(get_teacher_student_service),
 ) -> TeacherStudentResponseDTO:
-    return await service.link(data)
+    return await service.link(data, current_user.id)

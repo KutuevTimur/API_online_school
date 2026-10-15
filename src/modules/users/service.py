@@ -1,5 +1,5 @@
+from src.modules.handlers_files.avatar_transaction import atomic_avatar_upload, retire_avatar
 from src.modules.check_permission.service import ObjectPermissionService
-import shutil
 import uuid
 from pathlib import Path
 from typing import Tuple, List, TYPE_CHECKING
@@ -67,41 +67,9 @@ class UsersService:
         return self.cr_context.hash(password)
 
     async def _create_avatar(self, user_id: int, avatar: UploadFile) -> str:
-        """
-        Преобразовывает в формат .webp и сжимает фото до 512x512.
-        :return: Путь к аватарке
-        :raises InvalidImageFormat: Если расширение или формат файла недопустимы / повреждены.
-        :raises ImageConversionError: При ошибке в процессе конвертации / сжатия / сохранения.
-        """
-        temp_webp: Path | None = None
-        result_file_path: Path | None = None
-        try:
-            temp_webp = self.path_builder.get_temp() / Path(f"{uuid.uuid4().hex}.webp")
-            temp_webp = await self.handler_images.convert_to_webp(photo=avatar, dest=temp_webp)
-
-            result_file_path = self.path_builder.get_avatar_user(user_id)
-            result_file_path = await self.compression_images.compress_webp(file=temp_webp, dest=result_file_path)
-        except Exception:
-            if temp_webp and temp_webp.is_file():
-                temp_webp.unlink(missing_ok=True)
-            if result_file_path and result_file_path.is_file():
-                result_file_path.unlink(missing_ok=True)
-            raise
-        finally:
-            if temp_webp and temp_webp.is_file():
-                temp_webp.unlink(missing_ok=True)
-
-        return str(result_file_path)
-
-    def delete_avatar(self, user_id: int) -> None:
-        """
-        :raises AvatarNotFound: Если аватар не найден
-        """
-        avatar_path = self.path_builder.get_avatar_user(user_id)
-        if avatar_path.is_file():
-            shutil.rmtree(avatar_path.parent)
-        else:
-            raise AvatarNotFound()
+        path = await self.handler_images.create_avatar()
+        await self.handler_images.convert_to_webp(avatar, path)
+        return str(path)
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """
@@ -190,6 +158,8 @@ class UsersService:
                 await TeacherStudentRepository(self.session_db).link(teacher.id, student.id)
             from src.modules.account_invitations.service import InvitationService
             invitation = await InvitationService(self).stage_issue(user_orm, "invite", actor)
+            from src.modules.audit_events.service import AuditEventsService
+            AuditEventsService(self.session_db).stage(actor.id, "account_create", "user", user_orm.id)
             await self.session_db.commit()
         except Exception as e:
             await self.session_db.rollback()
@@ -204,54 +174,27 @@ class UsersService:
             **UserResponse.model_validate(user_orm).model_dump(), **invitation.model_dump()
         )
 
-    async def update_avatar(
-        self,
-        user_id: int,
-        avatar: UploadFile,
-        actor: UserDTO,
-    ) -> UserAvatarResponseDTO:
-        """
-        Обновляет аватарку пользователя.
-        :param user_id: ID пользователя, которому обновляется аватарка
-        :param avatar: Загружаемый файл
-        :return: UserAvatarResponseDTO с путем к аватарке
-        :raises NotFoundData: Если пользователь не найден
-        :raises InvalidRole: Если роль пользователя неизвестна
-        :raises InvalidImageFormat: Если формат файла недопустим / поврежден
-        :raises ImageConversionError: При ошибке конвертации
-        :raises ImageCompressionError: При ошибке сжатия
-        """
+    @atomic_avatar_upload
+    async def update_avatar(self, user_id: int, avatar: UploadFile, actor: UserDTO) -> UserAvatarResponseDTO:
         await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id, write=True)
-        user = await self.users_repo.get_user_by_id(user_id)
+        user = await self.users_repo.lock_user(user_id)
         if not user:
             raise NotFoundData()
-
-        try:
-            self.delete_avatar(user_id=user_id)
-        except AvatarNotFound:
-            pass
-
-        avatar_path = await self._create_avatar(user_id=user_id, avatar=avatar)
-
-        await self._audit_profile(actor, user_id, "avatar_update")
-        if user.role == UserRole.TEACHER:
-            await self.teacher_service.update_teacher_by_user_id(
-                user_id=user_id,
-                data=UpdateTeacherDTO(
-                    avatar_path=avatar_path,
-                )
-            )
-        elif user.role == UserRole.STUDENT:
-            await self.student_service.update_student_by_user_id(
-                user_id=user_id,
-                data=UpdateStudentDTO(
-                    avatar_path=avatar_path,
-                )
-            )
-        else:
+        profile = user.student if user.role == UserRole.STUDENT else user.teacher
+        if profile is None:
             raise InvalidRole()
-
-        return UserAvatarResponseDTO(avatar_path=avatar_path)
+        old_path = profile.avatar_path
+        avatar_path = await self._create_avatar(user_id, avatar)
+        repo = self.student_repo if user.role == UserRole.STUDENT else self.teacher_repo
+        if user.role == UserRole.STUDENT:
+            await repo.update_student_by_user_id(user_id, {"avatar_path": avatar_path})
+        else:
+            await repo.update_teacher_by_user_id(user_id, {"avatar_path": avatar_path})
+        retire_avatar(self.session_db, old_path)
+        await self._audit_profile(actor, user_id, "avatar_update")
+        await self.session_db.commit()
+        self.handler_images.upload_committed = True
+        return UserAvatarResponseDTO(avatar_path=f"/users/{user_id}/avatar")
 
     async def update_user(
         self,
@@ -411,15 +354,22 @@ class UsersService:
 
     async def avatar_file(self, actor: UserDTO, user_id: int) -> Path:
         await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id)
-        path = self.path_builder.get_avatar_user(user_id)
-        if not path.is_file():
+        user = await self.users_repo.get_user_by_id(user_id)
+        profile = user.student if user.role == UserRole.STUDENT else user.teacher
+        path = Path(profile.avatar_path) if profile and profile.avatar_path else None
+        if path is None:
             raise NotFoundData()
         return path
 
+    @atomic_avatar_upload
     async def remove_avatar(self, actor: UserDTO, user_id: int) -> None:
         await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id, write=True)
         # Remove the pointer before removing the file so responses cannot expose stale paths.
-        user = await self.users_repo.get_user_by_id(user_id)
+        user = await self.users_repo.lock_user(user_id)
+        profile = user.student if user.role == UserRole.STUDENT else user.teacher
+        if not profile or not profile.avatar_path:
+            raise AvatarNotFound()
+        retire_avatar(self.session_db, profile.avatar_path)
         if user.role == UserRole.STUDENT:
             await self.student_repo.update_student_by_user_id(user_id, {"avatar_path": None})
         elif user.role == UserRole.TEACHER:
@@ -428,7 +378,7 @@ class UsersService:
             raise InvalidRole()
         await self._audit_profile(actor, user_id, "avatar_delete")
         await self.session_db.commit()
-        self.delete_avatar(user_id)
+        self.handler_images.upload_committed = True
 
     async def update_account_status(self, actor: UserDTO, user_id: int, is_active: bool):
         from src.modules.check_permission.exception import PermissionErrorService

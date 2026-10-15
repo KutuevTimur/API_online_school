@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.repository_model import BaseRepository
 from src.modules.homework_submissions.models import HomeworkSubmission, HomeworkSubmissionFile
+from src.modules.homeworks.models import Homework
 from src.modules.homework_submissions.models_dto import HomeworkSubmissionRequestDTO, HomeworkSubmissionFileRequestDTO
 
 
@@ -136,9 +137,9 @@ class HomeworkSubmissionsRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def lock_homework(self, homework_id: int) -> None:
-        from src.modules.homeworks.models import Homework
-        await self.session.scalar(select(Homework).where(Homework.id == homework_id).with_for_update())
+    async def lock_homework(self, homework_id: int) -> Homework | None:
+        return await self.session.scalar(select(Homework).where(Homework.id == homework_id)
+                                         .with_for_update().execution_options(populate_existing=True))
 
     async def working_submission(self, homework_id: int) -> HomeworkSubmission | None:
         return await self.session.scalar(select(HomeworkSubmission).where(

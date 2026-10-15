@@ -43,9 +43,9 @@ if __name__ == '__main__':
         if sys.platform == 'linux':
             resource.setrlimit(resource.RLIMIT_AS, (768 * 1024 * 1024, 768 * 1024 * 1024))
         result = inspect(Path(sys.argv[1]), sys.argv[2])
-        if len(sys.argv) == 4 and sys.argv[2] != 'pdf':
+        if len(sys.argv) >= 4 and sys.argv[2] != 'pdf':
             from src.modules.handlers_files.normalize_photo import normalize_photo
-            normalize_photo(Path(sys.argv[1]), Path(sys.argv[3]))
+            normalize_photo(Path(sys.argv[1]), Path(sys.argv[3]), max_side=512 if len(sys.argv) == 5 else 2560)
         print(json.dumps(result))
     except Exception:
         sys.exit(2)

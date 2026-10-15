@@ -1,6 +1,5 @@
+from src.modules.handlers_files.avatar_transaction import atomic_avatar_upload, retire_avatar
 from src.modules.check_permission.service import ObjectPermissionService
-import shutil
-import uuid
 from pathlib import Path
 from datetime import datetime, UTC
 from typing import Optional, List, Tuple
@@ -8,7 +7,7 @@ from typing import Optional, List, Tuple
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.courses.exception import CourseNotFound, CourseAvatarNotFound, CourseAlreadyExists, CourseAccessDenied
+from src.modules.courses.exception import CourseNotFound, CourseAlreadyExists, CourseAccessDenied
 from src.modules.courses.models import AvatarCoursesType
 from src.modules.courses.models_dto import (
     CreateCourseDTORequest,
@@ -55,37 +54,9 @@ class CoursesService:
         self.session_db = session_db
 
     async def _create_avatar(self, course_id: int, avatar: UploadFile) -> str:
-        """
-        Конвертирует в формат .webp и сжимает до 512x512.
-        :return: Путь к файлу
-        """
-        temp_webp: Path | None = None
-        result_file_path: Path | None = None
-        try:
-            temp_webp = self.path_builder.get_temp() / Path(f"{uuid.uuid4().hex}.webp")
-            temp_webp = await self.handler_images.convert_to_webp(photo=avatar, dest=temp_webp)
-
-            result_file_path = self.path_builder.get_avatar_course(course_id)
-            result_file_path = await self.compression_images.compress_webp(file=temp_webp, dest=result_file_path)
-        except Exception:
-            if temp_webp and temp_webp.is_file():
-                temp_webp.unlink(missing_ok=True)
-            if result_file_path and result_file_path.is_file():
-                result_file_path.unlink(missing_ok=True)
-            raise
-        finally:
-            if temp_webp and temp_webp.is_file():
-                temp_webp.unlink(missing_ok=True)
-
-        return str(result_file_path)
-
-    def delete_avatar(self, course_id: int) -> None:
-        """Удаляет аватар курса"""
-        avatar_path = self.path_builder.get_avatar_course(course_id)
-        if avatar_path.is_file():
-            shutil.rmtree(avatar_path.parent)
-        else:
-            raise CourseAvatarNotFound()
+        path = await self.handler_images.create_avatar()
+        await self.handler_images.convert_to_webp(avatar, path)
+        return str(path)
 
     async def create_course(
         self,
@@ -216,10 +187,7 @@ class CoursesService:
             values["deleted_at"] = datetime.now(UTC)
 
         if data.avatar_type and data.avatar_type != AvatarCoursesType.CUSTOM:
-            try:
-                self.delete_avatar(course_id=course_id)
-            except CourseAvatarNotFound:
-                pass
+            retire_avatar(self.session_db, course.avatar_path)
             values["avatar_path"] = None
 
         if not values:
@@ -236,6 +204,7 @@ class CoursesService:
         await self.session_db.refresh(updated_course)
         return CoursesDTO.model_validate(updated_course)
 
+    @atomic_avatar_upload
     async def update_avatar(
         self,
         course_id: int,
@@ -243,7 +212,8 @@ class CoursesService:
         avatar: UploadFile,
     ) -> CoursesDTO:
         """Обновляет аватар"""
-        course = await self.course_repo.get_course_by_id(course_id)
+        from src.modules.course_lifecycle.repository import LifecycleRepository
+        course = await LifecycleRepository(self.session_db).course(course_id)
         if not course:
             raise CourseNotFound()
             
@@ -253,11 +223,7 @@ class CoursesService:
         if course.teacher_id != teacher_id:
             raise CourseAccessDenied("You can only modify your own courses")
 
-        try:
-            self.delete_avatar(course_id=course_id)
-        except CourseAvatarNotFound:
-            pass
-
+        old_path = course.avatar_path
         avatar_path = await self._create_avatar(course_id=course_id, avatar=avatar)
 
         updated_course = await self.course_repo.update_course(
@@ -270,7 +236,9 @@ class CoursesService:
         if not updated_course:
             raise CourseNotFound()
 
+        retire_avatar(self.session_db, old_path)
         await self.session_db.commit()
+        self.handler_images.upload_committed = True
         await self.session_db.refresh(updated_course)
         return CoursesDTO.model_validate(updated_course)
 
@@ -347,8 +315,8 @@ class CoursesService:
 
     async def avatar_file(self, actor, course_id: int) -> Path:
         from src.modules.base.exception import NotFoundData
-        await self.detail_visible(actor, course_id)
-        path = self.path_builder.get_avatar_course(course_id)
-        if not path.is_file():
+        course = await self.detail_visible(actor, course_id)
+        path = Path(course.avatar_path) if course.avatar_path else None
+        if path is None:
             raise NotFoundData()
         return path

@@ -174,7 +174,7 @@ async def test_checked_freezes_every_placement_and_delete_is_forbidden(client_fo
     await debt(c,w,third['id'],expected=409)
     r=await c.delete(f"/homeworks/{w['homeworks'][0].id}",headers=headers(w,'t1'),
         params={'lesson_id':w['lessons'][0].id,'student_user_id':w['accounts']['s1'][0].id})
-    assert r.status_code==403
+    assert r.status_code==409
 
 
 @pytest.mark.asyncio

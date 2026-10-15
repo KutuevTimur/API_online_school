@@ -248,6 +248,29 @@ teacher_students. Зачисление в свой курс требует эт�
 homework → submission → file; ID lecture/homework сверяется с LessonStudent.
 Legacy avatar alias защищён той же проверкой.
 
+T13R: `PATCH /users/{user_id}/avatar` и `PATCH /courses/{course_id}/avatar`
+возвращают JSON `{"avatar_path": "/users/123/avatar"}` (для курса `/courses/123/avatar`),
+а не исходные bytes/MIME/filename. Скачивать аватар отдельным авторизованным GET:
+нормализованный static WebP, ≤512×512, q85, без EXIF/GPS, private/no-store/nosniff.
+Допустимы static JPEG/PNG/WebP/HEIC/HEIF; GIF/анимация отклоняются.
+Лимиты в Config: `avatar_max_bytes` = 10 MiB, `avatar_processing_timeout_seconds` = 30 s;
+декодер T12 ограничивает изображение 50 MP, одним кадром, CPU/памятью.
+Превышение bytes → 413, неверный формат/пиксели/анимация/timeout → 400.
+Имя клиента не используется в путях. Новые файлы — immutable UUID WebP в
+`config.paths.objects` внутри локального media (в Docker — persistent volume).
+Исходник находится только в закрытом временном workspace ОС на время декодирования.
+Существующие legacy аватары читаются по сохранённой DB-ссылке до успешной замены.
+DB pointer, admin audit и durable cleanup прежнего файла фиксируются одной транзакцией;
+ошибка до commit сохраняет прежнее фото. При потере подтверждения commit очистка
+нового объекта сначала проверяет durable references; неопределённые объекты сохраняются
+для штатной reconciliation после 24 h. Удаление старого файла повторяет worker.
+
+T13R: `DELETE /homeworks/{id}` при любой попытке ответа (draft/submitted/checked,
+включая историческую) → 409 без удаления истории/файлов. Без ответов DELETE разрешён.
+`PATCH /courses/{id}`: обязательные name/slug/avatar_type/is_deleted можно опустить,
+но explicit null → 422; name/slug — 1–500 символов. description/call_url можно очистить null.
+
+
 `DELETE /courses/{id}?hard=true` закрыт для teacher; безопасный admin purge,
 архив/read-only/cutoff/restore и согласование D02 относятся к T07. Пока сохраняется
 существующее чтение персонального LessonStudent; новая cutoff-политика не вводится.
@@ -546,3 +569,39 @@ Rollback window 7 дней; перед удалением дубликатов �
 Admin purge удаляет и свои migration backups с учётом shared refs.
 LEGACY_FILE_READS=0 включается после нулевого dry-run остатка. Не применять этот
 локальный job к неизвестной/production БД; такой target отвергается guard.
+
+
+### T13: уведомления и аудит
+
+`GET /notifications` выдаёт только уведомления текущего пользователя, включая
+admin без обхода recipient scope. Параметры: `limit` 1..100, `offset` ≥0,
+`unread_only`. `GET /notifications/unread` возвращает `{ "unread": N }`.
+`PATCH /notifications/{id}/read` идемпотентно сохраняет первое read_at.
+Перед переходом клиент вызывает `GET /notifications/{id}/target`: доступ
+проверяется заново; `available=false` и русское сообщение заменяют переход,
+если объект удалён или история закрыта. Domain endpoints также проверяют доступ.
+
+Назначение ДЗ, первая сдача, проверка, перенос и отмена урока записывают события
+в бизнес-транзакции. Правки submitted и повторные submit/PATCH не создают спам.
+Никаких текстов решения, контактов или файлов в notification payload.
+
+`GET /audit-events` доступен только active admin: общий журнал AuditEvent,
+AccountAudit и LifecycleAudit; filters `actor_user_id`, `action`, page/total.
+Уникальная публичная identity записи — `(source, id)`. GET ничего не изменяет.
+Новая миграция не переписывает прошлые журналы и запрещает downgrade при наличии
+новых уведомлений/audit records. Корреляция — случайный ID операции без секретов.
+
+Frontend T14/T15 должен запрашивать уведомления при открытии и раз в 60 секунд
+активной вкладки, останавливать polling при hidden/logout и повторять ошибки
+с backoff. Внешних доставок, WebSocket, email и push в T13 нет.
+
+Локальная synthetic проверка после dev build/upgrade/up:
+
+```sh
+.venv/bin/python -m src.tools.smoke_t13
+.venv/bin/python -m src.tools.smoke_t13 --verify-retained
+```
+
+Скрипт использует существующие ignored synthetic credentials `.env.audit-access`,
+создаёт свою учебную цепочку без удаления прежних данных и не выводит токены.
+[Контракт и результаты T13](docs/plan/tasks/T13.md).

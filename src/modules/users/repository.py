@@ -21,7 +21,7 @@ class UsersRepository(BaseRepository):
         return self.add(data)
 
     async def lock_user(self, user_id: int) -> User | None:
-        result = await self.session.execute(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
+        result = await self.session.execute(select(User).where(User.id == user_id).options(selectinload(User.teacher), selectinload(User.student)).with_for_update().execution_options(populate_existing=True))
         return result.scalar_one_or_none()
 
     async def get_user_by_id(self, user_id: int) -> User | None:

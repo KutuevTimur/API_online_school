@@ -1,6 +1,8 @@
+from src.modules.users.models_dto import UserAvatarResponseDTO
+from src.modules.storage.download import private_download
 from typing import Optional
 
-from fastapi import APIRouter, Depends, UploadFile, File, Response, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Response, Query, Request
 from starlette import status
 from fastapi.responses import FileResponse
 
@@ -80,6 +82,7 @@ async def update_course(
 
 @router.patch(
     "/courses/{course_id}/avatar",
+    response_model=UserAvatarResponseDTO,
     status_code=status.HTTP_200_OK,
 )
 @router.patch(
@@ -93,18 +96,9 @@ async def update_avatar(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    file_bytes = await avatar.read()
-    await avatar.seek(0)
     teacher = await courses_service.owner_profile(current_user, course_id)
     await courses_service.update_avatar(course_id=course_id, teacher_id=teacher.id, avatar=avatar)
-
-    return Response(
-        content=file_bytes,
-        media_type=avatar.content_type or "application/octet-stream",
-        headers={
-            "Content-Disposition": f'inline; filename="{avatar.filename}"'
-        },
-    )
+    return {"avatar_path": f"/courses/{course_id}/avatar"}
 
 
 @router.delete(
@@ -128,8 +122,9 @@ async def delete_course(
 
 @router.get("/courses/{course_id}/avatar", response_class=FileResponse, status_code=status.HTTP_200_OK)
 async def get_course_avatar(
+    request: Request,
     course_id: int,
     current_user: UserDTO = Depends(get_current_user),
     service: CoursesService = Depends(get_courses_service),
 ):
-    return FileResponse(await service.avatar_file(current_user, course_id), media_type="image/webp")
+    return await private_download(request, str(await service.avatar_file(current_user, course_id)), "avatar.webp", "image/webp")

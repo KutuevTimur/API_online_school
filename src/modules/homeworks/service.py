@@ -125,6 +125,8 @@ class HomeworksService:
             if homework.original_asset_id == homework.download_asset_id:
                 homework.original_file_path = str(pdf_path)
 
+        from src.modules.notifications.service import NotificationsService
+        await NotificationsService(self.session_db).homework_event(homework.id, "homework_assigned")
         await self.session_db.commit()
         self.handler_documents.upload_committed = True
         await self.session_db.refresh(homework)
@@ -204,7 +206,12 @@ class HomeworksService:
         from src.modules.homework_submissions.exception import HomeworkSubmissionNotEditable
         repo = HomeworkPlacementsRepository(self.session_db)
         homework = await repo.homework(homework.id)
-        if homework.deadline_frozen_at is not None or await repo.checked(homework.id):
+        if not homework:
+            raise HomeworkNotFound("Homework does not exist")
+        if await self.homeworks_repo.has_submissions(homework.id):
+            from src.modules.homework_submissions.exception import SubmissionConflict
+            raise SubmissionConflict("Cannot delete homework with answers or answer history")
+        if homework.deadline_frozen_at is not None:
             raise HomeworkSubmissionNotEditable()
         from src.modules.course_lifecycle.models import FileDeletion
         self.session_db.add_all([FileDeletion(path=p) for p in sorted(

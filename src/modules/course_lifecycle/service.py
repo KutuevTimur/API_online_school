@@ -95,7 +95,7 @@ class LifecycleService:
     def safe_path(self, raw: str) -> Path:
         from src.modules.storage.service import LegacyStorage
         path = Path(raw)
-        roots = [self.config.paths.avatars_courses, self.config.paths.lectures,
+        roots = [self.config.paths.avatars_users, self.config.paths.avatars_courses, self.config.paths.lectures,
                  self.config.paths.homework, self.config.paths.homework_submissions, self.config.paths.temp,
                  self.config.paths.objects]
         LegacyStorage(self.config.paths).key(path)

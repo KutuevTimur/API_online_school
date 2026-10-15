@@ -1,3 +1,4 @@
+from pathlib import Path
 import io
 import pytest
 from PIL import Image
@@ -255,11 +256,9 @@ async def test_update_avatar_by_self_student(
     )
 
     assert response.status_code == 200
-    assert response.content == image_bytes
-    assert response.headers.get("content-type") == "image/png"
-    assert response.headers.get("content-disposition") == 'inline; filename="photo.png"'
+    assert response.json()["avatar_path"].endswith("/avatar")
 
-    avatar_file = path_builder_fixture.get_avatar_user(student.id)
+    avatar_file = Path(await session_db.scalar(select(Student.avatar_path).where(Student.user_id == student.id)))
     assert avatar_file.is_file()
     with Image.open(avatar_file) as img:
         assert img.format == "WEBP"
@@ -294,11 +293,9 @@ async def test_update_avatar_by_admin_for_student(
     )
 
     assert response.status_code == 200
-    assert response.content == image_bytes
-    assert response.headers.get("content-type") == "image/jpeg"
-    assert response.headers.get("content-disposition") == 'inline; filename="avatar.jpg"'
+    assert response.json()["avatar_path"].endswith("/avatar")
 
-    avatar_file = path_builder_fixture.get_avatar_user(student.id)
+    avatar_file = Path(await session_db.scalar(select(Student.avatar_path).where(Student.user_id == student.id)))
     assert avatar_file.is_file()
 
     result_db = await session_db.execute(select(Student).where(Student.user_id == student.id))
@@ -327,7 +324,7 @@ async def test_update_avatar_replaces_existing_avatar(
     )
     assert response_1.status_code == 200
 
-    avatar_file = path_builder_fixture.get_avatar_user(teacher.id)
+    avatar_file = Path(await session_db.scalar(select(Teacher.avatar_path).where(Teacher.user_id == teacher.id)))
     assert avatar_file.is_file()
 
     second_bytes = _generate_test_image_bytes("JPEG", (400, 400))
@@ -337,7 +334,9 @@ async def test_update_avatar_replaces_existing_avatar(
         files={"avatar": ("second.jpg", io.BytesIO(second_bytes), "image/jpeg")},
     )
     assert response_2.status_code == 200
-    assert response_2.content == second_bytes
+    assert response_2.json()["avatar_path"] == f"/users/{teacher.id}/avatar"
+    assert not avatar_file.exists()
+    avatar_file = Path(await session_db.scalar(select(Teacher.avatar_path).where(Teacher.user_id == teacher.id)))
     assert avatar_file.is_file()
 
     result_db = await session_db.execute(select(Teacher).where(Teacher.user_id == teacher.id))
@@ -424,6 +423,7 @@ async def test_delete_avatar_by_self_student(
     create_user_fixture,
     path_builder_fixture,
     config_fix,
+    session_db,
 ):
     student, token = await create_user_fixture(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
@@ -437,7 +437,7 @@ async def test_delete_avatar_by_self_student(
     )
     assert upload_res.status_code == 200
 
-    avatar_file = path_builder_fixture.get_avatar_user(student.id)
+    avatar_file = Path(await session_db.scalar(select(Student.avatar_path).where(Student.user_id == student.id)))
     assert avatar_file.is_file()
 
     delete_res = await client_for_tests.delete(
@@ -454,6 +454,7 @@ async def test_delete_avatar_by_admin_for_student(
     create_user_fixture,
     path_builder_fixture,
     config_fix,
+    session_db,
 ):
     teacher, teacher_token = await create_user_fixture(
         new_user=CreateUserFixtureDTO(role=UserRole.ADMIN)
@@ -470,7 +471,7 @@ async def test_delete_avatar_by_admin_for_student(
     )
     assert upload_res.status_code == 200
 
-    avatar_file = path_builder_fixture.get_avatar_user(student.id)
+    avatar_file = Path(await session_db.scalar(select(Student.avatar_path).where(Student.user_id == student.id)))
     assert avatar_file.is_file()
 
     delete_res = await client_for_tests.delete(

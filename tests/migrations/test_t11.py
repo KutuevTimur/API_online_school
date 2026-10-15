@@ -38,7 +38,7 @@ def test_t11_null_no_next_and_history_downgrade_guard(database):
     sql(f"INSERT INTO homework_deadline_events(placement_id,lesson_student_id,reason) VALUES({pid},80,'lesson_updated')")
     result=alembic('downgrade','8a575436b7db',success=False)
     assert 'Cannot discard T11' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version')==[('36a8711f7799',)]
+    assert sql('SELECT version_num FROM alembic_version')==[('2048d2eeeaa8',)]
     assert_schema(conf)
     with pytest.raises(Exception,match='uq_homework_placement|uix_homework_original_placement'):
         sql("INSERT INTO homework_placements(homework_id,lesson_student_id,kind) VALUES(90,80,'original')")

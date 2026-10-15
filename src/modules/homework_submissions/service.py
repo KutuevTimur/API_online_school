@@ -84,7 +84,8 @@ class HomeworkSubmissionsService:
         """
         async with self._mutation() as created_paths:
             await ObjectPermissionService(self.session_db).homework(student_user_id, homework_id, UserRole.STUDENT)
-            await self.homework_submissions_repo.lock_homework(homework_id)
+            if not await self.homework_submissions_repo.lock_homework(homework_id):
+                raise HomeworkSubmissionNotFound()
             if await self.homework_submissions_repo.working_submission(homework_id):
                 raise SubmissionConflict("A working answer already exists; open it instead")
             attempt = await self.homework_submissions_repo.get_max_attempt_number(homework_id) + 1
@@ -175,7 +176,8 @@ class HomeworkSubmissionsService:
                       submission_id: int, expected_version: int | None = None) -> HomeworkSubmission:
         # The same lock order covers create/edit/submit/delete/teacher checking.
         await ObjectPermissionService(self.session_db).homework(user_id, homework_id, role)
-        await self.homework_submissions_repo.lock_homework(homework_id)
+        if not await self.homework_submissions_repo.lock_homework(homework_id):
+            raise HomeworkSubmissionNotFound()
         actor = await ObjectPermissionService(self.session_db).actor(user_id)
         submission = await self.homework_submissions_repo.get_by_submission_id(submission_id, actor=actor, lock=True)
         if not submission or submission.homework_id != homework_id:
@@ -272,6 +274,8 @@ class HomeworkSubmissionsService:
             if not self._has_content(submission):
                 raise EmptySubmission("Add text or a file before submitting")
             if submission.status == HomeworkSubmissionStatus.DRAFT:
+                from src.modules.notifications.service import NotificationsService
+                await NotificationsService(self.session_db).homework_event(homework_id, "solution_submitted", submission_id)
                 submission.status = HomeworkSubmissionStatus.SUBMITTED
                 submission.submitted_at = datetime.now(UTC)
                 self._touch(submission)
@@ -313,6 +317,8 @@ class HomeworkSubmissionsService:
             teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
             for key, value in data.items():
                 setattr(submission, key, value)
+            from src.modules.notifications.service import NotificationsService
+            await NotificationsService(self.session_db).homework_event(homework_id, "solution_checked", submission_id)
             submission.status = HomeworkSubmissionStatus.CHECKED
             submission.checked_at = datetime.now(UTC)
             submission.checked_by = teacher.id

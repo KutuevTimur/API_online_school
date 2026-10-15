@@ -19,6 +19,8 @@ async def start_test(config_fix, app_fastapi):
 async def clearing_db(session_db: AsyncSession, config_fix):
     """Очиста бд перед тестами"""
     require_test_config(config_fix)
+    await session_db.execute(delete(Notification))
+    await session_db.execute(delete(AuditEvent))
     await session_db.execute(delete(FileDeletion))
     await session_db.execute(delete(LifecycleAudit))
     await session_db.execute(delete(EnrollmentGap))

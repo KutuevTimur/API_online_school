@@ -29,6 +29,10 @@ from src.modules.homework_placements.views import router as homework_placements_
 
 
 def _include_routers(app: FastAPI) -> FastAPI:
+    from src.modules.notifications.views import router as notifications_router
+    from src.modules.audit_events.views import router as audit_events_router
+    app.include_router(notifications_router)
+    app.include_router(audit_events_router)
     from src.modules.files.views import router as files_router
     app.include_router(files_router)
     app.include_router(lifecycle_router)
