@@ -3,7 +3,7 @@ from starlette.responses import JSONResponse
 
 from src.modules.courses.exception import CourseAlreadyExists, CourseRemovedException
 from src.modules.student_courses.exception import EnrollmentExistsException, EnrollmentNotFoundException, CourseAccessDeniedException
-from src.modules.users.exception import InvalidRole
+from src.modules.users.exception import InvalidRole, UserAlreadyExit
 from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
 from src.modules.check_permission.exception import PermissionErrorService
@@ -21,6 +21,19 @@ from src.modules.handlers_files.exception import (
 
 
 def register_exception_handlers(app: FastAPI):
+    from src.modules.lessons.exception import InvalidLessonRequest
+
+    @app.exception_handler(InvalidLessonRequest)
+    async def invalid_lesson_request_handler(request, exc):
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+    from src.modules.course_lifecycle.exception import InvalidPurgeConfirmation
+
+    @app.exception_handler(InvalidPurgeConfirmation)
+    async def invalid_purge_confirmation_handler(request, exc):
+        return JSONResponse(status_code=400, content={"detail": "Course confirmation does not match"})
+
 
     @app.exception_handler(LessonStudentAlreadyExists)
     async def lesson_student_already_exists_handler(request, exc):
@@ -46,6 +59,16 @@ def register_exception_handlers(app: FastAPI):
     async def document_conversion_error_handler(request, exc):
         return JSONResponse(status_code=500, content={"detail": str(exc) or "Document conversion error"})
 
+    from src.modules.homework_submissions.exception import SubmissionConflict, EmptySubmission
+
+    @app.exception_handler(SubmissionConflict)
+    async def submission_conflict_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+    @app.exception_handler(EmptySubmission)
+    async def empty_submission_handler(request, exc):
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+
     @app.exception_handler(ServiceException)
     async def service_handler(request, exc):
         return JSONResponse(status_code=500, content={"detail": "Server Error"})
@@ -54,13 +77,17 @@ def register_exception_handlers(app: FastAPI):
     async def service_handler(request, exc):
         return JSONResponse(status_code=400, content={"detail": "Did not transmit data"})
 
+    @app.exception_handler(UserAlreadyExit)
+    async def user_already_exists_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": "Account already exists"})
+
     @app.exception_handler(InvalidRole)
     async def service_handler(request, exc):
         return JSONResponse(status_code=400, content={"detail": "Invalid role"})
 
     @app.exception_handler(InvalidJWTToken)
     async def service_handler(request, exc):
-        return JSONResponse(status_code=401, content={"detail": "Invalid JWT token"})
+        return JSONResponse(status_code=401, content={"detail": "Invalid credentials"})
 
     @app.exception_handler(InvalidCredentials)
     async def service_handler(request, exc):

@@ -1,3 +1,4 @@
+from src.modules.check_permission.service import ObjectPermissionService
 import os
 import uuid
 from typing import List, Optional
@@ -46,29 +47,9 @@ class LecturesService:
         lesson_id: int,
         student_user_id: int,
     ):
-        teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
-        if not teacher:
-            raise PermissionErrorService("Teacher user not found")
-
-        lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
-        if not lesson:
-            raise PermissionErrorService("Lesson not found")
-
-        if lesson.teacher_id != teacher.id:
-            raise PermissionErrorService("You do not have permission to modify this lesson")
-
-        student = await self.student_repo.get_student_by_user_id(student_user_id)
-        if not student:
-            raise PermissionErrorService("Student user not found")
-
-        lesson_student = await self.lesson_students_repo.get_by_lesson_and_student(
-            lesson_id=lesson.id,
-            student_id=student.id
+        return await ObjectPermissionService(self.session_db).recipient(
+            teacher_user_id, lesson_id, student_user_id, write=True
         )
-        if not lesson_student:
-            raise PermissionErrorService("Student is not enrolled in this lesson")
-
-        return lesson_student
 
     async def upload_lecture(
         self,
@@ -136,25 +117,9 @@ class LecturesService:
         to_date: Optional[datetime] = None,
         sort_date: str = "desc",
     ) -> PaginationResponseDTO[LectureResponseDTO]:
-        student = await self.student_repo.get_student_by_user_id(student_user_id)
-        if not student:
-            raise PermissionErrorService("Student user not found")
-
-        lesson_student = await self.lesson_students_repo.get_by_lesson_and_student(
-            lesson_id=lesson_id,
-            student_id=student.id
+        lesson_student = await ObjectPermissionService(self.session_db).recipient(
+            user_id, lesson_id, student_user_id
         )
-        if not lesson_student:
-            raise PermissionErrorService("Student is not enrolled in this lesson")
-
-        teacher = await self.teacher_repo.get_teacher_by_user_id(user_id)
-        lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
-        
-        is_teacher_owner = teacher and lesson and lesson.teacher_id == teacher.id
-        is_student_owner = student.user_id == user_id
-
-        if not is_teacher_owner and not is_student_owner:
-            raise PermissionErrorService("Access denied to view these lectures")
 
         lectures, total = await self.lectures_repo.get_all_by_lesson_student_id(
             lesson_student_id=lesson_student.id,
@@ -163,6 +128,7 @@ class LecturesService:
             from_date=from_date,
             to_date=to_date,
             sort_date=sort_date,
+            actor=await ObjectPermissionService(self.session_db).actor(user_id),
         )
         
         dtos = [LectureResponseDTO.model_validate(l) for l in lectures]
@@ -194,6 +160,7 @@ class LecturesService:
             from_date=from_date,
             to_date=to_date,
             sort_date=sort_date,
+            actor=await ObjectPermissionService(self.session_db).actor(student_user_id),
         )
         dtos = [LectureResponseDTO.model_validate(l) for l in lectures]
         
@@ -211,30 +178,18 @@ class LecturesService:
         student_user_id: int,
         lecture_id: int,
     ) -> LectureDTO:
-        student = await self.student_repo.get_student_by_user_id(student_user_id)
-        if not student:
-            raise PermissionErrorService("Student user not found")
-
-        lesson_student = await self.lesson_students_repo.get_by_lesson_and_student(
-            lesson_id=lesson_id,
-            student_id=student.id
+        lesson_student = await ObjectPermissionService(self.session_db).recipient(
+            user_id, lesson_id, student_user_id
         )
-        if not lesson_student:
-            raise PermissionErrorService("Student is not enrolled in this lesson")
-
-        teacher = await self.teacher_repo.get_teacher_by_user_id(user_id)
-        lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
-        
-        is_teacher_owner = teacher and lesson and lesson.teacher_id == teacher.id
-        is_student_owner = student.user_id == user_id
-
-        if not is_teacher_owner and not is_student_owner:
-            raise PermissionErrorService("Access denied to view this lecture")
 
         lecture = await self.lectures_repo.get_by_id(lecture_id)
         if not lecture or lecture.lesson_student_id != lesson_student.id:
             raise LectureNotFound("Lecture not found")
 
+        actor = await ObjectPermissionService(self.session_db).actor(user_id)
+        from src.modules.lectures.models import Lecture
+        if not await ObjectPermissionService(self.session_db).repo.material_visible(Lecture, lecture.id, actor):
+            raise LectureNotFound()
         return LectureDTO.model_validate(lecture)
 
     async def delete_lecture(

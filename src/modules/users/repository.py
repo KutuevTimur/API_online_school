@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from sqlalchemy import select, or_, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,10 @@ class UsersRepository(BaseRepository):
     ) -> User:
         return self.add(data)
 
+    async def lock_user(self, user_id: int) -> User | None:
+        result = await self.session.execute(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
+        return result.scalar_one_or_none()
+
     async def get_user_by_id(self, user_id: int) -> User | None:
         result_db = await self.session.execute(
             select(User)
@@ -31,14 +35,11 @@ class UsersRepository(BaseRepository):
         )
         return result_db.scalar_one_or_none()
 
-    async def get_user_by_username_or_email(self, username_or_email: str) -> User | None:
+    async def get_user_by_username(self, username: str) -> User | None:
         result_db = await self.session.execute(
             select(User)
             .where(
-                or_(
-                    User.username == username_or_email,
-                    User.email == username_or_email
-                )
+                User.username == username
             )
         )
         return result_db.scalar_one_or_none()
@@ -51,16 +52,18 @@ class UsersRepository(BaseRepository):
         self,
         role: UserRole,
         limit: int = 100,
-        offset: int = 0
+        offset: int = 0,
+        access_scope=None,
     ) -> Tuple[int, List[User]]:
         """Получить пользователей по роли с связанных профилем"""
         from sqlalchemy import func
-        count_stmt = select(func.count()).select_from(User).where(User.role == role)
+        predicate = access_scope if access_scope is not None else True
+        count_stmt = select(func.count()).select_from(User).where(User.role == role, predicate)
         total_count = (await self.session.execute(count_stmt)).scalar() or 0
 
         stmt = (
             select(User)
-            .where(User.role == role)
+            .where(User.role == role, predicate)
             .options(
                 selectinload(User.teacher), 
                 selectinload(User.student)

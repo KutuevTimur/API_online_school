@@ -1,3 +1,5 @@
+from src.modules.check_permission.repository import material_scope
+from src.modules.users.models import UserRole
 from typing import List
 from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,16 +27,20 @@ class HomeworksRepository(BaseRepository):
     async def get_by_id(self, homework_id: int) -> Homework | None:
         return await super().get_by_id(Homework, homework_id)
 
-    async def get_all_by_lesson_student_id(self, lesson_student_id: int) -> List[Homework]:
+    async def get_all_by_lesson_student_id(self, lesson_student_id: int, actor=None) -> List[Homework]:
         stmt = select(Homework).where(Homework.lesson_student_id == lesson_student_id)
+        if actor is not None:
+            stmt = stmt.where(material_scope(Homework, actor.id, actor.role))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
         
-    async def get_all_by_student_id(self, student_id: int) -> List[Homework]:
+    async def get_all_by_student_id(self, student_id: int, actor=None) -> List[Homework]:
         """Получить все домашние задания студента по всем урокам / курсам (JOIN к lesson_students)"""
         stmt = select(Homework).join(
             LessonStudent, Homework.lesson_student_id == LessonStudent.id
         ).where(LessonStudent.student_id == student_id)
+        if actor is not None:
+            stmt = stmt.where(material_scope(Homework, actor.id, actor.role))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 

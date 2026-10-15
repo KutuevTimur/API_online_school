@@ -1,3 +1,5 @@
+from src.modules.check_permission.repository import submission_scope
+from sqlalchemy.orm import with_loader_criteria
 from typing import List, Tuple, Optional
 from datetime import datetime
 
@@ -26,12 +28,18 @@ class HomeworkSubmissionsRepository(BaseRepository):
         files = [HomeworkSubmissionFile(**file.model_dump()) for file in files_data]
         self.session.add_all(files)
 
-    async def get_by_submission_id(self, submission_id: int) -> HomeworkSubmission | None:
+    async def get_by_submission_id(self, submission_id: int, actor=None, lock: bool = False) -> HomeworkSubmission | None:
         stmt = (
             select(HomeworkSubmission)
             .where(HomeworkSubmission.id == submission_id)
             .options(selectinload(HomeworkSubmission.files))
         )
+        if lock:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        if actor is not None:
+            file_predicate = submission_scope(HomeworkSubmissionFile, actor.id, actor.role)
+            stmt = stmt.where(submission_scope(HomeworkSubmission, actor.id, actor.role)).options(
+                with_loader_criteria(HomeworkSubmissionFile, file_predicate)).execution_options(populate_existing=True)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -55,12 +63,16 @@ class HomeworkSubmissionsRepository(BaseRepository):
         homework_id: int,
         limit: int = 100,
         offset: int = 0,
-        sort_date: str = "desc"
+        sort_date: str = "desc",
+        actor=None,
     ) -> Tuple[List[HomeworkSubmission], int]:
+        scope = submission_scope(HomeworkSubmission, actor.id, actor.role) if actor else True
+        total = await self.session.scalar(select(func.count()).select_from(HomeworkSubmission).where(
+            HomeworkSubmission.homework_id == homework_id, scope)) or 0
         count_over = func.count().over().label('total_count')
         
         stmt = select(HomeworkSubmission, count_over).where(
-            HomeworkSubmission.homework_id == homework_id
+            HomeworkSubmission.homework_id == homework_id, scope
         )
 
         if sort_date.lower() == "asc":
@@ -71,13 +83,16 @@ class HomeworkSubmissionsRepository(BaseRepository):
         stmt = stmt.limit(limit).offset(offset)
         stmt = stmt.options(selectinload(HomeworkSubmission.files))
 
+        if actor is not None:
+            file_predicate = submission_scope(HomeworkSubmissionFile, actor.id, actor.role)
+            stmt = stmt.where(submission_scope(HomeworkSubmission, actor.id, actor.role)).options(
+                with_loader_criteria(HomeworkSubmissionFile, file_predicate)).execution_options(populate_existing=True)
         result = await self.session.execute(stmt)
         rows = result.all()
 
         if not rows:
-            return [], 0
+            return [], total
             
-        total = rows[0][1]
         submissions = [row[0] for row in rows]
         
         return submissions, total
@@ -120,3 +135,21 @@ class HomeworkSubmissionsRepository(BaseRepository):
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def lock_homework(self, homework_id: int) -> None:
+        from src.modules.homeworks.models import Homework
+        await self.session.scalar(select(Homework).where(Homework.id == homework_id).with_for_update())
+
+    async def working_submission(self, homework_id: int) -> HomeworkSubmission | None:
+        return await self.session.scalar(select(HomeworkSubmission).where(
+            HomeworkSubmission.homework_id == homework_id, HomeworkSubmission.is_working.is_(True)))
+
+    async def remove_file(self, file: HomeworkSubmissionFile) -> None:
+        from src.modules.course_lifecycle.models import FileDeletion
+        paths = {file.original_file_path, file.pdf_file_path} - {None}
+        self.session.add_all([FileDeletion(path=p) for p in sorted(paths)])
+        await self.session.delete(file)
+
+    async def file_count(self, submission_id: int) -> int:
+        return await self.session.scalar(select(func.count()).select_from(HomeworkSubmissionFile).where(
+            HomeworkSubmissionFile.submission_id == submission_id)) or 0

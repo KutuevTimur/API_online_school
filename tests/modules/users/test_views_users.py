@@ -119,13 +119,13 @@ async def test_update_user_self_teacher(
 
 
 @pytest.mark.asyncio
-async def test_update_user_by_teacher_for_student(
+async def test_admin_updates_student_activation(
     client_for_tests,
     create_user_fixture,
     session_db,
 ):
     teacher, teacher_token = await create_user_fixture(
-        new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+        new_user=CreateUserFixtureDTO(role=UserRole.ADMIN)
     )
     student, _ = await create_user_fixture(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
@@ -134,7 +134,6 @@ async def test_update_user_by_teacher_for_student(
     update_dto = UpdateUserDataRequestDTO(
         first_name="Changed_By_Teacher",
         last_name="Student_New_Last",
-        is_active=False,
     )
     response = await client_for_tests.patch(
         f"/users/{student.id}",
@@ -155,6 +154,12 @@ async def test_update_user_by_teacher_for_student(
     result_user = await session_db.execute(select(User).where(User.id == student.id))
     user_db = result_user.scalar_one_or_none()
     assert user_db is not None
+    status_response = await client_for_tests.patch(
+        f"/users/{student.id}/account-status", headers={"Authorization": f"Bearer {teacher_token}"},
+        json={"is_active": False},
+    )
+    assert status_response.status_code == 200
+    await session_db.refresh(user_db)
     assert user_db.is_active is False
 
 
@@ -167,15 +172,14 @@ async def test_update_user_is_active_forbidden_for_student(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
     )
 
-    update_dto = UpdateUserDataRequestDTO(is_active=False)
+    update_dto = {"is_active": False}
     response = await client_for_tests.patch(
         f"/users/{student.id}",
         headers={"Authorization": f"Bearer {access_token}"},
-        json=update_dto.model_dump(exclude_unset=True),
+        json=update_dto,
     )
 
-    assert response.status_code == 403
-    assert response.json() == {"detail": "Not permission"}
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -197,8 +201,8 @@ async def test_update_user_forbidden_for_other_student(
         json=update_dto.model_dump(exclude_unset=True),
     )
 
-    assert response.status_code == 403
-    assert response.json() == {"detail": "Not permission"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not found data"}
 
 
 @pytest.mark.asyncio
@@ -268,7 +272,7 @@ async def test_update_avatar_by_self_student(
 
 
 @pytest.mark.asyncio
-async def test_update_avatar_by_teacher_for_student(
+async def test_update_avatar_by_admin_for_student(
     client_for_tests,
     create_user_fixture,
     path_builder_fixture,
@@ -276,7 +280,7 @@ async def test_update_avatar_by_teacher_for_student(
     config_fix,
 ):
     teacher, teacher_token = await create_user_fixture(
-        new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+        new_user=CreateUserFixtureDTO(role=UserRole.ADMIN)
     )
     student, _ = await create_user_fixture(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
@@ -361,8 +365,8 @@ async def test_update_avatar_forbidden_for_other_student(
         files={"avatar": ("photo.png", io.BytesIO(image_bytes), "image/png")},
     )
 
-    assert response.status_code == 403
-    assert response.json() == {"detail": "Not permission"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not found data"}
 
 
 @pytest.mark.asyncio
@@ -445,14 +449,14 @@ async def test_delete_avatar_by_self_student(
 
 
 @pytest.mark.asyncio
-async def test_delete_avatar_by_teacher_for_student(
+async def test_delete_avatar_by_admin_for_student(
     client_for_tests,
     create_user_fixture,
     path_builder_fixture,
     config_fix,
 ):
     teacher, teacher_token = await create_user_fixture(
-        new_user=CreateUserFixtureDTO(role=UserRole.TEACHER)
+        new_user=CreateUserFixtureDTO(role=UserRole.ADMIN)
     )
     student, student_token = await create_user_fixture(
         new_user=CreateUserFixtureDTO(role=UserRole.STUDENT)
@@ -502,8 +506,8 @@ async def test_delete_avatar_forbidden_for_other_student(
         f"/users/{student_2.id}/avatar",
         headers={"Authorization": f"Bearer {token_1}"},
     )
-    assert delete_res.status_code == 403
-    assert delete_res.json() == {"detail": "Not permission"}
+    assert delete_res.status_code == 404
+    assert delete_res.json() == {"detail": "Not found data"}
 
 
 @pytest.mark.asyncio

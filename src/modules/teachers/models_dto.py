@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import field_serializer, BaseModel, ConfigDict
 
 from src.modules.base.orm_dto import ORMDTO
 
@@ -27,6 +27,10 @@ class TeachersResponseDTO(ORMDTO):
     description: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("avatar_path")
+    def serialize_avatar(self, value: str | None) -> str | None:
+        return f"/users/{self.user_id}/avatar" if value else None
 
 
 class CreateTeacherDTO(BaseModel):

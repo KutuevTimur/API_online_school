@@ -30,6 +30,14 @@ async def create_lesson_student_factory(
         lesson = await create_lesson_factory(session_db, crypto_context, CreateLessonFixtureDTO())
         new_lesson_student.lesson_id = lesson.id
 
+    # A valid public recipient requires enrollment. Negative tests insert dangling grants explicitly.
+    from src.modules.lessons.models import Lesson
+    from src.modules.student_courses.models import StudentCourse
+    course_id = await session_db.scalar(select(Lesson.course_id).where(Lesson.id == new_lesson_student.lesson_id))
+    enrollment = await session_db.scalar(select(StudentCourse).where(
+        StudentCourse.course_id == course_id, StudentCourse.student_id == new_lesson_student.student_id))
+    if enrollment is None:
+        session_db.add(StudentCourse(course_id=course_id, student_id=new_lesson_student.student_id))
     lesson_student_db = LessonStudent(**new_lesson_student.model_dump())
     session_db.add(lesson_student_db)
     await session_db.commit()

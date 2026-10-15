@@ -78,7 +78,7 @@ async def get_students_for_course(
     course_id: int,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: UserDTO = Depends(get_current_teacher_user),
+    current_user: UserDTO = Depends(get_current_user),
     service: StudentCoursesService = Depends(get_student_courses_service),
 ):
     total, students = await service.get_students_for_course(

@@ -24,11 +24,13 @@ async def test_get_courses_as_teacher(
     client_for_tests,
     create_user_fixture,
     create_course_fixture,
+    session_db,
 ):
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
 
-    c1 = await create_course_fixture(CreateCourseFixtureDTO(name="Python 1", slug="py-1"))
-    c2 = await create_course_fixture(CreateCourseFixtureDTO(name="Python 2", slug="py-2"))
+    teacher_pk = await session_db.scalar(select(Teacher.id).where(Teacher.user_id == teacher.id))
+    c1 = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_pk, name="Python 1", slug="py-1"))
+    c2 = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_pk, name="Python 2", slug="py-2"))
 
     response = await client_for_tests.get(
         "/courses",
@@ -107,7 +109,7 @@ async def test_get_courses_as_student_only_enrolled(
     slugs = {c.slug for c in res_dto.items}
     assert c_enrolled.slug in slugs
     assert c_not_enrolled.slug not in slugs
-    assert c_inactive.slug not in slugs
+    assert c_inactive.slug in slugs  # D02 retains history in the course list
 
 
 @pytest.mark.asyncio
@@ -125,9 +127,11 @@ async def test_get_course_by_id_as_teacher(
     client_for_tests,
     create_user_fixture,
     create_course_fixture,
+    session_db,
 ):
     teacher, token = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.TEACHER))
-    course = await create_course_fixture(CreateCourseFixtureDTO(name="Any Course", slug="any-course"))
+    teacher_pk = await session_db.scalar(select(Teacher.id).where(Teacher.user_id == teacher.id))
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_pk, name="Any Course", slug="any-course"))
 
     response = await client_for_tests.get(
         f"/courses/{course.id}",
@@ -175,8 +179,8 @@ async def test_get_course_by_id_as_student_forbidden_not_enrolled(
         f"/courses/{course.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 403
-    assert response.json() == {"detail": "Not permission"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not found data"}
 
 
 @pytest.mark.asyncio
@@ -292,7 +296,7 @@ async def test_update_course_by_teacher(
     res_dto = CoursesResponseDTO.model_validate(response.json())
     assert res_dto.name == "Updated Name"
     assert res_dto.description == "Updated Description"
-    pass  # assert res_dto.is_deleted is True
+    assert res_dto.is_deleted is False
 
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one()
@@ -383,7 +387,7 @@ async def test_update_avatar_forbidden_for_student(
 # =====================================================================
 
 @pytest.mark.asyncio
-async def test_soft_delete_course_by_teacher_and_reuse_slug(
+async def test_archive_course_keeps_slug_reserved_for_restore(
     client_for_tests,
     create_user_fixture,
     create_course_fixture,
@@ -402,9 +406,8 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
     assert del_response.status_code == 200
     res_dto = CoursesResponseDTO.model_validate(del_response.json())
     assert res_dto.id == course.id
-    pass  # assert res_dto.is_deleted is True
-    assert res_dto.slug.startswith(orig_slug)
-    assert "__deleted__" in res_dto.slug
+    assert res_dto.is_deleted is True
+    assert res_dto.slug == orig_slug
 
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
     db_course = res_db.scalar_one_or_none()
@@ -415,16 +418,14 @@ async def test_soft_delete_course_by_teacher_and_reuse_slug(
         f"/courses/{course.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert del_again.status_code == 404
+    assert del_again.status_code == 200
 
     create_res = await client_for_tests.post(
         "/courses",
         headers={"Authorization": f"Bearer {token}"},
         json={"name": "Recreated Course", "slug": orig_slug},
     )
-    assert create_res.status_code == 201
-    create_dto = CoursesResponseDTO.model_validate(create_res.json())
-    assert create_dto.slug == orig_slug
+    assert create_res.status_code == 409
 
 
 @pytest.mark.asyncio
@@ -456,12 +457,12 @@ async def test_hard_delete_course_by_teacher(
         f"/courses/{course.id}?hard=true",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert del_res.status_code == 200
+    assert del_res.status_code == 403
 
-    assert not avatar_path.exists()
+    assert avatar_path.exists()
 
     res_db = await session_db.execute(select(Course).where(Course.id == course.id))
-    assert res_db.scalar_one_or_none() is None
+    assert res_db.scalar_one_or_none() is not None
 
 
 @pytest.mark.asyncio

@@ -25,6 +25,15 @@ async def test_create_lesson(
 
     course_dto = CreateCourseFixtureDTO(name="Physics", slug="phys-101", teacher_id=teacher_table_id)
     course = await create_course_fixture(course_dto)
+    student, _ = await create_user_fixture(CreateUserFixtureDTO(role=UserRole.STUDENT))
+    from src.modules.students.models import Student
+    from src.modules.student_courses.models import StudentCourse
+    from src.modules.teacher_students.models import TeacherStudent
+    async with not_open_session_db() as session:
+        student_db = await session.scalar(select(Student).where(Student.user_id == student.id))
+        session.add(StudentCourse(course_id=course.id, student_id=student_db.id))
+        session.add(TeacherStudent(teacher_id=teacher_table_id, student_id=student_db.id))
+        await session.commit()
 
     create_dto = CreateLessonRequestDTO(
         course_id=course.id,
@@ -160,4 +169,5 @@ async def test_delete_lesson(
         f"/lessons/{lesson.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert get_res.status_code == 404
+    assert get_res.status_code == 200
+    assert get_res.json()["is_deleted"] is True

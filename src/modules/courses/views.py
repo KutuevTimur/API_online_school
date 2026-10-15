@@ -2,20 +2,19 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Response, Query
 from starlette import status
+from fastapi.responses import FileResponse
 
 from src.modules.auth.depends import get_current_user
 from src.modules.base.orm_dto import PaginationResponseDTO
 from src.modules.check_permission import get_current_teacher_user
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.courses.depends import get_courses_service
-from src.modules.courses.exception import CourseNotFound
 from src.modules.courses.models_dto import (
     CoursesResponseDTO,
     CreateCourseDTORequest,
     UpdateCourseDTORequest,
 )
 from src.modules.courses.service import CoursesService
-from src.modules.users.models import UserRole
 from src.modules.users.models_dto import UserDTO
 
 router = APIRouter(tags=["Course"])
@@ -34,49 +33,7 @@ async def get_courses(
     current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    if current_user.role == UserRole.TEACHER:
-        teacher = None
-        if teacher_user_id:
-            teacher = await courses_service.teacher_repo.get_teacher_by_user_id(teacher_user_id)
-            if not teacher:
-                return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
-        elif my_courses:
-            teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
-            if not teacher:
-                return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
-
-        filter_teacher_id = teacher.id if teacher else None
-
-        courses, total = await courses_service.get_courses_by_teacher(
-            teacher_id=filter_teacher_id,
-            limit=limit,
-            offset=offset,
-        )
-        return PaginationResponseDTO(
-            items=courses,
-            total=total,
-            limit=limit,
-            offset=offset
-        )
-
-    if current_user.role == UserRole.STUDENT:
-        student = await courses_service.student_repo.get_student_by_user_id(current_user.id)
-        if not student:
-            return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
-
-        courses, total = await courses_service.get_courses_by_student(
-            student_id=student.id,
-            limit=limit,
-            offset=offset,
-        )
-        return PaginationResponseDTO(
-            items=courses,
-            total=total,
-            limit=limit,
-            offset=offset
-        )
-
-    raise PermissionErrorService()
+    return await courses_service.list_visible(current_user, limit, offset, teacher_user_id)
 
 
 @router.get(
@@ -89,28 +46,7 @@ async def get_course_by_id(
     current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    course = await courses_service.get_course_by_id(course_id)
-    if not course:
-        raise CourseNotFound()
-
-    if current_user.role == UserRole.TEACHER:
-        return course
-
-    if current_user.role == UserRole.STUDENT:
-        student = await courses_service.student_repo.get_student_by_user_id(current_user.id)
-        if not student:
-            raise PermissionErrorService()
-
-        has_access = await courses_service.check_student_access(
-            student_id=student.id,
-            course_id=course_id,
-        )
-        if not has_access:
-            raise PermissionErrorService()
-
-        return course
-
-    raise PermissionErrorService()
+    return await courses_service.detail_visible(current_user, course_id)
 
 
 @router.post(
@@ -123,7 +59,7 @@ async def create_course(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+    teacher = await courses_service.owner_profile(current_user)
     return await courses_service.create_course(teacher_id=teacher.id, data=data)
 
 
@@ -138,7 +74,7 @@ async def update_course(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+    teacher = await courses_service.owner_profile(current_user, course_id)
     return await courses_service.update_course(course_id=course_id, teacher_id=teacher.id, data=data)
 
 
@@ -159,7 +95,7 @@ async def update_avatar(
 ):
     file_bytes = await avatar.read()
     await avatar.seek(0)
-    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+    teacher = await courses_service.owner_profile(current_user, course_id)
     await courses_service.update_avatar(course_id=course_id, teacher_id=teacher.id, avatar=avatar)
 
     return Response(
@@ -182,8 +118,18 @@ async def delete_course(
     current_user: UserDTO = Depends(get_current_teacher_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    teacher = await courses_service.teacher_repo.get_teacher_by_user_id(current_user.id)
+    await courses_service.detail_visible(current_user, course_id)
+    teacher = await courses_service.owner_profile(current_user)
     if hard:
-        return await courses_service.delete_course(course_id=course_id, teacher_id=teacher.id)
+        raise PermissionErrorService("Purge is a separate admin workflow")
     else:
         return await courses_service.soft_delete_course(course_id=course_id, teacher_id=teacher.id)
+
+
+@router.get("/courses/{course_id}/avatar", response_class=FileResponse, status_code=status.HTTP_200_OK)
+async def get_course_avatar(
+    course_id: int,
+    current_user: UserDTO = Depends(get_current_user),
+    service: CoursesService = Depends(get_courses_service),
+):
+    return FileResponse(await service.avatar_file(current_user, course_id), media_type="image/webp")

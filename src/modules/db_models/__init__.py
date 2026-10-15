@@ -10,7 +10,16 @@ from src.modules.lectures.models import Lecture
 from src.modules.homeworks.models import Homework
 from src.modules.homework_submissions.models import HomeworkSubmission, HomeworkSubmissionFile
 
+from src.modules.teacher_students.models import TeacherStudent
+
+from src.modules.account_invitations.models import AccountInvitation, AccountAudit, AuthRateLimit
+
+from src.modules.course_lifecycle.models import EnrollmentGap, LifecycleAudit, FileDeletion
+
 __all__ = [
+    "EnrollmentGap", "LifecycleAudit", "FileDeletion",
+    "AccountInvitation", "AccountAudit", "AuthRateLimit",
+    "TeacherStudent",
     "User",
     "RefreshToken",
     "Teacher",

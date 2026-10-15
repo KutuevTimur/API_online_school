@@ -19,6 +19,12 @@ async def start_test(config_fix, app_fastapi):
 async def clearing_db(session_db: AsyncSession, config_fix):
     """Очиста бд перед тестами"""
     require_test_config(config_fix)
+    await session_db.execute(delete(FileDeletion))
+    await session_db.execute(delete(LifecycleAudit))
+    await session_db.execute(delete(EnrollmentGap))
+    await session_db.execute(delete(AccountInvitation))
+    await session_db.execute(delete(AccountAudit))
+    await session_db.execute(delete(AuthRateLimit))
     # Удаляем зависимости в нужном порядке
     await session_db.execute(delete(HomeworkSubmissionFile))
     await session_db.execute(delete(HomeworkSubmission))
@@ -29,6 +35,7 @@ async def clearing_db(session_db: AsyncSession, config_fix):
     await session_db.execute(delete(StudentCourse))
     await session_db.execute(delete(Course))
     await session_db.execute(delete(RefreshToken))
+    await session_db.execute(delete(TeacherStudent))
     await session_db.execute(delete(Teacher))
     await session_db.execute(delete(Student))
     await session_db.execute(delete(User))

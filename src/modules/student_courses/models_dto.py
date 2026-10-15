@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 from src.modules.base.orm_dto import ORMDTO
-from src.modules.students.models_dto import StudentsResponseDTO
+from src.modules.students.models_dto import MinimalStudentResponseDTO
 
 
 class CreateStudentCoursesDTO(BaseModel):
@@ -23,7 +23,7 @@ class EnrollStudentRequestDTO(BaseModel):
 
 class StudentCourseResponseDTO(ORMDTO):
     id: int
-    student_id: int
+    student_user_id: int
     course_id: int
     is_deleted: bool
     started_at: datetime
@@ -32,4 +32,7 @@ class StudentCourseResponseDTO(ORMDTO):
     updated_at: datetime
     deleted_at: Optional[datetime] = None
 
-    student: Optional[StudentsResponseDTO] = None
+    access_ended_at: Optional[datetime] = None
+    history_revoked: bool = False
+
+    student: Optional[MinimalStudentResponseDTO] = None

@@ -15,6 +15,7 @@ async def test_add_student_to_lesson(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_course_fixture,
     create_lesson_student_fixture,
     not_open_session_db,
     session_db,
@@ -26,7 +27,16 @@ async def test_add_student_to_lesson(
         t_db = await session.scalar(select(Teacher).where(Teacher.user_id == teacher.id))
         teacher_table_id = t_db.id
 
-    lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
+    from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_table_id))
+    lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id, course_id=course.id))
+
+    from src.modules.teacher_students.models import TeacherStudent
+    from src.modules.student_courses.models import StudentCourse
+    student_pk = await session_db.scalar(select(Student.id).where(Student.user_id == student.id))
+    session_db.add(TeacherStudent(teacher_id=teacher_table_id, student_id=student_pk))
+    session_db.add(StudentCourse(course_id=course.id, student_id=student_pk))
+    await session_db.commit()
 
     add_dto = AddStudentToLessonRequestDTO(student_user_id=student.id)
     response = await client_for_tests.post(
@@ -50,6 +60,7 @@ async def test_remove_student_from_lesson(
     client_for_tests,
     create_user_fixture,
     create_lesson_fixture,
+    create_course_fixture,
     create_lesson_student_fixture,
     not_open_session_db,
     session_db,
@@ -63,7 +74,9 @@ async def test_remove_student_from_lesson(
         s_db = await session.scalar(select(Student).where(Student.user_id == student.id))
         student_table_id = s_db.id
 
-    lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id))
+    from tests.modules.courses.fixtures.models_dto import CreateCourseFixtureDTO
+    course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_table_id))
+    lesson = await create_lesson_fixture(CreateLessonFixtureDTO(teacher_id=teacher_table_id, course_id=course.id))
 
     await create_lesson_student_fixture(CreateLessonStudentFixtureDTO(lesson_id=lesson.id, student_id=student_table_id))
 
@@ -79,4 +92,4 @@ async def test_remove_student_from_lesson(
             LessonStudent.lesson_id == lesson.id,
             LessonStudent.student_id == student_table_id,
         ))
-        assert ls_db is None
+        assert ls_db is not None and ls_db.access_ended_at is not None

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncEngine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import URL
@@ -22,7 +22,7 @@ class Config:
                 raise RuntimeError("Test config requires an explicit temporary media root")
         self.paths = PathsConfig.build(media_root=media_root or values.get("MEDIA_ROOT"))
         self.db_connection = DbConnectionConfig.build(self.env)
-        self.tokens = TokensConfig.build()
+        self.tokens = TokensConfig.build(values)
         self.allowed_extensions = AllowedExtensions.build()
 
 
@@ -131,15 +131,15 @@ class PathsConfig(BaseModel):
 
 
 class TokensConfig(BaseModel):
-    access_token_expire_minutes: int
-    refresh_token_expire_days: int
+    access_token_expire_minutes: int = Field(default=15, ge=1, le=60)
+    refresh_token_expire_days: int = Field(default=30, ge=1, le=90)
     algorithm: str
 
     @classmethod
-    def build(cls) -> "TokensConfig":
+    def build(cls, values: dict[str, str] | None = None) -> "TokensConfig":
         return cls(
-            access_token_expire_minutes=30,
-            refresh_token_expire_days=30,
+            access_token_expire_minutes=(values or {}).get("ACCESS_TOKEN_EXPIRE_MINUTES", 15),
+            refresh_token_expire_days=(values or {}).get("REFRESH_TOKEN_EXPIRE_DAYS", 30),
             algorithm="HS256",
         )
 

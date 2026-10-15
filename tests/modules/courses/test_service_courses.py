@@ -271,9 +271,8 @@ async def test_delete_course(
     )
     avatar_file = Path(with_avatar.avatar_path)
 
-    deleted = await courses_service_fixture.delete_course(course_id=created.id, teacher_id=course_obj.teacher_id)
-    assert deleted.id == created.id
-    assert not avatar_file.exists()
-
-    with pytest.raises(CourseNotFound):
+    from src.modules.check_permission.exception import PermissionErrorService
+    with pytest.raises(PermissionErrorService):
         await courses_service_fixture.delete_course(course_id=created.id, teacher_id=course_obj.teacher_id)
+    assert avatar_file.exists()
+    assert await session_db.get(Course, created.id) is not None

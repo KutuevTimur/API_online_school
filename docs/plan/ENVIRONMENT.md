@@ -51,3 +51,48 @@ DONE по критериям T01. Docker Desktop запущен: Engine 29.8.2; 
 - Read-only connection smoke: PASS; роль/БД/ограничения подтверждены. `git diff --check`: PASS.
 
 Не проверено: полный функциональный pytest, Alembic clean/prior-state, dev backend build/start, UI/E2E. Это не утверждение готовности приложения. Внешняя БД UNKNOWN и не тронута. Следующее — T02, миграционный baseline по отдельному поручению. Ветка dev, HEAD 71fdcfa; commit/push/PR/deploy отсутствуют. Тестовый контейнер оставлен работающим; остановка без удаления данных — в README.
+
+## T02 — 15.10.2026
+
+Миграционный baseline выполнен только на lgg-test. Ветка
+codex/t00-t01-environment, исходный HEAD 662a992; новых commit/push/merge/deploy нет.
+Контейнер и порт подтверждены Compose. Alembic использует явный guarded test config;
+миграции не создают media в проекте. Чистая цепочка d98c55d6402c → 56c4070bf9cd,
+no-op и round-trip проверяются отдельными tests/migrations через Alembic.
+Synthetic snapshot покрывает все 12 таблиц; текущие ORM совпадают с инспекцией БД,
+включая enum labels. Main baseline явно отклоняется.
+Внешняя БД остаётся UNKNOWN и не затронута. Mapping/downgrade и команды —
+README и TEST_BASELINE.md. Полный исходный pytest: 141 passed, 0 failed, 0 skipped.
+
+
+## Приёмка перед T08 — 15.10.2026
+
+Впервые собран/запущен lgg-dev: новые postgres_data/media volumes, PostgreSQL
+healthy на 127.0.0.1:55431, backend 127.0.0.1:8018. До миграций public tables=0;
+lgg_dev_app без SUPERUSER/CREATEDB/CREATEROLE. Head 811d7911d0b4, schema diff пустой.
+Synthetic HTTP и restart persistence PASS; оба контейнера оставлены работающими.
+Файлы persistent в lgg-dev_media; локальный client media-audit-client не является
+хранилищем backend. Полный [отчёт](T00_T07_ACCEPTANCE.md), команды и остановка — README.
+Неизвестная БД не затронута. Dev MODE=LOCAL в исходном ignored env; runner MODE=DEV.
+
+
+## T08 — 15.10.2026
+
+Существующий synthetic lgg-dev обновлён migration 29e67248e0f3 без reset/удаления
+volumes; schema diff пустой. Backend пересобран и перезапущен, сохранность
+status/time/URL и прежнего PDF SHA256 проверена по HTTP. Dev остаётся на
+127.0.0.1:8018, PostgreSQL healthy 55431; guarded test 55432 отдельно.
+[Карточка T08](tasks/T08.md) содержит итоговые проверки. Учётные данные/ID только
+в ignored .env.audit-access (0600), не в документации/Git/чате.
+
+## T09 — 15.10.2026
+
+Synthetic lgg-dev обновлён migration `8a575436b7db` без reset/удаления volumes.
+Backend build/start и HTTP smoke: 28 запросов + независимая concurrent create
+пара (201/409) PASS. После restart login/checked answer/version/PDF bytes/OpenAPI
+PASS. Dev alembic check: schema diff пустой. Старые DB/media сохранены.
+Dev остаётся 127.0.0.1:8018, файлы — прежний persistent `lgg-dev_media`;
+удалённые attachments ожидают existing admin cleanup retry в durable queue.
+Учётные данные и synthetic IDs только ignored `.env.audit-access` (0600).
+Test остаётся отдельной guarded lgg-test на loopback 55432. Неизвестная БД
+не затронута. Итог тестов и ограничения — [карточка T09](tasks/T09.md).

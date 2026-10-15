@@ -1,13 +1,15 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import pool
+from sqlalchemy import pool, text
+from tempfile import TemporaryDirectory
+from pathlib import Path
+from src.core.config.test_guard import require_test_config
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from src.core.config import create_config
-from src.core.config.base import init_env
 from src.core.database.database import Base
 
 # ОСТАВИТЬ. НЕОБХОДИМО ДЛЯ ПОДГРУЗКИ МОДЕЛЕЙ
@@ -16,13 +18,14 @@ from src.modules.db_models import *
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 
-init_env()
-app_config = create_config()
 config = context.config
-config.set_main_option(
-    'sqlalchemy.url',
-    app_config.db_connection.sql_db_url + "?async_fallback=True"
-)
+# TEST uses the explicit guarded .env.test target. Media is unused by Alembic.
+_media = TemporaryDirectory(prefix="lgg-alembic-")
+app_config = create_config(media_root=Path(_media.name))
+if app_config.env.mode == "TEST":
+    require_test_config(app_config)
+config.set_main_option("sqlalchemy.url",
+                       app_config.db_connection.sql_db_url.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -67,6 +70,13 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
+    if connection.dialect.has_table(connection, "alembic_version"):
+        revisions = set(connection.execute(text("SELECT version_num FROM alembic_version")).scalars())
+        if "1c3d40e331ff" in revisions:
+            raise RuntimeError(
+                "Unsupported main baseline 1c3d40e331ff: stop; inventory and backup "
+                "plus a separate migration plan required. Do not stamp or drop."
+            )
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -89,10 +99,14 @@ async def run_async_migrations() -> None:
         poolclass=pool.NullPool,
     )
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
+    try:
+        async with connectable.connect() as connection:
+            await connection.run_sync(do_run_migrations)
+            await connection.commit()
+    finally:
+        await connectable.dispose()
+        await app_config.db_connection.engine.dispose()
+        _media.cleanup()
 
 
 def run_migrations_online() -> None:

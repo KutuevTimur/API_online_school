@@ -1,5 +1,6 @@
 from typing import Optional
-from datetime import datetime
+from pydantic import AwareDatetime
+from src.modules.lessons.models import LessonStatus
 from fastapi import APIRouter, Depends, Query
 from starlette import status
 
@@ -39,9 +40,10 @@ async def create_lesson(
 async def get_lessons(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    from_date: Optional[datetime] = Query(None, description="От даты"),
-    to_date: Optional[datetime] = Query(None, description="До даты"),
+    from_date: Optional[AwareDatetime] = Query(None, description="От даты"),
+    to_date: Optional[AwareDatetime] = Query(None, description="До даты"),
     course_id: Optional[int] = Query(None, description="Фильтр по курсу"),
+    lesson_status: LessonStatus | None = Query(None, alias="status"),
     sort_date: str = Query("desc", description="Сортировка по дате (asc/desc)"),
     current_user: UserDTO = Depends(get_current_user),
     service: LessonsService = Depends(get_lessons_service),
@@ -54,6 +56,7 @@ async def get_lessons(
         to_date=to_date,
         course_id=course_id,
         sort_date=sort_date,
+        lesson_status=lesson_status,
     )
 
 @router.get(

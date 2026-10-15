@@ -1,3 +1,4 @@
+from src.modules.auth.password_dto import Password
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
@@ -21,6 +22,7 @@ class LogoutResponse(BaseModel):
 
 
 class ChangePasswordRequestDTO(BaseModel):
-    new_password: str
+    current_password: str
+    new_password: Password
 
     model_config = ConfigDict(from_attributes=True)

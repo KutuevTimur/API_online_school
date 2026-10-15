@@ -12,7 +12,7 @@ from tests.modules.users.fixtures.factory import create_user_factory
 
 
 def create_accesses_token(user_id: int, conf: Config) -> str:
-    to_encode = {"sub": str(user_id)}.copy()
+    to_encode = {"sub": str(user_id), "ver": 0}.copy()
 
     # Установка времени истечения токена
     expire = datetime.now(UTC) + timedelta(minutes=conf.tokens.access_token_expire_minutes)

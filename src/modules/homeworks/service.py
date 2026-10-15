@@ -1,3 +1,4 @@
+from src.modules.check_permission.service import ObjectPermissionService
 import os
 import uuid
 from typing import List, Optional
@@ -45,29 +46,9 @@ class HomeworksService:
         lesson_id: int,
         student_user_id: int,
     ):
-        teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
-        if not teacher:
-            raise PermissionErrorService("Teacher user not found")
-
-        lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
-        if not lesson:
-            raise PermissionErrorService("Lesson not found")
-
-        if lesson.teacher_id != teacher.id:
-            raise PermissionErrorService("You do not have permission to modify this lesson")
-
-        student = await self.student_repo.get_student_by_user_id(student_user_id)
-        if not student:
-            raise PermissionErrorService("Student user not found")
-
-        lesson_student = await self.lesson_students_repo.get_by_lesson_and_student(
-            lesson_id=lesson.id,
-            student_id=student.id
+        return await ObjectPermissionService(self.session_db).recipient(
+            teacher_user_id, lesson_id, student_user_id, write=True
         )
-        if not lesson_student:
-            raise PermissionErrorService("Student is not enrolled in this lesson")
-
-        return lesson_student
 
     async def create_homework(
         self,
@@ -142,27 +123,11 @@ class HomeworksService:
         lesson_id: int,
         student_user_id: int,
     ) -> List[HomeworkResponseDTO]:
-        student = await self.student_repo.get_student_by_user_id(student_user_id)
-        if not student:
-            raise PermissionErrorService("Student user not found")
-
-        lesson_student = await self.lesson_students_repo.get_by_lesson_and_student(
-            lesson_id=lesson_id,
-            student_id=student.id
+        lesson_student = await ObjectPermissionService(self.session_db).recipient(
+            user_id, lesson_id, student_user_id
         )
-        if not lesson_student:
-            raise PermissionErrorService("Student is not enrolled in this lesson")
 
-        teacher = await self.teacher_repo.get_teacher_by_user_id(user_id)
-        lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
-        
-        is_teacher_owner = teacher and lesson and lesson.teacher_id == teacher.id
-        is_student_owner = student_user_id == user_id
-
-        if not is_teacher_owner and not is_student_owner:
-            raise PermissionErrorService("Access denied to view these homeworks")
-
-        homeworks = await self.homeworks_repo.get_all_by_lesson_student_id(lesson_student.id)
+        homeworks = await self.homeworks_repo.get_all_by_lesson_student_id(lesson_student.id, actor=await ObjectPermissionService(self.session_db).actor(user_id))
         return [HomeworkResponseDTO.model_validate(h) for h in homeworks]
 
     async def get_my_homeworks(self, student_user_id: int) -> List[HomeworkResponseDTO]:
@@ -170,7 +135,7 @@ class HomeworksService:
         if not student:
             raise PermissionErrorService("Student user not found")
             
-        homeworks = await self.homeworks_repo.get_all_by_student_id(student.id)
+        homeworks = await self.homeworks_repo.get_all_by_student_id(student.id, actor=await ObjectPermissionService(self.session_db).actor(student_user_id))
         return [HomeworkResponseDTO.model_validate(h) for h in homeworks]
 
     async def get_homework_file(
@@ -180,30 +145,15 @@ class HomeworksService:
         student_user_id: int,
         homework_id: int,
     ) -> HomeworkDTO:
-        student = await self.student_repo.get_student_by_user_id(student_user_id)
-        if not student:
-            raise PermissionErrorService("Student user not found")
-
-        lesson_student = await self.lesson_students_repo.get_by_lesson_and_student(
-            lesson_id=lesson_id,
-            student_id=student.id
+        lesson_student = await ObjectPermissionService(self.session_db).recipient(
+            user_id, lesson_id, student_user_id
         )
-        if not lesson_student:
-            raise PermissionErrorService("Student is not enrolled in this lesson")
-
-        teacher = await self.teacher_repo.get_teacher_by_user_id(user_id)
-        lesson = await self.lessons_repo.get_lesson_by_id(lesson_id)
-        
-        is_teacher_owner = teacher and lesson and lesson.teacher_id == teacher.id
-        is_student_owner = student_user_id == user_id
-
-        if not is_teacher_owner and not is_student_owner:
-            raise PermissionErrorService("Access denied to view this homework")
 
         homework = await self.homeworks_repo.get_by_id(homework_id)
         if not homework or homework.lesson_student_id != lesson_student.id:
             raise HomeworkNotFound("Homework not found")
             
+        await ObjectPermissionService(self.session_db).homework(user_id, homework_id)
         if not homework.pdf_file_path:
             raise HomeworkNotFound("No files attached to this homework")
 

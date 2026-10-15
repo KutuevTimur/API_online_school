@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, List
 
-from sqlalchemy import Integer, ForeignKey, String, Text, func, Enum, Numeric, UniqueConstraint
+from sqlalchemy import Integer, ForeignKey, String, Text, func, Enum, Numeric, UniqueConstraint, Boolean, Index, text, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
@@ -42,11 +42,16 @@ class HomeworkSubmission(Base):
     __tablename__ = 'homework_submissions'
     __table_args__ = (
         UniqueConstraint('homework_id', 'attempt_number', name='uix_homework_attempt'),
+        Index('uix_homework_working_submission', 'homework_id', unique=True, postgresql_where=text('is_working')),
+        CheckConstraint('version >= 1', name='ck_submission_version'),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     homework_id: Mapped[int] = mapped_column(Integer, ForeignKey("homeworks.id"), nullable=False)
     attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    is_working: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
 
     text_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 

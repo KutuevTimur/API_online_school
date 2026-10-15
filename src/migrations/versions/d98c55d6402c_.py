@@ -73,7 +73,7 @@ def upgrade() -> None:
     sa.UniqueConstraint('user_id')
     )
     op.create_table('courses',
-    sa.Column('id', sa.Integer(), autcrement=True, nullable=False),
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('teacher_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=500), nullable=False),
     sa.Column('slug', sa.String(length=500), nullable=False),

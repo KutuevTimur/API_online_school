@@ -30,6 +30,8 @@ class HomeworkSubmissionDTO(ORMDTO):
     id: int
     homework_id: int
     attempt_number: int
+    version: int = 1
+    is_working: bool = True
     text_content: Optional[str] = None
     status: HomeworkSubmissionStatus
     grade: Optional[float] = None
@@ -48,6 +50,8 @@ class HomeworkSubmissionResponseDTO(ORMDTO):
     id: int
     homework_id: int
     attempt_number: int
+    version: int = 1
+    is_working: bool = True
     text_content: Optional[str] = None
     status: HomeworkSubmissionStatus
     grade: Optional[float] = None
@@ -66,6 +70,8 @@ class HomeworkSubmissionRequestDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     homework_id: int
     attempt_number: int
+    version: int = 1
+    is_working: bool = True
     text_content: Optional[str] = None
     status: HomeworkSubmissionStatus = HomeworkSubmissionStatus.DRAFT
     grade: Optional[float] = None

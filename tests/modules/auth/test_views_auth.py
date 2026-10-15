@@ -8,8 +8,9 @@ from src.modules.auth.models_dto import (
     ChangePasswordRequestDTO,
 )
 from src.modules.refresh_tokens.models import RefreshToken
+from src.modules.refresh_tokens.service import token_digest
 from src.modules.users.models import User, UserRole
-from src.modules.users.models_dto import RegisterUserRequestDTO, RegisterUserByAdminRequestDTO, UserDTO
+from src.modules.users.models_dto import RegisterUserRequestDTO, RegisterUserByAdminRequestDTO, UserResponse
 from tests.modules.refresh_tokens.fixtures.fixtures import create_refresh_token_fixture
 from tests.modules.refresh_tokens.fixtures.models_dto import CreateRefreshTokenFixtureDTO
 from tests.modules.users.fixtures.models_dto import CreateUserFixtureDTO
@@ -40,13 +41,14 @@ class TestsForSuccess:
                 password="test_password",
                 first_name="test_first_name",
                 last_name="test_last_name",
-                role=UserRole.TEACHER,
+                role=UserRole.STUDENT,
             ).model_dump(),
         )
 
         assert response.status_code == 200
 
-        new_user = UserDTO.model_validate(response.json())
+        assert "hashed_password" not in response.json()
+        new_user = UserResponse.model_validate(response.json())
 
         result_db = await session_db.execute(select(User).where(User.id == new_user.id))
         user_from_db = result_db.scalar_one_or_none()
@@ -60,9 +62,12 @@ class TestsForSuccess:
         session_db,
         client_for_tests,
         config_fix,
+        create_user_fixture,
     ):
+        _, token = await create_user_fixture(new_user=CreateUserFixtureDTO(role=UserRole.ADMIN))
         response = await client_for_tests.post(
             "/auth/register_by_admin",
+            headers={"Authorization": f"Bearer {token}"},
             json=RegisterUserByAdminRequestDTO(
                 email="admin_created@mail.com",
                 username="admin_created_user",
@@ -76,7 +81,8 @@ class TestsForSuccess:
 
         assert response.status_code == 200
 
-        new_user = UserDTO.model_validate(response.json())
+        assert "hashed_password" not in response.json()
+        new_user = UserResponse.model_validate(response.json())
 
         result_db = await session_db.execute(select(User).where(User.id == new_user.id))
         user_from_db = result_db.scalar_one_or_none()
@@ -102,8 +108,7 @@ class TestsForSuccess:
             ).model_dump(),
         )
 
-        assert response.status_code == 403
-        assert response.json() == {"detail": "Not permission"}
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_login(
@@ -129,7 +134,7 @@ class TestsForSuccess:
 
         token = TokenResponse.model_validate(response.json())
 
-        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.token == token.refresh_token))
+        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.digest == token_digest(token.refresh_token)))
         token_db = result_db.scalar_one_or_none()
         assert token_db
 
@@ -155,12 +160,12 @@ class TestsForSuccess:
         new_token = TokenResponse.model_validate(response.json())
 
         # старый должен быть помечен
-        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.token == old_token.token))
+        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.digest == token_digest(old_token.token)))
         token_db: RefreshToken = result_db.scalar_one_or_none()
         assert token_db.is_revoked
 
         # новый токен есть
-        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.token == new_token.refresh_token))
+        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.digest == token_digest(new_token.refresh_token)))
         token_db = result_db.scalar_one_or_none()
         assert token_db
 
@@ -190,9 +195,9 @@ class TestsForSuccess:
 
         assert response.status_code == 200
 
-        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.token == token.token))
+        result_db = await session_db.execute(select(RefreshToken).where(RefreshToken.digest == token_digest(token.token)))
         token_db: RefreshToken = result_db.scalar_one_or_none()
-        assert not token_db
+        assert token_db.is_revoked
 
     @pytest.mark.asyncio
     async def test_change_password_by_self_student(
@@ -210,7 +215,7 @@ class TestsForSuccess:
         response = await client_for_tests.post(
             f"/auth/change_password/{student.id}",
             headers={"Authorization": f"Bearer {access_token}"},
-            json=ChangePasswordRequestDTO(new_password="new_student_password").model_dump(),
+            json=ChangePasswordRequestDTO(current_password="old_student_password", new_password="new_student_password").model_dump(),
         )
 
         assert response.status_code == 200
@@ -244,10 +249,10 @@ class TestsForSuccess:
         response = await client_for_tests.post(
             f"/auth/change_password/{student.id}",
             headers={"Authorization": f"Bearer {teacher_token}"},
-            json=ChangePasswordRequestDTO(new_password="reset_by_teacher_pwd").model_dump(),
+            json=ChangePasswordRequestDTO(current_password="unused-current", new_password="reset_by_teacher_pwd").model_dump(),
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 403
 
         login_response = await client_for_tests.post(
             "/auth/login",
@@ -256,7 +261,7 @@ class TestsForSuccess:
                 "password": "reset_by_teacher_pwd",
             },
         )
-        assert login_response.status_code == 200
+        assert login_response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_change_password_forbidden_for_other_student(
@@ -274,7 +279,7 @@ class TestsForSuccess:
         response = await client_for_tests.post(
             f"/auth/change_password/{student_2.id}",
             headers={"Authorization": f"Bearer {token_1}"},
-            json=ChangePasswordRequestDTO(new_password="hacked_pwd").model_dump(),
+            json=ChangePasswordRequestDTO(current_password="unused-current", new_password="hacked_pwd").model_dump(),
         )
 
         assert response.status_code == 403
@@ -304,8 +309,8 @@ class TestsForSuccess:
         response = await client_for_tests.post(
             "/auth/change_password/99999",
             headers={"Authorization": f"Bearer {teacher_token}"},
-            json=ChangePasswordRequestDTO(new_password="some_pwd").model_dump(),
+            json=ChangePasswordRequestDTO(current_password="unused-current", new_password="some_password").model_dump(),
         )
 
-        assert response.status_code == 404
-        assert response.json() == {"detail": "Not found data"}
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Not permission"}

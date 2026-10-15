@@ -1,5 +1,5 @@
 from typing import Sequence
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +26,8 @@ class StudentCoursesRepository(BaseRepository):
             StudentCourse.student_id == student_id,
             StudentCourse.course_id == course_id,
             StudentCourse.is_deleted == False,
+            StudentCourse.access_ended_at.is_(None), StudentCourse.history_revoked.is_(False),
+            or_(StudentCourse.expires_at.is_(None), StudentCourse.expires_at > func.now()),
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
@@ -40,7 +42,7 @@ class StudentCoursesRepository(BaseRepository):
             StudentCourse.student_id == student_id,
             StudentCourse.course_id == course_id,
         )
-        result = await self.session.execute(stmt)
+        result = await self.session.execute(stmt.with_for_update().execution_options(populate_existing=True))
         return result.scalar_one_or_none()
 
     async def add_student_to_course(

@@ -1,3 +1,5 @@
+from src.modules.check_permission.repository import material_scope
+from src.modules.users.models import UserRole
 from typing import List, Tuple, Optional
 from datetime import datetime
 from sqlalchemy import select, delete, update, and_, func
@@ -34,10 +36,13 @@ class LecturesRepository(BaseRepository):
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
         sort_date: str = "desc",
+        actor=None,
     ) -> Tuple[List[Lecture], int]:
         """Получает список лекций по ID связи занятие-ученик с фильтрацией, пагинацией и сортировкой.
         Использует оконную функцию для гарантированной синхронности данных и счетчика."""
         filters = [Lecture.lesson_student_id == lesson_student_id]
+        if actor is not None:
+            filters.append(material_scope(Lecture, actor.id, actor.role))
         if from_date:
             filters.append(Lecture.created_at >= from_date)
         if to_date:
@@ -67,9 +72,12 @@ class LecturesRepository(BaseRepository):
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
         sort_date: str = "desc",
+        actor=None,
     ) -> Tuple[List[Lecture], int]:
         """Получить все лекции студента по всем курсам (JOIN к lesson_students)"""
         filters = [LessonStudent.student_id == student_id]
+        if actor is not None:
+            filters.append(material_scope(Lecture, actor.id, actor.role))
         if from_date:
             filters.append(Lecture.created_at >= from_date)
         if to_date:

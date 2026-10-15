@@ -1,3 +1,4 @@
+from src.modules.check_permission.service import ObjectPermissionService
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from asyncpg.exceptions import UniqueViolationError
@@ -32,6 +33,7 @@ class LessonStudentsService:
         teacher_user_id: int,
         data: CreateLessonStudentRequestDTO,
     ) -> LessonStudentResponseDTO:
+        await ObjectPermissionService(self.session_db).require(teacher_user_id, "lesson", data.lesson_id, write=True)
         # Проверяем, что текущий юзер-учитель существует
         teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
         if not teacher:
@@ -48,6 +50,11 @@ class LessonStudentsService:
         student = await self.student_repo.get_student_by_user_id(data.student_user_id)
         if not student:
             raise PermissionErrorService("Student user not found")
+
+        permissions = ObjectPermissionService(self.session_db)
+        await permissions.require_link(teacher_user_id, data.student_user_id)
+        if not await permissions.repo.enrolled(lesson.course_id, data.student_user_id):
+            raise PermissionErrorService("Student must be enrolled in the course")
 
         # Проверяем существование
         existing = await self.lesson_students_repo.get_by_lesson_and_student(
@@ -80,6 +87,7 @@ class LessonStudentsService:
         lesson_id: int,
         student_user_id: int,
     ) -> LessonStudentResponseDTO:
+        await ObjectPermissionService(self.session_db).require(teacher_user_id, "lesson", lesson_id, write=True)
         # Проверяем учителя
         teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
         if not teacher:
@@ -103,10 +111,9 @@ class LessonStudentsService:
         if not existing:
             raise LessonStudentNotFound()
 
-        deleted_ls = await self.lesson_students_repo.remove_student_from_lesson(
-            lesson_id=lesson_id,
-            student_id=student.id,
-        )
+        from datetime import datetime, UTC
+        existing.access_ended_at = existing.access_ended_at or datetime.now(UTC)
+        deleted_ls = existing
         await self.session_db.commit()
 
         return LessonStudentResponseDTO.model_validate(deleted_ls)

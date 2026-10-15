@@ -30,6 +30,11 @@ async def test_enroll_student_to_course(
 
     course = await create_course_fixture(CreateCourseFixtureDTO(teacher_id=teacher_table_id))
 
+    from src.modules.teacher_students.models import TeacherStudent
+    student_pk = await session_db.scalar(select(Student.id).where(Student.user_id == student.id))
+    session_db.add(TeacherStudent(teacher_id=teacher_table_id, student_id=student_pk))
+    await session_db.commit()
+
     dto = EnrollStudentRequestDTO(student_user_id=student.id)
 
     res = await client_for_tests.post(
@@ -136,4 +141,4 @@ async def test_get_students_for_course(
     
     items = res_dto.items
     assert len(items) == 1
-    assert items[0].student_id == student_table_id
+    assert items[0].student_user_id == student.id

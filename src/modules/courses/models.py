@@ -35,6 +35,7 @@ class Course(Base, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     slug: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
+    call_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     avatar_type: Mapped[AvatarCoursesType] = mapped_column(
         Enum(

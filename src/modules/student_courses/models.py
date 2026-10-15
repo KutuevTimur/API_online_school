@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import func, Boolean, Integer, ForeignKey
+from sqlalchemy import func, Boolean, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
@@ -10,6 +10,10 @@ from src.modules.base.database_model import SoftDeleteMixin
 
 class StudentCourse(Base, SoftDeleteMixin):
     __tablename__ = "student_courses"
+    __table_args__ = (UniqueConstraint("student_id", "course_id", name="uq_student_course"),)
+
+    access_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    history_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
@@ -24,3 +28,7 @@ class StudentCourse(Base, SoftDeleteMixin):
 
     student: Mapped["Student"] = relationship("Student", back_populates="student_courses")
     course: Mapped["Course"] = relationship("Course", back_populates="student_courses")
+
+    @property
+    def student_user_id(self) -> int | None:
+        return self.student.user_id if self.student else None

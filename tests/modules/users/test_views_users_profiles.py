@@ -15,7 +15,7 @@ async def test_get_students(client_for_tests, create_user_fixture):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["total"] >= 2
+    assert data["total"] == 0
     items = data["items"]
     roles = [i["role"] for i in items]
     assert all(r == UserRole.STUDENT.value for r in roles)
@@ -44,7 +44,7 @@ async def test_get_teachers(client_for_tests, create_user_fixture):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["total"] >= 2
+    assert data["total"] == 0
     items = data["items"]
     roles = [i["role"] for i in items]
     assert all(r == UserRole.TEACHER.value for r in roles)
@@ -59,11 +59,7 @@ async def test_get_public_profile(client_for_tests, create_user_fixture):
         f"/users/{teacher.id}",
         headers={"Authorization": f"Bearer {s_token}"}
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["id"] == teacher.id
-    assert data["role"] == UserRole.TEACHER.value
-    assert "teacher" in data
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio

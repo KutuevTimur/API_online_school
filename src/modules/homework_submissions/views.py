@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
+from fastapi import APIRouter, Request, Depends, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse
 from starlette import status
 
@@ -113,20 +113,23 @@ async def get_homework_submission_file(
     summary="Update attempt as Student (Only if not CHECKED)",
 )
 async def update_homework_submission_student(
+    request: Request,
     submission_id: int,
     homework_id: int = Query(...),
     text_content: Optional[str] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
+    expected_version: int | None = Form(None, ge=1),
     current_user: UserDTO = Depends(get_current_user),
     service: HomeworkSubmissionsService = Depends(get_homework_submissions_service),
 ):
-    dto = UpdateSubmissionStudentRequestDTO(text_content=text_content)
+    form = await request.form()
+    dto = UpdateSubmissionStudentRequestDTO(**({"text_content": text_content} if "text_content" in form else {}))
     return await service.update_submission_student(
         student_user_id=current_user.id,
         homework_id=homework_id,
         submission_id=submission_id,
         update_dto=dto,
-        files=files,
+        files=files, expected_version=expected_version,
     )
 
 @router.patch(
@@ -167,3 +170,37 @@ async def delete_homework_submission(
         homework_id=homework_id,
         submission_id=submission_id,
     )
+
+
+@router.post("/submissions/{submission_id}/submit", response_model=HomeworkSubmissionResponseDTO,
+             status_code=status.HTTP_200_OK, summary="Submit the current answer (idempotent)")
+async def submit_homework_submission(
+    submission_id: int, homework_id: int = Query(...),
+    current_user: UserDTO = Depends(get_current_user),
+    service: HomeworkSubmissionsService = Depends(get_homework_submissions_service),
+):
+    return await service.submit_submission(current_user.id, homework_id, submission_id)
+
+
+@router.delete("/submissions/{submission_id}/files/{file_id}", response_model=HomeworkSubmissionResponseDTO,
+               status_code=status.HTTP_200_OK, summary="Remove one answer attachment")
+async def delete_submission_file(
+    submission_id: int, file_id: int, homework_id: int = Query(...),
+    expected_version: int | None = Query(None, ge=1),
+    current_user: UserDTO = Depends(get_current_user),
+    service: HomeworkSubmissionsService = Depends(get_homework_submissions_service),
+):
+    return await service.mutate_file(current_user.id, homework_id, submission_id, file_id,
+                                     expected_version=expected_version)
+
+
+@router.put("/submissions/{submission_id}/files/{file_id}", response_model=HomeworkSubmissionResponseDTO,
+            status_code=status.HTTP_200_OK, summary="Replace one answer attachment atomically")
+async def replace_submission_file(
+    submission_id: int, file_id: int, homework_id: int = Query(...),
+    file: UploadFile = File(...), expected_version: int | None = Form(None, ge=1),
+    current_user: UserDTO = Depends(get_current_user),
+    service: HomeworkSubmissionsService = Depends(get_homework_submissions_service),
+):
+    return await service.mutate_file(current_user.id, homework_id, submission_id, file_id, file,
+                                     expected_version=expected_version)

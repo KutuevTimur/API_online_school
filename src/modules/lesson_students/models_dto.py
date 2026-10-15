@@ -8,6 +8,7 @@ class LessonStudentDTO(ORMDTO):
     lesson_id: int
     student_id: int
     created_at: datetime
+    access_ended_at: datetime | None = None
 
 
 class LessonStudentResponseDTO(ORMDTO):
@@ -15,6 +16,7 @@ class LessonStudentResponseDTO(ORMDTO):
     lesson_id: int
     student_user_id: int
     created_at: datetime
+    access_ended_at: datetime | None = None
 
 
 class CreateLessonStudentRequestDTO(BaseModel):

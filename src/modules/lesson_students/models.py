@@ -26,6 +26,8 @@ class LessonStudent(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
+    access_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # Relationships
     lesson: Mapped["Lesson"] = relationship("Lesson", back_populates="lesson_students")
     student: Mapped["Student"] = relationship("Student", back_populates="lesson_students", lazy="selectin")

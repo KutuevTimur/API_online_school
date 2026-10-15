@@ -16,7 +16,17 @@ from src.modules.homeworks.views import router as homeworks_router
 from src.modules.homework_submissions.views import router as homework_submissions_router
 
 
+from src.modules.teacher_students.views import router as teacher_students_router
+
+
+from src.modules.account_invitations.views import router as invitations_router
+
+from src.modules.course_lifecycle.views import router as lifecycle_router
+
 def _include_routers(app: FastAPI) -> FastAPI:
+    app.include_router(lifecycle_router)
+    app.include_router(invitations_router)
+    app.include_router(teacher_students_router)
     app.include_router(auth_router)
     app.include_router(user_router)
     app.include_router(courses_router)

@@ -41,9 +41,12 @@ class CourseRepository(BaseRepository):
         offset: int = 0,
         teacher_id: Optional[int] = None,
         include_deleted: Optional[bool] = False,
+        access_scope=None,
     ) -> Tuple[List[Course], int]:
         """Находит все курсы с учетом пагинации и фильтров и возвращает кортеж (курсы, общее_кол-во)"""
         stmt = select(Course)
+        if access_scope is not None:
+            stmt = stmt.where(access_scope)
         if teacher_id is not None:
             stmt = stmt.where(Course.teacher_id == teacher_id)
         if not include_deleted:
@@ -54,7 +57,7 @@ class CourseRepository(BaseRepository):
         total_count = (await self.session.execute(count_stmt)).scalar() or 0
 
         # Получаем данные с учетом лимита
-        stmt = stmt.limit(limit).offset(offset)
+        stmt = stmt.order_by(Course.id).limit(limit).offset(offset)
         result_db = await self.session.execute(stmt)
         courses = list(result_db.scalars().all())
         return courses, total_count

@@ -1,3 +1,4 @@
+from src.modules.check_permission.service import ObjectPermissionService
 import shutil
 import uuid
 from pathlib import Path
@@ -198,6 +199,9 @@ class CoursesService:
         if not course:
             raise CourseNotFound()
             
+        if course.is_deleted:
+            from src.modules.check_permission.exception import PermissionErrorService
+            raise PermissionErrorService("Archived course is read-only")
         if course.teacher_id != teacher_id:
             raise CourseAccessDenied("You can only modify your own courses")
 
@@ -206,14 +210,17 @@ class CoursesService:
             if existing and existing.id != course_id:
                 raise CourseAlreadyExists(f"Course with slug '{data.slug}' already exists")
 
+        values = data.model_dump(exclude_unset=True)
+        # The legacy PATCH archive must preserve the same timestamp as DELETE.
+        if values.get("is_deleted") is True:
+            values["deleted_at"] = datetime.now(UTC)
+
         if data.avatar_type and data.avatar_type != AvatarCoursesType.CUSTOM:
             try:
                 self.delete_avatar(course_id=course_id)
             except CourseAvatarNotFound:
                 pass
-            data.avatar_path = None
-
-        values = data.model_dump(exclude_unset=True)
+            values["avatar_path"] = None
 
         if not values:
             return CoursesDTO.model_validate(course)
@@ -240,6 +247,9 @@ class CoursesService:
         if not course:
             raise CourseNotFound()
             
+        if course.is_deleted:
+            from src.modules.check_permission.exception import PermissionErrorService
+            raise PermissionErrorService("Archived course is read-only")
         if course.teacher_id != teacher_id:
             raise CourseAccessDenied("You can only modify your own courses")
 
@@ -271,21 +281,19 @@ class CoursesService:
     ) -> CoursesDTO:
         """Мягкое удаление"""
         course = await self.course_repo.get_course_by_id(course_id)
-        if not course or course.is_deleted:
+        if not course:
             raise CourseNotFound()
+        if course.is_deleted:
+            return CoursesDTO.model_validate(course)
             
         if course.teacher_id != teacher_id:
             raise CourseAccessDenied("You can only modify your own courses")
 
-        deleted_suffix = f"__deleted__{uuid.uuid4().hex[:8]}"
-        max_slug_len = 255 - len(deleted_suffix)
-        deleted_slug = f"{course.slug[:max_slug_len]}{deleted_suffix}"
         updated = await self.course_repo.update_course(
             course_id=course_id,
             values={
                 "is_deleted": True,
                 "deleted_at": datetime.now(UTC),
-                "slug": deleted_slug,
             },
         )
         if not updated:
@@ -300,22 +308,47 @@ class CoursesService:
         course_id: int,
         teacher_id: int,
     ) -> CoursesDTO:
-        """Полное удаление"""
-        course = await self.course_repo.get_course_by_id(course_id)
-        if not course:
-            raise CourseNotFound()
-            
-        if course.teacher_id != teacher_id:
-            raise CourseAccessDenied("You can only modify your own courses")
+        """Legacy hard delete is permanently closed; use the audited admin workflow."""
+        from src.modules.check_permission.exception import PermissionErrorService
+        raise PermissionErrorService("Purge is a separate admin workflow")
 
-        try:
-            self.delete_avatar(course_id=course_id)
-        except CourseAvatarNotFound:
-            pass
+    async def list_visible(self, actor, limit: int, offset: int, teacher_user_id: int | None = None):
+        from src.modules.check_permission.repository import course_scope
+        from src.modules.base.orm_dto import PaginationResponseDTO
+        from src.modules.courses.models_dto import CoursesResponseDTO
+        teacher_id = None
+        if teacher_user_id is not None:
+            teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
+            if teacher is None:
+                return PaginationResponseDTO(items=[], total=0, limit=limit, offset=offset)
+            teacher_id = teacher.id
+        courses, total = await self.course_repo.get_all_courses(
+            limit=limit, offset=offset, teacher_id=teacher_id, include_deleted=True,
+            access_scope=course_scope(actor.id, actor.role),
+        )
+        return PaginationResponseDTO(items=[CoursesResponseDTO.model_validate(c) for c in courses],
+                                     total=total, limit=limit, offset=offset)
 
-        deleted = await self.course_repo.delete_course(course_id=course_id)
-        if not deleted:
-            raise CourseNotFound()
+    async def detail_visible(self, actor, course_id: int):
+        await ObjectPermissionService(self.session_db).require(actor.id, "course", course_id)
+        return await self.get_course_by_id(course_id)
 
-        await self.session_db.commit()
-        return CoursesDTO.model_validate(deleted)
+    async def owner_profile(self, actor, course_id: int | None = None):
+        from src.modules.check_permission.exception import PermissionErrorService
+        from src.modules.users.models import UserRole
+        if course_id is not None:
+            await ObjectPermissionService(self.session_db).require(actor.id, "course", course_id, write=True)
+        if actor.role != UserRole.TEACHER:
+            raise PermissionErrorService()
+        teacher = await self.teacher_repo.get_teacher_by_user_id(actor.id)
+        if teacher is None:
+            raise PermissionErrorService()
+        return teacher
+
+    async def avatar_file(self, actor, course_id: int) -> Path:
+        from src.modules.base.exception import NotFoundData
+        await self.detail_visible(actor, course_id)
+        path = self.path_builder.get_avatar_course(course_id)
+        if not path.is_file():
+            raise NotFoundData()
+        return path

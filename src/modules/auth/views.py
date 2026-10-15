@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
 
-from src.core.config import Config
 from src.modules.auth.auth_service import AuthService
 from src.modules.auth.depends import get_auth_service, get_token_service, get_current_user
 from src.modules.auth.models_dto import (
@@ -13,78 +12,74 @@ from src.modules.auth.models_dto import (
     ChangePasswordRequestDTO,
 )
 from src.modules.auth.token_service import TokenService
-from src.modules.check_permission import (
-    StudentPermissionService,
-    get_current_teacher_user,
-    get_current_user_with_target_permission,
-)
-from src.modules.depends import get_config
+from src.modules.check_permission.depends import get_account_creator, get_current_admin_user
 from src.modules.users.depends import get_user_service
-from src.modules.users.models_dto import UserDTO, RegisterUserRequestDTO, RegisterUserByAdminRequestDTO
+from src.modules.users.models_dto import UserDTO, UserResponse, RegisterUserRequestDTO, RegisterUserByAdminRequestDTO
 from src.modules.users.service import UsersService
+
+from src.modules.account_invitations.models_dto import InvitationUserResponse
+from src.modules.account_invitations.rate_limit import check_rate_limit
+from src.modules.check_permission.exception import PermissionErrorService
 
 router = APIRouter(prefix="/auth",  tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserDTO, status_code=status.HTTP_200_OK)
+@router.post("/register", response_model=InvitationUserResponse, status_code=status.HTTP_200_OK)
 async def register_user(
     data: RegisterUserRequestDTO,
-    current_user: UserDTO = Depends(get_current_teacher_user),
+    current_user: UserDTO = Depends(get_account_creator),
     user_service: UsersService = Depends(get_user_service),
 ):
     """
     :raises UserAlreadyExists: 409 Если email занят
     :raises PermissionErrorService: 403 Если создаёт нового пользователя не учитель
     """
-    return await user_service.create_user(new_user=data)
+    return await user_service.create_user(new_user=data, actor=current_user)
 
 
-@router.post("/register_by_admin", response_model=UserDTO, status_code=status.HTTP_200_OK)
-@router.post("/register-by-admin", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.post("/register_by_admin", response_model=InvitationUserResponse, status_code=status.HTTP_200_OK)
+@router.post("/register-by-admin", response_model=InvitationUserResponse, status_code=status.HTTP_200_OK, include_in_schema=False)
 async def register_user_by_admin(
     data: RegisterUserByAdminRequestDTO,
-    config: Config = Depends(get_config),
+    current_user: UserDTO = Depends(get_current_admin_user),
     user_service: UsersService = Depends(get_user_service),
 ):
-    """
-    Регистрация нового пользователя по мастер-паролю администратора (без требования токена current_user).
-    :raises PermissionErrorService: 403 Если password_for_admin неверный
-    :raises UserAlreadyExists: 409 Если email занят
-    """
-    StudentPermissionService.check_admin_password(
-        provided_password=data.password_for_admin,
-        expected_password=config.env.password_for_admin,
-    )
-
-    return await user_service.create_user(new_user=data)
+    """Legacy alias: authenticated ADMIN only; master password grants no access."""
+    return await user_service.create_user(new_user=data, actor=current_user)
 
 
-@router.post("/change_password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK)
-@router.post("/change-password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
-@router.patch("/change_password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
-@router.patch("/change-password/{user_id}", response_model=UserDTO, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.post("/change_password/{user_id}", response_model=UserResponse, status_code=status.HTTP_200_OK)
+@router.post("/change-password/{user_id}", response_model=UserResponse, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.patch("/change_password/{user_id}", response_model=UserResponse, status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.patch("/change-password/{user_id}", response_model=UserResponse, status_code=status.HTTP_200_OK, include_in_schema=False)
 async def change_password(
+    request: Request,
     user_id: int,
     data: ChangePasswordRequestDTO,
-    current_user: UserDTO = Depends(get_current_user_with_target_permission),
+    current_user: UserDTO = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """
-    Смена пароля пользователя.
-    :raises PermissionErrorService: 403 Если нет прав (не сам пользователь и не учитель)
-    :raises NotFoundData: 404 Если пользователь не найден
+    Смена собственного пароля с проверкой текущего.
+    Чужой пароль, включая admin/teacher запрос, меняется только через reset-ссылку.
     """
+    if current_user.id != user_id:
+        raise PermissionErrorService()
+    await check_rate_limit(request, "password", str(user_id))
     return await auth_service.change_password(
         user_id=user_id,
         new_password=data.new_password,
+        current_password=data.current_password,
     )
 
 
 @router.post('/login', response_model=TokenResponse)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     auth_service: AuthService = Depends(get_auth_service)
 ):
+    await check_rate_limit(request, "login", form_data.username)
     return await auth_service.login(
         username=form_data.username,
         password=form_data.password
@@ -105,5 +100,5 @@ async def logout(
     current_user: UserDTO = Depends(get_current_user),
     token_service: TokenService = Depends(get_token_service)
 ):
-    """Удаляет refresh токен только который передаётся"""
-    return await token_service.logout(token.refresh_token)
+    """Отзывает своё семейство сессии; повторный вызов возвращает 200."""
+    return await token_service.logout(token.refresh_token, current_user.id)

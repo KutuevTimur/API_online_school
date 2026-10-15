@@ -1,3 +1,4 @@
+from src.modules.check_permission.service import ObjectPermissionService
 from typing import List, Tuple, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -89,6 +90,8 @@ class StudentCoursesService:
         :raises StudentNotFound:
         :raises EnrollmentExistsException:
         """
+        await ObjectPermissionService(self.session_db).require(teacher_user_id, "course", course_id, write=True)
+        await ObjectPermissionService(self.session_db).require_link(teacher_user_id, data.student_user_id)
         existing, student = await self.cheek_student_course(
             course_id=course_id,
             student_user_id=data.student_user_id,
@@ -96,10 +99,20 @@ class StudentCoursesService:
         )
 
         if existing:
-            if not existing.is_deleted:
+            from datetime import datetime, UTC
+            from src.modules.course_lifecycle.models import EnrollmentGap
+            now = datetime.now(UTC)
+            ended = [d for d in (existing.access_ended_at, existing.deleted_at,
+                                existing.expires_at) if d is not None and d <= now]
+            if not existing.is_deleted and not ended:
                 raise EnrollmentExistsException()
             else:
+                if ended:
+                    self.session_db.add(EnrollmentGap(enrollment_id=existing.id,
+                                                     started_at=min(ended), ended_at=now))
                 existing.restore()
+                existing.access_ended_at = None
+                existing.expires_at = None
                 await self.session_db.commit()
                 await self.session_db.refresh(existing)
                 return StudentCourseResponseDTO.model_validate(existing)
@@ -132,6 +145,8 @@ class StudentCoursesService:
             deletion_check=True,
         )
 
+        from datetime import datetime, UTC
+        existing.access_ended_at = existing.access_ended_at or datetime.now(UTC)
         existing.soft_delete()
         await self.session_db.commit()
 
@@ -149,6 +164,7 @@ class StudentCoursesService:
         :raises EnrollmentNotFoundException:
         """
 
+        await ObjectPermissionService(self.session_db).require(teacher_user_id, "course", course_id, write=True)
         existing, student = await self.cheek_student_course(
             course_id=course_id,
             student_user_id=student_user_id,
@@ -156,6 +172,8 @@ class StudentCoursesService:
             deletion_check=True,
         )
 
+        from datetime import datetime, UTC
+        existing.access_ended_at = existing.access_ended_at or datetime.now(UTC)
         existing.soft_delete()
         await self.session_db.commit()
 
@@ -171,12 +189,15 @@ class StudentCoursesService:
         :raises CourseNotFound:
         :raises CourseAccessDeniedException:
         """
+        await ObjectPermissionService(self.session_db).require(teacher_user_id, "course", course_id)
         course = await self.course_repo.get_course_by_id(course_id)
         if not course:
             raise CourseNotFound()
             
         teacher_pk = course.teacher.user_id if course.teacher else None
-        if teacher_pk != teacher_user_id:
+        actor = await ObjectPermissionService(self.session_db).actor(teacher_user_id)
+        from src.modules.users.models import UserRole
+        if actor.role != UserRole.ADMIN and teacher_pk != teacher_user_id:
             raise CourseAccessDeniedException()
 
         total, records = await self.student_courses_repo.get_students_for_course(

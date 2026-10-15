@@ -1,7 +1,11 @@
+from src.modules.check_permission.service import ObjectPermissionService
 import shutil
 import uuid
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.modules.account_invitations.models_dto import InvitationUserResponse
 
 from fastapi import UploadFile
 from passlib.context import CryptContext
@@ -28,6 +32,7 @@ from src.modules.users.models_dto import (
     PublicProfileResponseDTO,
 )
 from src.modules.users.repository import UsersRepository
+from src.modules.refresh_tokens.repository import RefreshTokenRepository
 
 
 class UsersService:
@@ -107,8 +112,8 @@ class UsersService:
         """
         return self.cr_context.verify(plain_password, hashed_password)
 
-    async def get_user_by_username_or_email(self, username_or_email: str) -> UserDTO | None:
-        result = await self.users_repo.get_user_by_username_or_email(username_or_email)
+    async def get_user_by_username(self, username: str) -> UserDTO | None:
+        result = await self.users_repo.get_user_by_username(username)
         return UserDTO.model_validate(result) if result else None
 
     async def get_user_by_id(self, user_id: int) -> UserDTO | None:
@@ -122,16 +127,28 @@ class UsersService:
     async def create_user(
         self,
         new_user: RegisterUserRequestDTO,
-    ) -> UserDTO:
+        actor: UserDTO,
+    ) -> "InvitationUserResponse":
         """
         Создает нового пользователя (учителя или ученика).
         :raises UserAlreadyExit: Если пользователь с таким email/username уже существует.
         :raises InvalidRole: Если роль недопустима.
         """
-        if await self.get_user_by_username_or_email(new_user.email):
+        from src.modules.check_permission.exception import PermissionErrorService
+        from src.modules.teacher_students.repository import TeacherStudentRepository
+        if actor.role not in {UserRole.ADMIN, UserRole.TEACHER} or new_user.role == UserRole.ADMIN:
+            raise PermissionErrorService()
+        if actor.role == UserRole.TEACHER and new_user.role != UserRole.STUDENT:
+            raise PermissionErrorService()
+        teacher = None
+        if actor.role == UserRole.TEACHER:
+            teacher = await self.teacher_repo.get_teacher_by_user_id(actor.id)
+            if teacher is None:
+                raise PermissionErrorService()
+        if new_user.email and await self.get_user_by_email(new_user.email):
             raise UserAlreadyExit()
 
-        hashed_password = self._get_hash_password(new_user.password)
+        hashed_password = self._get_hash_password(uuid.uuid4().hex)
 
         try:
             user_orm = await self.users_repo.add_user(
@@ -140,6 +157,7 @@ class UsersService:
                     username=new_user.username,
                     hashed_password=hashed_password,
                     role=new_user.role,
+                    is_activated=False,
                 )
             )
 
@@ -156,7 +174,7 @@ class UsersService:
                     )
                 )
             elif new_user.role == UserRole.STUDENT:
-                await self.student_repo.add_student(
+                student = await self.student_repo.add_student(
                     CreateStudentDTO(
                         user_id=user_orm.id,
                         first_name=new_user.first_name,
@@ -167,19 +185,30 @@ class UsersService:
             else:
                 raise InvalidRole()
 
+            if teacher is not None:
+                await self.session_db.flush()
+                await TeacherStudentRepository(self.session_db).link(teacher.id, student.id)
+            from src.modules.account_invitations.service import InvitationService
+            invitation = await InvitationService(self).stage_issue(user_orm, "invite", actor)
             await self.session_db.commit()
         except Exception as e:
+            await self.session_db.rollback()
             if 'email' in str(e).lower() or 'duplicate key' in str(e).lower():
                 raise UserAlreadyExit()
             else:
                 raise
 
-        return UserDTO.model_validate(user_orm)
+        from src.modules.account_invitations.models_dto import InvitationUserResponse
+        from src.modules.users.models_dto import UserResponse
+        return InvitationUserResponse(
+            **UserResponse.model_validate(user_orm).model_dump(), **invitation.model_dump()
+        )
 
     async def update_avatar(
         self,
         user_id: int,
         avatar: UploadFile,
+        actor: UserDTO,
     ) -> UserAvatarResponseDTO:
         """
         Обновляет аватарку пользователя.
@@ -192,6 +221,7 @@ class UsersService:
         :raises ImageConversionError: При ошибке конвертации
         :raises ImageCompressionError: При ошибке сжатия
         """
+        await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id, write=True)
         user = await self.users_repo.get_user_by_id(user_id)
         if not user:
             raise NotFoundData()
@@ -203,6 +233,7 @@ class UsersService:
 
         avatar_path = await self._create_avatar(user_id=user_id, avatar=avatar)
 
+        await self._audit_profile(actor, user_id, "avatar_update")
         if user.role == UserRole.TEACHER:
             await self.teacher_service.update_teacher_by_user_id(
                 user_id=user_id,
@@ -226,6 +257,7 @@ class UsersService:
         self,
         user_id: int,
         data: UpdateUserDataRequestDTO,
+        actor: UserDTO,
     ) -> TeachersDTO | StudentsDTO:
         """
         Обновляет данные профиля пользователя (учителя или ученика) и аккаунта по user_id.
@@ -236,13 +268,15 @@ class UsersService:
         :raises UserAlreadyExit: Если email или username уже заняты другим пользователем
         :raises InvalidRole: Если роль пользователя неизвестна
         """
+        await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id, write=True)
         user = await self.users_repo.get_user_by_id(user_id)
         if not user:
             raise NotFoundData()
 
         # Обновление данных аккаунта (таблица User)
         user_account_dto = data.to_user_account_dto()
-        user_values = user_account_dto.model_dump(exclude_unset=True, exclude_none=True)
+        user_values = {k: v for k, v in user_account_dto.model_dump(exclude_unset=True).items()
+                       if v is not None or k == "email"}
 
         if user_values:
             if user_account_dto.email:
@@ -250,7 +284,7 @@ class UsersService:
                 if existing_by_email and existing_by_email.id != user_id:
                     raise UserAlreadyExit()
             if user_account_dto.username:
-                existing_by_username = await self.users_repo.get_user_by_username_or_email(user_account_dto.username)
+                existing_by_username = await self.users_repo.get_user_by_username(user_account_dto.username)
                 if existing_by_username and existing_by_username.id != user_id:
                     raise UserAlreadyExit()
 
@@ -270,6 +304,7 @@ class UsersService:
 
             if not teacher:
                 raise NotFoundData()
+            await self._audit_profile(actor, user_id, "profile_update")
             await self.session_db.commit()
             await self.session_db.refresh(teacher)
             return TeachersDTO.model_validate(teacher)
@@ -287,6 +322,7 @@ class UsersService:
 
             if not student:
                 raise NotFoundData()
+            await self._audit_profile(actor, user_id, "profile_update")
             await self.session_db.commit()
             await self.session_db.refresh(student)
             return StudentsDTO.model_validate(student)
@@ -298,6 +334,7 @@ class UsersService:
         self,
         user_id: int,
         new_password: str,
+        current_password: str | None = None,
     ) -> UserDTO:
         """
         Изменяет пароль пользователя по user_id.
@@ -306,49 +343,107 @@ class UsersService:
         :return: UserDTO обновленного пользователя
         :raises NotFoundData: Если пользователь не найден
         """
+        try:
+            user = await self.users_repo.lock_user(user_id)
+            if not user:
+                raise NotFoundData()
+
+            from src.modules.auth.exception import InvalidCredentials, require_active_user
+            require_active_user(user)
+            if current_password is None or not self.verify_password(current_password, user.hashed_password):
+                raise InvalidCredentials()
+            hashed_password = self._get_hash_password(new_password)
+            updated_user = await self.users_repo.update_user(
+                user_id=user_id,
+                values={"hashed_password": hashed_password, "auth_version": user.auth_version + 1},
+            )
+            if not updated_user:
+                raise NotFoundData()
+
+            await RefreshTokenRepository(self.session_db).revoke_user(user_id)
+            from src.modules.account_invitations.repository import InvitationRepository
+            await InvitationRepository(self.session_db).invalidate(user_id, "reset")
+            await self.session_db.commit()
+            await self.session_db.refresh(updated_user)
+            return UserDTO.model_validate(updated_user)
+        except Exception:
+            await self.session_db.rollback()
+            raise
+
+    async def _audit_profile(self, actor: UserDTO, target_id: int, action: str) -> None:
+        if actor.role == UserRole.ADMIN:
+            from src.modules.account_invitations.models import AccountAudit
+            self.session_db.add(AccountAudit(actor_user_id=actor.id, target_user_id=target_id,
+                                            action=action, correlation_id=uuid.uuid4().hex))
+
+    def _profile_response(self, user, actor):
+        from src.modules.users.models_dto import MinimalProfileResponseDTO
+        if actor.role == UserRole.ADMIN or actor.id == user.id:
+            return PublicProfileResponseDTO.model_validate(user)
+        profile = user.student if user.role == UserRole.STUDENT else user.teacher
+        if profile is None:
+            raise NotFoundData()
+        return MinimalProfileResponseDTO(user_id=user.id, username=user.username,
+            first_name=profile.first_name, last_name=profile.last_name,
+            avatar_path=f"/users/{user.id}/avatar" if profile.avatar_path else None)
+
+    async def get_students(self, actor: UserDTO, limit: int = 100, offset: int = 0):
+        from src.modules.check_permission.exception import PermissionErrorService
+        if actor.role not in {UserRole.ADMIN, UserRole.TEACHER}:
+            raise PermissionErrorService()
+        return await self._list_profiles(actor, UserRole.STUDENT, limit, offset)
+
+    async def get_teachers(self, actor: UserDTO, limit: int = 100, offset: int = 0):
+        return await self._list_profiles(actor, UserRole.TEACHER, limit, offset)
+
+    async def _list_profiles(self, actor, role, limit, offset):
+        from src.modules.check_permission.repository import profile_scope
+        total, users = await self.users_repo.get_users_by_role(
+            role, limit, offset, access_scope=profile_scope(actor.id, actor.role))
+        return total, [self._profile_response(user, actor) for user in users]
+
+    async def get_public_profile(self, user_id: int, actor: UserDTO):
+        await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id)
         user = await self.users_repo.get_user_by_id(user_id)
         if not user:
             raise NotFoundData()
+        return self._profile_response(user, actor)
 
-        hashed_password = self._get_hash_password(new_password)
-        updated_user = await self.users_repo.update_user(
-            user_id=user_id,
-            values={"hashed_password": hashed_password},
-        )
-        if not updated_user:
+    async def avatar_file(self, actor: UserDTO, user_id: int) -> Path:
+        await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id)
+        path = self.path_builder.get_avatar_user(user_id)
+        if not path.is_file():
             raise NotFoundData()
+        return path
 
+    async def remove_avatar(self, actor: UserDTO, user_id: int) -> None:
+        await ObjectPermissionService(self.session_db).require(actor.id, "profile", user_id, write=True)
+        # Remove the pointer before removing the file so responses cannot expose stale paths.
+        user = await self.users_repo.get_user_by_id(user_id)
+        if user.role == UserRole.STUDENT:
+            await self.student_repo.update_student_by_user_id(user_id, {"avatar_path": None})
+        elif user.role == UserRole.TEACHER:
+            await self.teacher_repo.update_teacher_by_user_id(user_id, {"avatar_path": None})
+        else:
+            raise InvalidRole()
+        await self._audit_profile(actor, user_id, "avatar_delete")
         await self.session_db.commit()
-        await self.session_db.refresh(updated_user)
-        return UserDTO.model_validate(updated_user)
+        self.delete_avatar(user_id)
 
-    async def get_students(
-        self,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> Tuple[int, List[PublicProfileResponseDTO]]:
-        """Получить список всех студентов."""
-        total, students = await self.users_repo.get_users_by_role(
-            role=UserRole.STUDENT, limit=limit, offset=offset
-        )
-        return total, [PublicProfileResponseDTO.model_validate(user) for user in students]
-
-    async def get_teachers(
-        self,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> Tuple[int, List[PublicProfileResponseDTO]]:
-        """Получить список всех учителей."""
-        total, teachers = await self.users_repo.get_users_by_role(
-            role=UserRole.TEACHER, limit=limit, offset=offset
-        )
-        return total, [PublicProfileResponseDTO.model_validate(user) for user in teachers]
-
-    async def get_public_profile(self, user_id: int) -> PublicProfileResponseDTO:
-        """Получение публичного профиля по ID"""
-        user = await self.users_repo.get_user_by_id(user_id)
-        if not user:
+    async def update_account_status(self, actor: UserDTO, user_id: int, is_active: bool):
+        from src.modules.check_permission.exception import PermissionErrorService
+        from src.modules.users.models_dto import UserResponse
+        if actor.role != UserRole.ADMIN:
+            raise PermissionErrorService()
+        user = await self.users_repo.lock_user(user_id)
+        if user is None:
             raise NotFoundData()
-
-        return PublicProfileResponseDTO.model_validate(user)
-
+        try:
+            await self.users_repo.update_user(user_id, {"is_active": is_active, "auth_version": user.auth_version + 1})
+            await RefreshTokenRepository(self.session_db).revoke_user(user_id)
+            await self._audit_profile(actor, user_id, "account_status")
+            await self.session_db.commit()
+            return UserResponse.model_validate(user)
+        except Exception:
+            await self.session_db.rollback()
+            raise
