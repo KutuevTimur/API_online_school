@@ -1,0 +1,587 @@
+.header {
+  background: var(--lgg-surface);
+  border-bottom: 1px solid var(--lgg-border);
+}
+.headerInner {
+  max-width: 1192px;
+  margin: auto;
+  padding: 20px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.logo {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+  color: var(--lgg-ink);
+  text-decoration: none;
+  min-height: 44px;
+}
+.logo svg {
+  color: var(--lgg-success);
+}
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.nav a,
+.mobile a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--lgg-muted);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
+.nav a[aria-current],
+.mobile a[aria-current] {
+  background: var(--lgg-lesson);
+  color: var(--lgg-ink);
+}
+.nav a:hover,
+.mobile a:hover {
+  background: var(--lgg-canvas);
+  color: var(--lgg-ink);
+}
+.main {
+  max-width: 1192px;
+  margin: auto;
+  padding: 36px;
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .teacherScheduleMain {
+    max-width: 1440px;
+    padding: 24px;
+  }
+}
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  transform: translateY(-200%);
+  z-index: 500;
+  background: var(--lgg-surface);
+  padding: 12px;
+}
+.skip:focus {
+  transform: none;
+}
+.mobile {
+  display: none;
+}
+.panel {
+  border-radius: 16px;
+  padding: 28px;
+  background: var(--lgg-surface);
+  border: 1px solid var(--lgg-border);
+  min-width: 0;
+}
+.lesson {
+  border: 0;
+  background: var(--lgg-lesson);
+}
+.mint {
+  border: 0;
+  background: var(--lgg-mint);
+}
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.stack {
+  display: grid;
+  gap: 20px;
+}
+.muted {
+  color: var(--lgg-muted);
+}
+.login {
+  display: grid;
+  gap: 20px;
+  max-width: 720px;
+  margin: 6vh auto;
+}
+.login .panel {
+  padding: 40px;
+}
+.login h1 {
+  max-width: 17ch;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.state {
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+}
+.state p {
+  margin: 0;
+}
+.error {
+  color: var(--lgg-danger);
+}
+.badge {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 650;
+  border-radius: 6px;
+  padding: 5px 9px;
+  color: var(--lgg-ink);
+  background: var(--lgg-lesson);
+}
+.badge[data-tone='success'] {
+  color: var(--lgg-success);
+  background: var(--lgg-successSurface);
+}
+.badge[data-tone='error'] {
+  color: var(--lgg-danger);
+  background: var(--lgg-surface);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.table th,
+.table td {
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--lgg-border);
+  overflow-wrap: anywhere;
+}
+.mobileList {
+  display: none;
+}
+@media (max-width: 767px) {
+  .headerInner {
+    padding: 16px 20px;
+  }
+  .main {
+    padding: 28px 20px 112px;
+  }
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .panel {
+    padding: 24px;
+  }
+  .login {
+    margin: 12px auto;
+  }
+  .login .panel {
+    padding: 28px 24px;
+  }
+  .mobile a {
+    padding: 8px 4px;
+    font-size: 14px;
+  }
+  .table {
+    display: none;
+  }
+  .mobileList {
+    display: grid;
+    gap: 16px;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+}
+.account a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.adminMenu {
+  display: none;
+}
+.drawerNav {
+  display: grid;
+  gap: 12px;
+}
+.drawerNav a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px;
+}
+
+.technical {
+  border-top: 1px solid var(--lgg-border);
+  margin-top: 40px;
+  padding-top: 24px;
+}
+.technical summary {
+  cursor: pointer;
+  min-height: 44px;
+  color: var(--lgg-muted);
+  font-weight: 650;
+  padding: 8px 0;
+}
+.technical[open] summary {
+  margin-bottom: 24px;
+}
+
+.previewAccount {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.previewAccount a {
+  display: flex;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--lgg-muted);
+  text-decoration: none;
+  border-radius: 50%;
+}
+.previewAvatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--lgg-mint);
+  color: var(--lgg-success);
+  font-weight: 750;
+}
+@media (max-width: 767px) {
+  .previewAccount a:first-child {
+    display: flex;
+  }
+}
+
+.linkList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  background: var(--lgg-surface);
+  border: 1px solid var(--lgg-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.linkList li + li {
+  border-top: 1px solid var(--lgg-border);
+}
+.linkList a {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  color: var(--lgg-ink);
+  text-decoration: none;
+  min-height: 88px;
+}
+.linkList a:hover {
+  background: var(--lgg-canvas);
+}
+.linkList a:focus-visible {
+  outline-offset: -4px;
+}
+@media (max-width: 767px) {
+  .linkList a {
+    padding: 18px 16px;
+    gap: 12px;
+  }
+}
+
+.weekNavigation {
+  margin-block: 20px;
+}
+.weekNavigation button {
+  height: auto;
+  min-height: 52px;
+  padding: 8px;
+}
+.weekNavigation :global(.mantine-Button-label) {
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.linkList[data-variant='review'] {
+  border: 0;
+  border-radius: 0;
+}
+.linkList[data-variant='review'] a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  padding: 20px 0;
+}
+.linkList[data-variant='review'] a > :not(:last-child) {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+}
+.linkList[data-variant='review'] a > :last-child {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  align-self: start;
+}
+@media (max-width: 420px) {
+  .linkList[data-variant='review'] a {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .linkList[data-variant='review'] a > :last-child {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+  }
+}
+
+.weekNavigation :global(.mantine-Button-label) {
+  overflow: visible;
+  height: auto;
+  text-wrap: balance;
+}
+@media (max-width: 600px) {
+  .weekNavigation button {
+    font-size: 14px;
+    padding-inline: 4px;
+    min-height: 60px;
+  }
+}
+
+/* Account action stays secondary to the current learning task. */
+.sessionActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--lgg-border);
+}
+.mobile button[data-active] {
+  background: var(--lgg-lesson);
+  color: var(--lgg-ink);
+}
+.account a[aria-current] {
+  font-weight: 750;
+  color: var(--lgg-ink);
+  text-decoration-thickness: 2px;
+}
+
+/* Compact navigation before the header breaks into competing rows. */
+@media (max-width: 1023px) {
+  .nav {
+    display: none;
+  }
+  .main {
+    padding-bottom: 112px;
+  }
+  .mobile {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    justify-content: space-around;
+    background: var(--lgg-surface);
+    border-top: 1px solid var(--lgg-border);
+    padding: 8px 4px max(8px, env(safe-area-inset-bottom));
+    gap: 2px;
+  }
+  .adminMenu {
+    display: block;
+  }
+  .account a:first-child {
+    display: none;
+  }
+}
+
+.studentAnswerBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--lgg-controlBorder);
+  border-radius: 6px;
+  background: var(--lgg-surface);
+  color: var(--lgg-ink);
+  font-size: 14px;
+  font-weight: 650;
+}
+.studentAnswerBadge[data-state='submitted'] {
+  background: var(--lgg-lesson);
+}
+.studentAnswerBadge[data-state='checked'] {
+  background: var(--lgg-mint);
+  border-color: var(--lgg-success);
+  color: var(--lgg-success);
+}
+
+/* Shared approved student/teacher navigation; admin keeps its original shell. */
+:is(.studentShell, .teacherShell) {
+  min-height: 100dvh;
+  background: var(--lgg-studentCanvas);
+}
+:is(.studentShell, .teacherShell) .header,
+:is(.studentShell, .teacherShell) .mobile {
+  background: var(--lgg-studentHeader);
+}
+:is(.studentShell, .teacherShell) .nav a {
+  gap: 6px;
+  color: var(--lgg-ink);
+  padding-inline: 10px;
+}
+:is(.studentShell, .teacherShell) .account a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--lgg-ink);
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+:is(.studentShell, .teacherShell) .nav a:hover,
+:is(.studentShell, .teacherShell) .account a:hover,
+:is(.studentShell, .teacherShell) .mobile a:hover {
+  background: var(--lgg-studentHover);
+  color: var(--lgg-ink);
+}
+:is(.studentShell, .teacherShell) .nav a[aria-current],
+:is(.studentShell, .teacherShell) .nav a[aria-current]:hover,
+:is(.studentShell, .teacherShell) .mobile a[aria-current],
+:is(.studentShell, .teacherShell) .mobile a[aria-current]:hover {
+  background: var(--lgg-lesson);
+  color: var(--lgg-ink);
+}
+:is(.studentShell, .teacherShell) svg {
+  flex-shrink: 0;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+:is(.studentShell, .teacherShell) .noticeLink {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+}
+@media (max-width: 1023px) {
+  :is(.studentShell, .teacherShell) .header {
+    background: var(--lgg-surface);
+    border-bottom: 1px solid var(--lgg-border);
+  }
+  :is(.studentShell, .teacherShell) .headerInner {
+    min-height: 47px;
+    padding: 1px 16px;
+    gap: 12px;
+  }
+  :is(.studentShell, .teacherShell) .logo {
+    font-size: 22px;
+  }
+  :is(.studentShell, .teacherShell) .logo svg {
+    width: 20px;
+    height: 20px;
+  }
+  :is(.studentShell, .teacherShell) .account .noticeLink {
+    display: inline-flex;
+  }
+  :is(.studentShell, .teacherShell) .account .profileLink {
+    display: none;
+  }
+  :is(.studentShell, .teacherShell) .main {
+    padding-top: 20px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+  :is(.studentShell, .teacherShell) .main :focus {
+    scroll-margin-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+  :is(.studentShell, .teacherShell) .mobile {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 2px 4px max(2px, env(safe-area-inset-bottom));
+  }
+  :is(.studentShell, .teacherShell) .mobile a,
+  :is(.studentShell, .teacherShell) .mobile > button {
+    min-width: 0;
+    min-height: 44px;
+    height: auto;
+    padding: 2px;
+    color: var(--lgg-ink);
+    font-size: 14px;
+    line-height: 18px;
+  }
+  :is(.studentShell, .teacherShell) .mobile a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+  :is(.studentShell, .teacherShell) .mobile [role='menuitem'] {
+    min-height: 44px;
+    padding: 8px 12px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0;
+    color: var(--lgg-ink);
+  }
+  :is(.studentShell, .teacherShell) .mobile :global(.mantine-Button-inner) {
+    height: auto;
+  }
+  :is(.studentShell, .teacherShell) .mobile :global(.mantine-Button-label) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    height: auto;
+    line-height: 18px;
+    overflow: visible;
+  }
+}
+
+.brandGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.pageBack:global(.mantine-Button-root) {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--lgg-ink);
+}
+.pageBack:global(.mantine-Button-root):hover:not(:disabled) {
+  background: var(--lgg-lesson);
+}
+.pageBack:global(.mantine-Button-root):disabled {
+  color: var(--lgg-muted);
+  background: transparent;
+  opacity: 0.5;
+}

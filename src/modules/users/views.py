@@ -1,3 +1,4 @@
+from typing import Literal
 from src.modules.storage.download import private_download
 from fastapi import APIRouter, Depends, UploadFile, File, Response, Query, Request
 from starlette import status
@@ -12,18 +13,24 @@ from src.modules.users.depends import get_user_service
 from src.modules.users.models_dto import UserAvatarResponseDTO, MinimalProfileResponseDTO, AdminAccountStatusRequestDTO, UserResponse, UserDTO, UpdateUserDataRequestDTO, PublicProfileResponseDTO
 from src.modules.users.service import UsersService
 
+from src.modules.users.models_dto import StudentSort, TeacherStudentProfileResponseDTO
+
 router = APIRouter(prefix="/users",  tags=["User"])
 
 
-@router.get("/students", response_model=PaginationResponseDTO[PublicProfileResponseDTO | MinimalProfileResponseDTO], status_code=status.HTTP_200_OK)
+@router.get("/students", response_model=PaginationResponseDTO[PublicProfileResponseDTO | TeacherStudentProfileResponseDTO | MinimalProfileResponseDTO], status_code=status.HTTP_200_OK)
 async def get_students(
+    sort: StudentSort = Query(StudentSort.RECENT),
+    attention: Literal["homework", "lecture"] | None = Query(None),
+    school_grade: int | None = Query(None, ge=1, le=11),
+    q: str | None = Query(None, min_length=1, max_length=100),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     current_user: UserDTO = Depends(get_current_user),
     user_service: UsersService = Depends(get_user_service),
 ):
-    total, items = await user_service.get_students(actor=current_user, limit=limit, offset=offset)
-    return PaginationResponseDTO[PublicProfileResponseDTO | MinimalProfileResponseDTO](
+    total, items = await user_service.get_students(actor=current_user, limit=limit, offset=offset, q=q, school_grade=school_grade, sort=sort, attention=attention)
+    return PaginationResponseDTO[PublicProfileResponseDTO | TeacherStudentProfileResponseDTO | MinimalProfileResponseDTO](
         items=items,
         total=total,
         limit=limit,
@@ -108,3 +115,12 @@ async def update_account_status(
     service: UsersService = Depends(get_user_service),
 ):
     return await service.update_account_status(current_user, user_id, data.is_active)
+
+
+from src.modules.users.models_dto import UpdateSchoolGradeRequestDTO
+
+@router.patch("/{user_id}/school-grade", response_model=PublicProfileResponseDTO | MinimalProfileResponseDTO, status_code=200)
+async def update_school_grade(user_id: int, data: UpdateSchoolGradeRequestDTO,
+    actor: UserDTO = Depends(get_current_user),
+    service: UsersService = Depends(get_user_service)):
+    return await service.update_school_grade(actor, user_id, data)

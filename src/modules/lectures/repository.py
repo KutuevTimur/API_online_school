@@ -19,6 +19,10 @@ class LecturesRepository(BaseRepository):
             model=Lecture,
         )
 
+    async def lock_recipient_and_count(self, recipient_id: int) -> int:
+        await self.session.scalar(select(LessonStudent.id).where(LessonStudent.id == recipient_id).with_for_update())
+        return await self.session.scalar(select(func.count()).select_from(Lecture).where(Lecture.lesson_student_id == recipient_id)) or 0
+
     async def add_lecture(
         self,
         data: CreateLectureRequestDTO,
@@ -56,9 +60,9 @@ class LecturesRepository(BaseRepository):
         stmt = select(Lecture).where(conditions)
 
         if sort_date.lower() == "asc":
-            stmt = stmt.order_by(Lecture.created_at.asc())
+            stmt = stmt.order_by(Lecture.created_at.asc(), Lecture.id.asc())
         else:
-            stmt = stmt.order_by(Lecture.created_at.desc())
+            stmt = stmt.order_by(Lecture.created_at.desc(), Lecture.id.desc())
 
         stmt = stmt.limit(limit).offset(offset)
         result = await self.session.execute(stmt)
@@ -73,6 +77,8 @@ class LecturesRepository(BaseRepository):
         to_date: Optional[datetime] = None,
         sort_date: str = "desc",
         actor=None,
+        course_id: int | None = None,
+        view=None,
     ) -> Tuple[List[Lecture], int]:
         """Получить все лекции студента по всем курсам (JOIN к lesson_students)"""
         filters = [LessonStudent.student_id == student_id]
@@ -83,30 +89,18 @@ class LecturesRepository(BaseRepository):
         if to_date:
             filters.append(Lecture.created_at <= to_date)
             
-        conditions = and_(*filters) if filters else True
-        
-        count_stmt = (
-            select(func.count())
-            .select_from(Lecture)
-            .join(LessonStudent, Lecture.lesson_student_id == LessonStudent.id)
-            .where(conditions)
-        )
-        total = (await self.session.execute(count_stmt)).scalar() or 0
-        
-        stmt = (
-            select(Lecture)
-            .join(LessonStudent, Lecture.lesson_student_id == LessonStudent.id)
-            .where(conditions)
-        )
-        
-        if sort_date.lower() == "asc":
-            stmt = stmt.order_by(Lecture.created_at.asc())
-        else:
-            stmt = stmt.order_by(Lecture.created_at.desc())
-            
-        stmt = stmt.limit(limit).offset(offset)
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all()), total
+        from src.modules.lessons.models import Lesson
+        from src.modules.check_permission.repository import lesson_active_scope
+        from src.modules.base.list_query import snapshot_page, view_scope, ListView
+        if course_id is not None:
+            filters.append(Lesson.course_id == course_id)
+        if actor is not None:
+            filters.append(view_scope(lesson_active_scope(actor.id, actor.role), view or ListView.ALL))
+        stmt = select(Lecture).join(LessonStudent, Lecture.lesson_student_id == LessonStudent.id).join(
+            Lesson, Lesson.id == LessonStudent.lesson_id).where(*filters)
+        order = (lambda l: l.created_at.asc(), lambda l: l.id.asc()) if sort_date.lower() == 'asc' else (
+            lambda l: l.created_at.desc(), lambda l: l.id.desc())
+        return await snapshot_page(self.session, Lecture, stmt, order, limit, offset)
 
     async def update_lecture_paths(
         self,
@@ -137,3 +131,8 @@ class LecturesRepository(BaseRepository):
             await FileAssetsRepository(self.session).prune(
                 {deleted.original_asset_id, deleted.download_asset_id} - {None})
         return deleted
+
+    async def detail_visible(self, lecture_id: int, actor) -> Lecture | None:
+        from src.modules.check_permission.repository import recipient_scope
+        return await self.session.scalar(select(Lecture).join(LessonStudent).where(
+            Lecture.id == lecture_id, recipient_scope(actor.id, actor.role), material_scope(Lecture, actor.id, actor.role)))

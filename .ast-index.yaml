@@ -1,0 +1,6 @@
+include:
+  - src
+  - tests
+  - tests_unit
+  - frontend/src
+  - scripts

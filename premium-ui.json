@@ -1,0 +1,9 @@
+{
+ "profile":"product-admin", "sourceRoots":["frontend/src"], "locale":"ru-RU",
+ "canonicalMap":"docs/plan/ARCHITECTURE.md",
+ "requiredCapabilities":["Form","Select/Listbox","Date","Scrollbar","Toast"],
+ "ownership":{"Select/Listbox":"authored","Date":"authored"},
+ "requiredCommands":["unit","typecheck","lint","build"],
+ "commands":{"unit":"npm --prefix frontend run test:unit","typecheck":"npm --prefix frontend run typecheck","lint":"npm --prefix frontend run lint","build":"npm --prefix frontend run build"},
+ "evidence":{"failurePaths":"frontend/src/shared/api/client.test.ts"}
+}

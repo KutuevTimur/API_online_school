@@ -1,6 +1,6 @@
 # Правила разработки и структура проекта 
 
-Это проект онлайн-школы (только backend). Стек: **Python 3.12+ / 3.14, FastAPI, SQLAlchemy 2.0 (asyncpg), Pydantic v2, Alembic, Pytest (pytest-asyncio)**.
+Это проект онлайн-школы: backend в `src/`, SPA в `frontend/`. Backend стек: **Python 3.12+ / 3.14, FastAPI, SQLAlchemy 2.0 (asyncpg), Pydantic v2, Alembic, Pytest (pytest-asyncio)**.
 
 ---
 
@@ -42,7 +42,7 @@
 - Маппинг ORM -> DTO производить через `ModelDTO.model_validate(orm_obj)`.
 
 ### 2.3. Репозитории (`repository.py`)
-- Наследуются от `BaseRepository` (из `src.modules.base.database_model`), в `__init__` вызывается `super().__init__(session=session, model=ModelClass)`.
+- Наследуются от `BaseRepository` (из `src.modules.base.repository_model`), в `__init__` вызывается `super().__init__(session=session, model=ModelClass)`.
 - Содержат только методы формирования и исполнения запросов (`select`, `update`, `delete`, `self.add()`).
 - Возвращают ORM-объекты, списки ORM-объектов или `None`.
 - **Запрещено**: коммитить транзакции (`session.commit()`) внутри репозитория — это ответственность сервиса.
@@ -63,7 +63,7 @@
 ### 2.6. Контроллеры и роутеры (`views.py`)
 - Создавать `router = APIRouter(prefix="/<domain>")`.
 - Все эндпоинты — `async def`. Внедрение сервисов строго через `Depends(get_<domain>_service)`.
-- Обязательно указывать `response_model` и `status_code` в декораторах маршрутов.
+- Обязательно указывать явный HTTP-контракт и `status_code`. Для JSON — `response_model`; для бинарных/204 ответов — соответствующий Response без фиктивной JSON-модели.
 - Внутри эндпоинтов нет прямой работы с базой или ORM — только вызовы методов сервиса.
 - Внимательно следить за правами доступа к эндпойнту. Для ограничения прав использовать зависимости из `src/modules/check_permission/depends.py`.
 - **Обязательно**: подключить созданный роутер в `src/modules/api/app.py` внутри функции `_include_routers()`.
@@ -83,8 +83,8 @@
 - Создание новой миграции выполняется командой: `alembic revision --autogenerate -m "описание_миграции"`.
 - Применение миграций: `alembic upgrade head`.
 
-### 2.10 Полечные файлы
-- В `src/tools` находятся файлы для работы с БД: дроп схем, создание
+### 2.10 Служебные команды
+- `src/tools` содержит операции с БД, bootstrap и media maintenance. Их наличие не разрешает запуск на произвольной БД: сначала проверить target и guards по README/T01.
 
 ---
 
@@ -107,9 +107,13 @@
   - `fixtures/fixtures.py` — pytest-фикстура фабрики `create_<entity>_fixture`, возвращающая замыкание-фабрику.
   - `test_views_<domain>.py` — тесты эндпоинтов с использованием `client_for_tests` (httpx AsyncClient).
 - **Сравнение данных**: Для валидации ответов и ORM-моделей использовать `comparison_models(Expected, Actual, keys_not_checked=[...])` из `tests.helpers.functions`.
-- **Изоляция**: Автоматическая очистка БД перед каждым тестом (`clearing_db` в `conftest.py`). При добавлении новых таблиц — добавлять их удаление в `clearing_db` в правильном порядке внешних ключей (FK).
+- **Изоляция**: Автоматическая очистка допускается только в явно изолированной тестовой БД после preflight guard (MODE=TEST недостаточно): см. docs/plan/tasks/T01.md. До реализации защиты не запускать очищающие fixtures на неизвестной БД. Текущая очистка — `clearing_db` в `conftest.py`. При добавлении новых таблиц — добавлять их удаление в `clearing_db` в правильном порядке внешних ключей (FK).
 
 ## 5. Бизнес правила проекта
 
 - Клиент не должен знать о существовании `teacher_id` и `student_id`, вместо этого он только имеет представление об `user_id`.
 - Дополнительные бизнес-правила будут добавляться по мере развития проекта.
+
+## 6. Актуальный продукт и передача работы
+
+GPT.md — короткий вход; подробные требования делегированы docs/plan/PRODUCT.md. Последние решения владельца важнее исторических предложений аудита. Текущая задача и фактические проверки — docs/plan/STATUS.md; карточки — docs/plan/tasks/. Следовать workflow и ограничениям текущего поручения; наличие плана не означает разрешение deploy/commit/push. Frontend React/TypeScript/Vite реализован в пределах STATUS; UI следует DESIGN и ARCHITECTURE A09–A13 без замены backend-стека.

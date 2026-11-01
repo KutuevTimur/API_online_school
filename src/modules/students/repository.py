@@ -90,3 +90,7 @@ class StudentRepository(BaseRepository):
             .returning(Student)
         )
         return result_db.scalar_one_or_none()
+
+    async def lock_by_user_id(self, user_id: int) -> Student | None:
+        return await self.session.scalar(select(Student).where(Student.user_id == user_id)
+            .with_for_update().execution_options(populate_existing=True))

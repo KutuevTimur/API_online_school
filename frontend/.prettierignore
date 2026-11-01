@@ -1,0 +1,9 @@
+node_modules
+dist
+.artifacts
+src/shared/api/schema.d.ts
+package-lock.json
+playwright-report
+test-results
+
+public/pdfjs

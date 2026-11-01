@@ -1,11 +1,12 @@
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Any
+from uuid import UUID
 from datetime import datetime, timedelta
 from sqlalchemy import update, delete, select, func, literal, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.base.repository_model import BaseRepository
-from src.modules.lessons.models import Lesson, LessonStatus
+from src.modules.lessons.models import Lesson, LessonStatus, RegularLessonSeries, RegularLessonOperation
 from src.modules.courses.models import Course
 from src.modules.student_courses.models import StudentCourse
 from src.modules.teacher_students.models import TeacherStudent
@@ -64,7 +65,7 @@ class LessonsRepository(BaseRepository):
             stmt = stmt.where(access_scope)
 
         if lesson_status is not None:
-            stmt = stmt.where(Lesson.status == lesson_status)
+            stmt = stmt.where(Lesson.effective_status == lesson_status.value)
 
         # Base filters
         if from_date:
@@ -79,37 +80,20 @@ class LessonsRepository(BaseRepository):
         if student_id:
             stmt = stmt.join(Lesson.lesson_students).where(LessonStudent.student_id == student_id)
 
-        total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-
-        # Pagination & Ordering
-        if sort_date.lower() == "asc":
-            stmt = stmt.order_by(Lesson.scheduled_at.asc())
-        else:
-            stmt = stmt.order_by(Lesson.scheduled_at.desc())
-            
-        stmt = stmt.limit(limit).offset(offset)
-        
-        stmt = stmt.options(
-            selectinload(Lesson.lesson_students).selectinload(LessonStudent.lectures),
-            selectinload(Lesson.lesson_students).selectinload(LessonStudent.homeworks)
-        )
-
-        result = await self.session.execute(stmt)
-        rows = result.all()
-        
-        if not rows:
-            return [], total
-            
-        lessons = [row[0] for row in rows]
-
-        return lessons, total
+        from src.modules.base.list_query import snapshot_page
+        asc = sort_date.lower() == "asc"
+        return await snapshot_page(self.session, Lesson, stmt,
+            (lambda l: l.scheduled_at.asc() if asc else l.scheduled_at.desc(),
+             lambda l: l.id.asc() if asc else l.id.desc()), limit, offset,
+            options=(lambda l: selectinload(l.lesson_students).selectinload(LessonStudent.lectures),
+                     lambda l: selectinload(l.lesson_students).selectinload(LessonStudent.homeworks)))
 
     async def update_lesson(self, lesson_id: int, values: dict) -> Lesson:
         """Обновляет поля у урока"""
         stmt = (
             update(Lesson)
             .where(Lesson.id == lesson_id)
-            .values(**values)
+            .values(**{**values, "updated_at": func.clock_timestamp()})
             .returning(Lesson)
         )
         result = await self.session.execute(stmt)
@@ -142,6 +126,23 @@ class LessonsRepository(BaseRepository):
                 material_scope(Homework, actor.id, actor.role))))
         return tuple(flags)
 
+    async def material_flags_many(self, lesson_ids: list[int], actor) -> dict[int, tuple[bool, bool]]:
+        from src.modules.lectures.models import Lecture
+        from src.modules.homeworks.models import Homework
+        from src.modules.homework_placements.models import HomeworkPlacement
+        from src.modules.check_permission.repository import material_scope
+        from sqlalchemy import exists
+        lectures = exists(select(Lecture.id).where(Lecture.lesson_student_id == LessonStudent.id,
+            material_scope(Lecture, actor.id, actor.role)).correlate(LessonStudent))
+        homeworks = exists(select(HomeworkPlacement.id).join(Homework, Homework.id == HomeworkPlacement.homework_id).where(
+            HomeworkPlacement.lesson_student_id == LessonStudent.id,
+            material_scope(HomeworkPlacement, actor.id, actor.role), material_scope(Homework, actor.id, actor.role)).correlate(LessonStudent))
+        stmt = select(LessonStudent.lesson_id, func.bool_or(lectures), func.bool_or(homeworks)).where(
+            LessonStudent.lesson_id.in_(lesson_ids)).group_by(LessonStudent.lesson_id)
+        if actor.role == UserRole.STUDENT:
+            stmt = stmt.where(LessonStudent.student_id.in_(select(Student.id).where(Student.user_id == actor.id)))
+        return {row[0]: (row[1], row[2]) for row in (await self.session.execute(stmt)).all()}
+
     async def active_students(self, course_id: int, teacher_id: int,
                               student_user_id: int | None = None) -> list[Student]:
         stmt = (select(Student).join(User, User.id == Student.user_id)
@@ -170,3 +171,58 @@ class LessonsRepository(BaseRepository):
                        Lesson.scheduled_at + Lesson.duration_minutes * literal(timedelta(minutes=1)) > start)
                 .order_by(Lesson.scheduled_at, Lesson.id))
         return list((await self.session.scalars(stmt)).all())
+
+    async def lock_schedule(self, teacher_user_id: int) -> None:
+        """Serialize this teacher's regular and ordinary schedule writes, not reads."""
+        await self.session.execute(select(func.pg_advisory_xact_lock(80408, teacher_user_id)))
+
+    async def regular_series(self, series_id: UUID, teacher_id: int) -> RegularLessonSeries | None:
+        from src.modules.lessons.models import RegularLessonSeries
+        return await self.session.scalar(select(RegularLessonSeries).where(
+            RegularLessonSeries.id == series_id, RegularLessonSeries.teacher_id == teacher_id
+        ).execution_options(populate_existing=True))
+
+    async def regular_operation(self, operation_id: UUID) -> RegularLessonOperation | None:
+        from src.modules.lessons.models import RegularLessonOperation
+        return await self.session.scalar(select(RegularLessonOperation).where(
+            RegularLessonOperation.id == operation_id
+        ).execution_options(populate_existing=True))
+
+    async def regular_lessons(self, series_id: UUID, future_after: datetime) -> list[Lesson]:
+        return list((await self.session.scalars(select(Lesson).where(
+            Lesson.regular_series_id == series_id,
+            Lesson.status == LessonStatus.SCHEDULED, Lesson.is_deleted.is_(False),
+            Lesson.scheduled_at > future_after,
+        ).order_by(Lesson.scheduled_at, Lesson.id))).all())
+
+    def add_regular_series(self, **values: Any) -> RegularLessonSeries:
+        from src.modules.lessons.models import RegularLessonSeries
+        series = RegularLessonSeries(**values)
+        self.session.add(series)
+        return series
+
+    def add_regular_operation(self, **values: Any) -> RegularLessonOperation:
+        from src.modules.lessons.models import RegularLessonOperation
+        operation = RegularLessonOperation(**values)
+        self.session.add(operation)
+        return operation
+
+    def bind_regular_occurrence(self, lesson: Lesson, series_id: UUID, original_at: datetime) -> None:
+        lesson.regular_series_id = series_id
+        lesson.regular_original_at = original_at
+
+    async def lock_regular_key(self, operation_id: UUID) -> None:
+        # Serialize even accidental cross-teacher UUID reuse before the PK insert.
+        await self.session.execute(select(func.pg_advisory_xact_lock(
+            func.hashtextextended(str(operation_id), 80409))))
+
+    async def regular_anchor_exists(self, teacher_id: int, course_id: int,
+                                    student_user_id: int, anchor_at: datetime) -> bool:
+        return bool(await self.session.scalar(select(RegularLessonSeries.id).where(
+            RegularLessonSeries.teacher_id == teacher_id, RegularLessonSeries.course_id == course_id,
+            RegularLessonSeries.student_user_id == student_user_id,
+            RegularLessonSeries.anchor_at == anchor_at)))
+
+    async def recipient_reminder_states(self, teacher_user_id: int, lesson_ids: list[int]) -> list:
+        from src.modules.teacher_planning.repository import reminder_rows
+        return (await self.session.execute(reminder_rows(teacher_user_id).where(Lesson.id.in_(lesson_ids)))).mappings().all()

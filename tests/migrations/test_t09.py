@@ -22,9 +22,10 @@ def test_t09_prior_history_backfill_and_unique(database):
     assert sql("SELECT id,homework_id,attempt_number,status::text,text_content,grade,teacher_comment FROM homework_submissions ORDER BY id")==before
     assert sql("SELECT id,is_working,version,submitted_at IS NULL FROM homework_submissions ORDER BY id")==[(110,False,1,False),(111,False,1,False),(112,True,1,True)]
     assert sql('SELECT id,submission_id,original_file_path FROM homework_submission_files')==[(120,110,'synthetic-old.pdf')]
+    revision_before = sql("SELECT version_num FROM alembic_version")
     result=alembic('downgrade','29e67248e0f3',success=False)
     assert 'Cannot discard T09' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version')==[('2048d2eeeaa8',)]
+    assert sql('SELECT version_num FROM alembic_version')==revision_before
     with pytest.raises(Exception,match='uix_homework_working_submission'):
         sql("INSERT INTO homework_submissions(homework_id,attempt_number,status) VALUES(90,4,'draft')")
     assert sql('SELECT count(*) FROM homework_submissions')==[(3,)]

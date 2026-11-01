@@ -57,3 +57,7 @@ class Course(Base, SoftDeleteMixin):
     @property
     def teacher_user_id(self) -> int | None:
         return self.teacher.user_id if self.teacher else None
+
+    @property
+    def teacher_name(self) -> str:
+        return f"{self.teacher.first_name} {self.teacher.last_name}" if self.teacher else ""

@@ -220,3 +220,25 @@ async def replace_submission_file(
 ):
     return await service.mutate_file(current_user.id, homework_id, submission_id, file_id, file,
                                      expected_version=expected_version)
+
+
+@router.patch(
+    "/submissions/{submission_id}/review", response_model=HomeworkSubmissionResponseDTO,
+    status_code=status.HTTP_200_OK, summary="Final review with optional photo/PDF feedback",
+)
+async def review_homework_submission_with_files(
+    submission_id: int,
+    homework_id: int = Query(..., ge=1),
+    expected_version: str = Form(..., pattern=r"^[1-9][0-9]*$"),
+    grade: str = Form(..., pattern=r"^[0-5]$"),
+    teacher_comment: Optional[str] = Form(None),
+    files: Optional[List[UploadFile]] = File(None),
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: HomeworkSubmissionsService = Depends(get_homework_submissions_service),
+):
+    return await service.update_submission_teacher(
+        teacher_user_id=current_user.id, homework_id=homework_id, submission_id=submission_id,
+        update_dto=UpdateSubmissionTeacherRequestDTO(expected_version=int(expected_version),
+                                                    grade=int(grade), teacher_comment=teacher_comment),
+        files=files,
+    )

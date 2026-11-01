@@ -1,0 +1,22 @@
+.form {
+  margin: 24px 0;
+}
+.form :global(.resize-none) textarea {
+  resize: none;
+}
+.form[data-state='empty'] {
+  background: var(--lgg-materialMissingSurface);
+}
+.form[data-state='local'],
+.form[data-state='draft'] {
+  background: var(--lgg-reviewSurface);
+}
+.form[data-state='submitted'],
+.form[data-state='checked'] {
+  background: var(--lgg-successSurface);
+}
+@media (max-width: 600px) {
+  .form > :global(.mantine-Button-root) {
+    width: 100%;
+  }
+}

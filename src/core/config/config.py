@@ -23,6 +23,8 @@ class Config:
         self.paths = PathsConfig.build(media_root=media_root or values.get("MEDIA_ROOT"))
         self.db_connection = DbConnectionConfig.build(self.env)
         self.tokens = TokensConfig.build(values)
+        from src.core.config.browser import BrowserConfig
+        self.browser = BrowserConfig.build(values, self.env.mode)
         self.allowed_extensions = AllowedExtensions.build()
         self.avatar_max_bytes = 10 * 1024 * 1024
         self.avatar_processing_timeout_seconds = 30

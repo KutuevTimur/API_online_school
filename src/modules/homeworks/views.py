@@ -1,3 +1,6 @@
+from src.modules.base.list_query import ListView
+from src.modules.base.orm_dto import PaginationResponseDTO
+from src.modules.homeworks.models_dto import HomeworkListStatus
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Request, HTTPException
@@ -72,6 +75,41 @@ async def get_my_homeworks(
     return await service.get_my_homeworks(
         student_user_id=current_user.id,
     )
+
+@router.get(
+    "/my/page",
+    response_model=PaginationResponseDTO[HomeworkResponseDTO],
+    status_code=status.HTTP_200_OK,
+)
+async def get_my_homeworks_page(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    course_id: int | None = Query(None),
+    status_filter: HomeworkListStatus = Query(HomeworkListStatus.ALL, alias="status"),
+    view: ListView = Query(ListView.ALL),
+    overdue_only: bool = Query(False),
+    current_user: UserDTO = Depends(get_current_student_user),
+    service: HomeworksService = Depends(get_homeworks_service),
+) -> PaginationResponseDTO[HomeworkResponseDTO]:
+    return await service.get_my_page(current_user.id, limit, offset, course_id,
+                                     status_filter, view, overdue_only)
+
+
+@router.get("/available-debts", response_model=PaginationResponseDTO[HomeworkResponseDTO], status_code=200)
+async def available_debts(
+    lesson_id: int = Query(...), student_user_id: int = Query(...),
+    limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+    current_user: UserDTO = Depends(get_current_user),
+    service: HomeworksService = Depends(get_homeworks_service),
+) -> PaginationResponseDTO[HomeworkResponseDTO]:
+    return await service.available_debts(current_user.id, lesson_id, student_user_id, limit, offset)
+
+
+@router.get("/{homework_id}", response_model=HomeworkResponseDTO, status_code=200)
+async def homework_detail(homework_id: int, current_user: UserDTO = Depends(get_current_user),
+                          service: HomeworksService = Depends(get_homeworks_service)) -> HomeworkResponseDTO:
+    return await service.detail(current_user.id, homework_id)
+
 
 @router.get(
     "/{homework_id}/file",

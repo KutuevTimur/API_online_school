@@ -31,6 +31,9 @@ class LifecycleService:
     async def restore(self, actor_id: int, kind: str, object_id: int) -> CoursesResponseDTO | LessonResponseDTO:
         await self.admin(actor_id)
         try:
+            schedule_course_id = object_id if kind == 'course' else await self.repo.lesson_course_id(object_id)
+            if schedule_course_id is not None:
+                await self.repo.lock_schedule_for_course(schedule_course_id)
             if kind == 'course':
                 obj = await self.repo.course(object_id)
             else:
@@ -48,8 +51,10 @@ class LifecycleService:
             from src.modules.homework_placements.service import HomeworkPlacementsService
             await HomeworkPlacementsService(self.session).recalculate_course(
                 obj.id if kind == "course" else obj.course_id, kind + "_restored")
-            # Flush during deadline recalculation expires the server-generated timestamp.
-            await self.session.refresh(obj, attribute_names=["updated_at"])
+            # Flush expires both the timestamp and a lesson's computed status.
+            # Load them inside the async context before DTO attribute access.
+            attributes = ["updated_at"] + (["effective_status"] if kind == "lesson" else [])
+            await self.session.refresh(obj, attribute_names=attributes)
             dto = (CoursesResponseDTO if kind == 'course' else LessonResponseDTO).model_validate(obj)
             await self.session.commit()
             return dto

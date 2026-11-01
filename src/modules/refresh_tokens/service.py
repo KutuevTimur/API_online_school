@@ -68,3 +68,17 @@ class RefreshTokensService:
         except Exception:
             await self.session_db.rollback()
             raise
+
+    async def browser_logout(self, raw: str) -> None:
+        """Possession of the opaque cookie authorizes only its own family."""
+        try:
+            token = await self.token_repo.get_token(token_digest(raw))
+            if token is not None:
+                # Do not require an active account or a live access token to sign out.
+                await UsersRepository(self.session_db).lock_user(token.user_id)
+                token = await self.token_repo.get_token(token_digest(raw), lock=True)
+                await self.token_repo.revoke_family(token.user_id, token.family_id)
+            await self.session_db.commit()
+        except Exception:
+            await self.session_db.rollback()
+            raise

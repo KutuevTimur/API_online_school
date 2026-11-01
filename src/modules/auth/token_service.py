@@ -112,3 +112,11 @@ class TokenService:
     async def logout(self, refresh_token: str, user_id: int) -> LogoutResponse:
         await self.refresh_token_service.logout(refresh_token, user_id)
         return LogoutResponse(success=True)
+
+    async def browser_cookie_max_age(self, raw: str) -> int:
+        """Bound browser lifetime by the actual issued row, including commit time."""
+        from src.modules.refresh_tokens.service import token_digest
+        token = await self.refresh_token_service.token_repo.get_token(token_digest(raw))
+        if token is None:
+            raise InvalidJWTToken()
+        return max(0, int((token.expires_at - datetime.now(UTC)).total_seconds()))

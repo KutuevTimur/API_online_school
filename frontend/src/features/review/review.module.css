@@ -1,0 +1,148 @@
+.review {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  align-items: start;
+  gap: 24px;
+  margin: 24px 0;
+}
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+.heading h1 {
+  margin: 0 0 8px;
+}
+.heading h1 a {
+  color: var(--lgg-ink);
+}
+.heading p {
+  margin: 4px 0;
+}
+.heading > a,
+.condition summary,
+.courseFilter summary {
+  min-height: 44px;
+  align-content: center;
+}
+.condition summary,
+.courseFilter summary {
+  cursor: pointer;
+}
+.condition summary {
+  font-weight: 650;
+}
+.condition summary span {
+  margin-left: 16px;
+  color: var(--lgg-primary);
+  font-weight: 500;
+}
+.condition[open] .expand,
+.condition:not([open]) .collapse {
+  display: none;
+}
+.conditionCopy {
+  max-width: 70ch;
+}
+.retryDate {
+  background: none;
+  border: 0;
+  color: var(--lgg-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 44px;
+}
+.grading {
+  padding: 20px;
+}
+.grading h2 {
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+}
+.grades {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(44px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.gradeBody {
+  position: relative;
+  align-items: center;
+  min-height: 44px;
+  padding-left: 8px;
+}
+.gradeLabelWrapper {
+  flex: 1;
+}
+.gradeLabel {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-left: 8px;
+  cursor: pointer;
+}
+.gradeLabel::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--lgg-controlBorder);
+  border-radius: 8px;
+}
+.grade:has(input:checked) .gradeLabel::after {
+  border-color: var(--lgg-primary);
+  border-width: 2px;
+}
+.grade:has(input:focus-visible) .gradeLabel::after {
+  outline: 2px solid var(--lgg-primary);
+  outline-offset: 2px;
+}
+.grade:has(input:disabled) .gradeLabel {
+  cursor: not-allowed;
+}
+.grade:hover:not(:has(input:disabled)) .gradeLabel::after {
+  border-color: var(--lgg-primary);
+}
+.fileHint {
+  margin: 16px 0 8px;
+  color: var(--lgg-muted);
+  font-size: 0.875rem;
+}
+.studentFilters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.studentFilters > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.courseFilter {
+  min-width: 0;
+}
+.courseFilter summary {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .studentFilters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1023px) {
+  .review {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

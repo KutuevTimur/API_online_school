@@ -49,3 +49,14 @@ class LessonStudentsRepository(BaseRepository):
 
         await self.session.delete(lesson_student)
         return lesson_student
+
+    async def visible_page(self, actor, lesson_id: int, limit: int, offset: int) -> tuple[list[int], int]:
+        from sqlalchemy import func, true
+        from src.modules.check_permission.repository import recipient_scope
+        filtered = select(LessonStudent.id).where(LessonStudent.lesson_id == lesson_id,
+            recipient_scope(actor.id, actor.role)).cte('recipients')
+        total = select(func.count().label('total')).select_from(filtered).subquery()
+        page = select(filtered.c.id).order_by(filtered.c.id).limit(limit).offset(offset).subquery()
+        rows = (await self.session.execute(select(page.c.id, total.c.total).select_from(
+            total.outerjoin(page, true())).order_by(page.c.id))).all()
+        return [r.id for r in rows if r.id is not None], rows[0].total

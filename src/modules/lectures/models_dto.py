@@ -1,3 +1,5 @@
+from src.modules.files.models_dto import FileDescriptorDTO
+from src.modules.check_permission.models_dto import AccessContextDTO
 from datetime import datetime
 from pydantic import BaseModel
 from src.modules.base.orm_dto import ORMDTO
@@ -16,7 +18,14 @@ class LectureDTO(ORMDTO):
     updated_at: datetime
 
 
-class LectureResponseDTO(ORMDTO):
+class LectureResponseDTO(ORMDTO, AccessContextDTO):
+    course_id: int | None = None
+    lesson_id: int | None = None
+    student_user_id: int | None = None
+    teacher_user_id: int | None = None
+    course_name: str | None = None
+    lesson_title: str | None = None
+    file: FileDescriptorDTO | None = None
     id: int
     original_file_name: str
     original_file_type: str

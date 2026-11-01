@@ -15,3 +15,7 @@ class NotFoundData(Exception):
 class NoDataForUpdate(RepositoryException):
     pass
 
+
+
+class StaleUpdate(ServiceException):
+    pass

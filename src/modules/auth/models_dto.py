@@ -26,3 +26,8 @@ class ChangePasswordRequestDTO(BaseModel):
     new_password: Password
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BrowserTokenResponse(BaseModel):
+    access_token: str
+    token_type: str

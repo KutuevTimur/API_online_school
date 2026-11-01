@@ -3,7 +3,6 @@ from functools import wraps
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.course_lifecycle.models import FileDeletion
-from src.modules.course_lifecycle.repository import LifecycleRepository
 
 
 def retire_avatar(session: AsyncSession, path: str | None) -> None:
@@ -27,6 +26,7 @@ def atomic_avatar_upload(method):
             raise
         # Queue remains durable on unlink/worker failure. Do not turn an already
         # committed update into a client error; the maintenance worker retries it.
+        from src.modules.course_lifecycle.repository import LifecycleRepository
         from src.modules.course_lifecycle.service import LifecycleService
         try:
             await LifecycleService(LifecycleRepository(self.session_db), handler.config)._cleanup(100)

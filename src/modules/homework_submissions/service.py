@@ -112,10 +112,11 @@ class HomeworkSubmissionsService:
             raise
 
     async def _append_files(self, submission_id: int, files: Optional[List[UploadFile]],
-                            created_paths: list[Path], uploader_user_id: int, replace_file_id: int | None = None) -> bool:
+                            created_paths: list[Path], uploader_user_id: int, replace_file_id: int | None = None,
+                            purpose: str = "answer", recipient_user_id: int | None = None) -> bool:
         from src.modules.handlers_files.exception import InvalidDocumentFormat, FileTooLarge
         incoming = [f for f in files or [] if f.filename]
-        count, total = await self.homework_submissions_repo.file_usage(submission_id, replace_file_id)
+        count, total = await self.homework_submissions_repo.file_usage(submission_id, replace_file_id, purpose)
         if incoming and count + len(incoming) > 10:
             raise InvalidDocumentFormat("An answer supports at most 10 files")
         data = []
@@ -136,8 +137,9 @@ class HomeworkSubmissionsService:
             if total > 100 * 1024 * 1024:
                 raise FileTooLarge("Answer source files exceed 100 MiB")
             original_asset_id, download_asset_id = await FileAssetsService(
-                self.session_db, self.handler_documents).register(original, pdf, name, uploader_user_id)
+                self.session_db, self.handler_documents).register(original, pdf, name, uploader_user_id, recipient_user_id)
             data.append(HomeworkSubmissionFileRequestDTO(
+                purpose=purpose,
                 original_asset_id=original_asset_id, download_asset_id=download_asset_id,
                 submission_id=submission_id, source_size=self.handler_documents.saved_objects[original][0].size,
                 original_file_path=str(pdf if original_asset_id == download_asset_id else original),
@@ -154,6 +156,16 @@ class HomeworkSubmissionsService:
 
     async def _public_response(self, submission: HomeworkSubmission) -> HomeworkSubmissionResponseDTO:
         result = HomeworkSubmissionResponseDTO.model_validate(submission)
+        from src.modules.files.service import file_descriptors
+        descriptors = await file_descriptors(self.session_db, [
+            (f.id, f.download_asset_id, f.pdf_file_name or f.original_file_name,
+             f"/submissions/{submission.id}/files/{f.id}?homework_id={submission.homework_id}")
+            for f in submission.files])
+        for file in result.files:
+            file.file = descriptors.get(file.id)
+        review_ids = {f.id for f in submission.files if f.purpose == "review"}
+        result.review_files = [f for f in result.files if f.id in review_ids]
+        result.files = [f for f in result.files if f.id not in review_ids]
         result.checked_by = await self.homework_submissions_repo.reviewer_user_id(submission.checked_by)
         return result
 
@@ -166,10 +178,25 @@ class HomeworkSubmissionsService:
             raise PermissionErrorService()
         rows, total = await self.homework_submissions_repo.review_queue(
             teacher_user_id, limit, offset, course_id, student_user_id)
-        items = [ReviewQueueItemDTO(
-            **(await self._public_response(submission)).model_dump(),
-            course_id=cid, lesson_id=lid, student_user_id=sid, homework_title=title,
-        ) for submission, cid, lid, sid, title in rows]
+        # One descriptor batch for the page; queue must not query files per answer.
+        from src.modules.files.service import file_descriptors
+        descriptors = await file_descriptors(self.session_db, [
+            (file.id, file.download_asset_id, file.pdf_file_name or file.original_file_name,
+             f"/submissions/{submission.id}/files/{file.id}?homework_id={submission.homework_id}")
+            for submission, *_ in rows for file in submission.files
+        ])
+        items = []
+        for submission, cid, lid, sid, title, first, last, username, course in rows:
+            dto = HomeworkSubmissionResponseDTO.model_validate(submission)
+            # Submitted answers have no reviewer; never expose an internal teacher id.
+            dto.checked_by = None
+            for file in dto.files:
+                file.file = descriptors.get(file.id)
+            items.append(ReviewQueueItemDTO(
+                **dto.model_dump(), course_id=cid, lesson_id=lid, student_user_id=sid,
+                homework_title=title, student_first_name=first, student_last_name=last,
+                student_username=username, course_name=course,
+            ))
         return PaginationResponseDTO(items=items, total=total, limit=limit, offset=offset)
 
     async def _locked(self, user_id: int, role: UserRole, homework_id: int,
@@ -305,8 +332,9 @@ class HomeworkSubmissionsService:
     async def update_submission_teacher(
         self, teacher_user_id: int, homework_id: int, submission_id: int,
         update_dto: UpdateSubmissionTeacherRequestDTO,
+        files: Optional[List[UploadFile]] = None,
     ) -> HomeworkSubmissionResponseDTO:
-        async with self._mutation():
+        async with self._mutation() as created_paths:
             submission = await self._locked(teacher_user_id, UserRole.TEACHER, homework_id, submission_id,
                                             update_dto.expected_version)
             if submission.status != HomeworkSubmissionStatus.SUBMITTED:
@@ -314,6 +342,11 @@ class HomeworkSubmissionsService:
             data = update_dto.model_dump(exclude={"expected_version"})
             if data.get('status', HomeworkSubmissionStatus.CHECKED) != HomeworkSubmissionStatus.CHECKED:
                 raise SubmissionConflict("A review cannot reopen an answer")
+            if files:
+                recipient = await ObjectPermissionService(self.session_db).homework(teacher_user_id, homework_id, UserRole.TEACHER)
+                student = await self.student_repo.get_student_by_id(recipient.student_id)
+                await self._append_files(submission.id, files, created_paths, teacher_user_id,
+                                         purpose="review", recipient_user_id=student.user_id)
             teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
             for key, value in data.items():
                 setattr(submission, key, value)

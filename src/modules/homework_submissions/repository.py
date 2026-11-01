@@ -154,12 +154,12 @@ class HomeworkSubmissionsRepository(BaseRepository):
         from src.modules.files.repository import FileAssetsRepository
         await FileAssetsRepository(self.session).prune({file.original_asset_id, file.download_asset_id} - {None})
 
-    async def file_usage(self, submission_id: int, exclude_file_id: int | None = None) -> tuple[int, int]:
+    async def file_usage(self, submission_id: int, exclude_file_id: int | None = None, purpose: str = "answer") -> tuple[int, int]:
         from src.modules.files.models import FileAsset
         stmt = select(func.count(HomeworkSubmissionFile.id),
                       func.coalesce(func.sum(func.coalesce(HomeworkSubmissionFile.source_size, FileAsset.size, 20 * 1024 * 1024)), 0)).select_from(
                           HomeworkSubmissionFile).outerjoin(FileAsset, FileAsset.id == HomeworkSubmissionFile.original_asset_id).where(
-                              HomeworkSubmissionFile.submission_id == submission_id)
+                              HomeworkSubmissionFile.submission_id == submission_id, HomeworkSubmissionFile.purpose == purpose)
         if exclude_file_id is not None:
             stmt = stmt.where(HomeworkSubmissionFile.id != exclude_file_id)
         row = (await self.session.execute(stmt)).one()
@@ -178,7 +178,7 @@ class HomeworkSubmissionsRepository(BaseRepository):
     async def review_queue(
         self, teacher_user_id: int, limit: int, offset: int,
         course_id: int | None = None, student_user_id: int | None = None,
-    ) -> tuple[list[tuple[HomeworkSubmission, int, int, int, str]], int]:
+    ) -> tuple[list[tuple[HomeworkSubmission, int, int, int, str, str, str, str, str]], int]:
         from sqlalchemy import exists, or_, true
         from src.modules.homework_submissions.models import HomeworkSubmissionStatus
         from src.modules.homeworks.models import Homework
@@ -190,15 +190,20 @@ class HomeworkSubmissionsRepository(BaseRepository):
         from src.modules.student_courses.models import StudentCourse
         from src.modules.teacher_students.models import TeacherStudent
 
+        from src.modules.users.models import User
+
         stmt = (select(HomeworkSubmission, Course.id.label("queue_course_id"),
                        Lesson.id.label("queue_lesson_id"), Student.user_id.label("queue_student_user_id"),
-                       Homework.title.label("queue_homework_title"))
+                       Homework.title.label("queue_homework_title"),
+                       Student.first_name.label("queue_first_name"), Student.last_name.label("queue_last_name"),
+                       User.username.label("queue_username"), Course.name.label("queue_course_name"))
             .join(Homework, Homework.id == HomeworkSubmission.homework_id)
             .join(LessonStudent, LessonStudent.id == Homework.lesson_student_id)
             .join(Lesson, Lesson.id == LessonStudent.lesson_id)
             .join(Course, Course.id == Lesson.course_id)
             .join(Teacher, Teacher.id == Course.teacher_id)
             .join(Student, Student.id == LessonStudent.student_id)
+            .join(User, User.id == Student.user_id)
             .join(StudentCourse, (StudentCourse.course_id == Course.id) &
                   (StudentCourse.student_id == Student.id))
             .where(Teacher.user_id == teacher_user_id, Lesson.teacher_id == Teacher.id,
@@ -224,9 +229,11 @@ class HomeworkSubmissionsRepository(BaseRepository):
         count = select(func.count()).select_from(filtered).subquery()
         result = await self.session.execute(select(
             submission, page.c.queue_course_id, page.c.queue_lesson_id,
-            page.c.queue_student_user_id, page.c.queue_homework_title, count.c[0]
+            page.c.queue_student_user_id, page.c.queue_homework_title,
+            page.c.queue_first_name, page.c.queue_last_name, page.c.queue_username,
+            page.c.queue_course_name, count.c[0]
         ).select_from(count.outerjoin(page, true())).options(selectinload(submission.files))
          .order_by(submission.submitted_at.asc().nulls_last(), submission.id)
          .execution_options(populate_existing=True))
         rows = result.all()
-        return [tuple(row[:5]) for row in rows if row[0] is not None], rows[0][-1]
+        return [tuple(row[:9]) for row in rows if row[0] is not None], rows[0][-1]

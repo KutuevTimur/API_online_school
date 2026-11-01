@@ -1,0 +1,28 @@
+.avatarPicker {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+}
+.avatarPicker input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+}
+
+.profileLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+.avatarSettings {
+  min-width: 0;
+}
+@media (max-width: 1023px) {
+  .profileLayout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}

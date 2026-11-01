@@ -21,6 +21,9 @@ class HomeworkSubmissionStatus(str, enum.Enum):
 
 class HomeworkSubmissionFile(Base):
     __tablename__ = 'homework_submission_files'
+    __table_args__ = (CheckConstraint("purpose IN ('answer', 'review')", name='ck_submission_file_purpose'),)
+
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False, default='answer', server_default='answer')
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     submission_id: Mapped[int] = mapped_column(Integer, ForeignKey("homework_submissions.id"), nullable=False)

@@ -204,3 +204,117 @@ class PermissionRepository(BaseRepository):
     async def material_visible(self, model: type, object_id: int, actor: User) -> bool:
         return bool(await self.session.scalar(select(exists().where(
             model.id == object_id, material_scope(model, actor.id, actor.role)))))
+
+
+def active_enrollment_scope(course_id: ColumnElement[int], student_user_id: int) -> ColumnElement[bool]:
+    """Current participation is separate from the historical read grant."""
+    from sqlalchemy.orm import aliased
+    owner_course = aliased(Course)
+    return exists(select(StudentCourse.id).join(Student).join(
+        owner_course, owner_course.id == StudentCourse.course_id).where(
+        StudentCourse.course_id == course_id, Student.user_id == student_user_id,
+        StudentCourse.is_deleted.is_(False), StudentCourse.history_revoked.is_(False),
+        StudentCourse.access_ended_at.is_(None), StudentCourse.started_at <= func.statement_timestamp(),
+        or_(StudentCourse.expires_at.is_(None), StudentCourse.expires_at > func.statement_timestamp()),
+        exists(select(TeacherStudent.id).where(
+            TeacherStudent.teacher_id == owner_course.teacher_id,
+            TeacherStudent.student_id == StudentCourse.student_id,
+            TeacherStudent.ended_at.is_(None)).correlate(owner_course, StudentCourse)),
+    ).correlate(course_id.table))
+
+
+def course_active_scope(user_id: int, role: UserRole) -> ColumnElement[bool]:
+    active = Course.is_deleted.is_(False)
+    if role == UserRole.STUDENT:
+        active = and_(active, active_enrollment_scope(Course.id, user_id))
+    return active
+
+
+def lesson_active_scope(user_id: int, role: UserRole) -> ColumnElement[bool]:
+    active = and_(Lesson.is_deleted.is_(False), exists(select(Course.id).where(
+        Course.id == Lesson.course_id, Course.is_deleted.is_(False)).correlate(Lesson)))
+    if role == UserRole.STUDENT:
+        active = and_(active, active_enrollment_scope(Lesson.course_id, user_id),
+            exists(select(LessonStudent.id).join(Student).where(
+                LessonStudent.lesson_id == Lesson.id, Student.user_id == user_id,
+                LessonStudent.access_ended_at.is_(None), recipient_history_scope()).correlate(Lesson)))
+    return active
+
+
+def course_student_filter(student_user_id: int) -> ColumnElement[bool]:
+    return exists(select(StudentCourse.id).join(Student).where(
+        StudentCourse.course_id == Course.id, Student.user_id == student_user_id).correlate(Course))
+
+
+def lesson_student_filter(student_user_id: int) -> ColumnElement[bool]:
+    return exists(select(LessonStudent.id).join(Student).where(
+        LessonStudent.lesson_id == Lesson.id, Student.user_id == student_user_id).correlate(Lesson))
+
+
+class ReadContextRepository:
+    """Bounded, column-only context reads; no locks, flushes or writes on GET."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def recipients(self, ids: list[int]) -> dict[int, dict]:
+        rows = (await self.session.execute(select(
+            LessonStudent.id, LessonStudent.lesson_id, LessonStudent.access_ended_at.label('recipient_ended'),
+            Student.user_id.label('student_user_id'), Student.first_name, Student.last_name, Student.school_grade, User.username,
+            Lesson.course_id, Lesson.title.label('lesson_title'), Lesson.is_deleted.label('lesson_archived'),
+            Course.name.label('course_name'), Course.is_deleted.label('course_archived'),
+            Teacher.user_id.label('teacher_user_id'), StudentCourse.id.label('enrollment_id'),
+            StudentCourse.is_deleted.label('enrollment_deleted'), StudentCourse.history_revoked,
+            StudentCourse.access_ended_at.label('enrollment_ended'), StudentCourse.started_at,
+            StudentCourse.expires_at, TeacherStudent.ended_at.label('link_ended'),
+            func.statement_timestamp().label('now'),
+        ).join(Student, Student.id == LessonStudent.student_id).join(User, User.id == Student.user_id)
+          .join(Lesson, Lesson.id == LessonStudent.lesson_id).join(Course, Course.id == Lesson.course_id)
+          .join(Teacher, Teacher.id == Course.teacher_id)
+          .outerjoin(StudentCourse, and_(StudentCourse.course_id == Course.id, StudentCourse.student_id == Student.id))
+          .outerjoin(TeacherStudent, and_(TeacherStudent.teacher_id == Teacher.id, TeacherStudent.student_id == Student.id))
+          .where(LessonStudent.id.in_(ids)))).mappings().all()
+        return {r['id']: dict(r) for r in rows}
+
+    async def lesson_recipients(self, actor: User, lesson_ids: list[int]) -> list[int]:
+        return list((await self.session.scalars(select(LessonStudent.id).where(
+            LessonStudent.lesson_id.in_(lesson_ids), recipient_scope(actor.id, actor.role))
+            .order_by(LessonStudent.id))).all())
+
+    async def course_states(self, actor: User, ids: list[int]) -> list:
+        # Active enrollment uses the very same read view predicate as T14a.
+        return (await self.session.execute(select(Course.id, Course.is_deleted,
+            course_active_scope(actor.id, actor.role).label('active')).where(Course.id.in_(ids)))).all()
+
+    async def course_student_states(self, actor: User, ids: list[int]) -> list:
+        return (await self.session.execute(select(
+            StudentCourse.course_id, StudentCourse.is_deleted, StudentCourse.history_revoked,
+            StudentCourse.access_ended_at, StudentCourse.expires_at, StudentCourse.started_at,
+            TeacherStudent.ended_at, func.statement_timestamp()).select_from(StudentCourse).join(Student)
+            .join(Course, Course.id == StudentCourse.course_id).outerjoin(TeacherStudent, and_(
+                TeacherStudent.teacher_id == Course.teacher_id, TeacherStudent.student_id == Student.id))
+            .where(StudentCourse.course_id.in_(ids), Student.user_id == actor.id))).all()
+
+
+    async def lesson_states(self, ids: list[int]) -> dict:
+        rows = (await self.session.execute(select(Lesson.id, Lesson.is_deleted,
+            Course.is_deleted.label('course_archived'),
+            select(func.count(LessonStudent.id)).where(LessonStudent.lesson_id == Lesson.id)
+                .correlate(Lesson).scalar_subquery().label('recipients'))
+            .join(Course, Course.id == Lesson.course_id).where(Lesson.id.in_(ids)))).all()
+        return {r.id: r for r in rows}
+
+    async def creatable_courses(self, ids: list[int]) -> set[int]:
+        rows = await self.session.scalars(select(Course.id).where(Course.id.in_(ids),
+            Course.is_deleted.is_(False), exists(select(StudentCourse.id)
+                .join(Student, Student.id == StudentCourse.student_id).join(User, User.id == Student.user_id).where(
+                User.is_active.is_(True), User.role == UserRole.STUDENT,
+                StudentCourse.started_at <= func.statement_timestamp(),
+                StudentCourse.course_id == Course.id, StudentCourse.is_deleted.is_(False),
+                StudentCourse.history_revoked.is_(False), StudentCourse.access_ended_at.is_(None),
+                or_(StudentCourse.expires_at.is_(None), StudentCourse.expires_at > func.statement_timestamp()),
+                exists(select(TeacherStudent.id).where(TeacherStudent.teacher_id == Course.teacher_id,
+                    TeacherStudent.student_id == StudentCourse.student_id, TeacherStudent.ended_at.is_(None))
+                    .correlate(Course, StudentCourse))))
+        ))
+        return set(rows.all())

@@ -117,7 +117,7 @@ async def test_profile_d01_and_avatar(client_for_tests,world,session_db):
         headers=auth(w['accounts'][name][1])
         r=await client_for_tests.get(f'/users/{s.id}',headers=headers)
         assert r.status_code==200
-        assert set(r.json())=={'user_id','username','first_name','last_name','avatar_path'}
+        assert set(r.json())=={'user_id','username','first_name','last_name','avatar_path','school_grade'}
         assert r.json()['avatar_path']==f'/users/{s.id}/avatar'
         r=await client_for_tests.get('/users/students?limit=1&offset=99',headers=headers)
         assert r.json()['total']==1 and r.json()['items']==[]

@@ -1,4 +1,4 @@
-from src.modules.files.models_dto import StorageQuotaResponse
+from src.modules.files.models_dto import StorageQuotaResponse, TeacherStorageResponse
 from functools import wraps
 from pathlib import Path
 
@@ -130,6 +130,18 @@ class StorageQuotaService:
             raise PermissionErrorService()
         return await self.report(user_id)
 
+    async def teacher_report(self, actor_id: int, user_id: int) -> TeacherStorageResponse:
+        from src.modules.check_permission.service import ObjectPermissionService
+        from src.modules.check_permission.exception import PermissionErrorService
+        from src.modules.users.models import UserRole
+        permission = ObjectPermissionService(self.session)
+        if (await permission.actor(actor_id)).role != UserRole.ADMIN:
+            raise PermissionErrorService()
+        if not await self.repo.teacher_exists(user_id):
+            raise NotFoundData()
+        total, courses = await self.repo.teacher_storage(user_id)
+        return TeacherStorageResponse(user_id=user_id, used_bytes=total, courses=courses)
+
     async def change(self,actor_id: int,user_id: int,limit: int) -> StorageQuotaResponse:
         from src.modules.course_lifecycle.models import LifecycleAudit
         from uuid import uuid4
@@ -149,3 +161,19 @@ class StorageQuotaService:
         except Exception:
             await self.session.rollback()
             raise
+
+
+async def file_descriptors(session: AsyncSession, entries: list[tuple]) -> dict:
+    """Call only after domain authorization. IDs are domain IDs, never asset IDs."""
+    from src.modules.files.repository import descriptor_assets
+    from src.modules.files.models_dto import FileDescriptorDTO
+    assets = await descriptor_assets(session, {e[1] for e in entries if e[1] is not None})
+    result = {}
+    for domain_id, asset_id, legacy_name, url in entries:
+        asset = assets.get(asset_id)
+        if asset_id is not None and asset is None:
+            continue
+        result[domain_id] = FileDescriptorDTO(id=domain_id, download_url=url,
+            mime_type=asset.mime if asset else 'application/pdf', size_bytes=asset.size if asset else None,
+            display_name=safe_display_name(asset.display_name if asset else legacy_name or 'document.pdf'))
+    return result

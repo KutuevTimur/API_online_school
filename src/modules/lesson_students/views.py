@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from src.modules.auth.depends import get_current_user
+from src.modules.base.orm_dto import PaginationResponseDTO
+from src.modules.check_permission.models_dto import LessonRecipientResponseDTO
 from starlette import status
 
 from src.modules.check_permission import get_current_teacher_user
@@ -48,3 +51,10 @@ async def remove_student_from_lesson(
         lesson_id=lesson_id,
         student_user_id=student_user_id,
     )
+
+
+@router.get("/{lesson_id}/students", response_model=PaginationResponseDTO[LessonRecipientResponseDTO], status_code=200)
+async def get_lesson_students(lesson_id: int, limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0), current_user: UserDTO = Depends(get_current_user),
+    service: LessonStudentsService = Depends(get_lesson_students_service)):
+    return await service.visible_page(current_user.id, lesson_id, limit, offset)

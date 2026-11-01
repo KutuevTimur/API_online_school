@@ -22,9 +22,10 @@ def test_t07_prior_state_cutoff_and_downgrade_guard(database):
     assert sql("SELECT access_ended_at=deleted_at,history_revoked FROM student_courses")==[(True,False)]
     assert sql("SELECT is_deleted,deleted_at FROM lessons")==[(False,None)]
     sql("UPDATE lessons SET is_deleted=true,deleted_at=now()")
+    revision_before = sql("SELECT version_num FROM alembic_version")
     result=alembic('downgrade','711e94443ef3',success=False)
     assert 'discard' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version')==[('2048d2eeeaa8',)]
+    assert sql('SELECT version_num FROM alembic_version')==revision_before
     assert sql('SELECT count(*) FROM lesson_students')==[(1,)]
 
 

@@ -1,4 +1,6 @@
 from datetime import datetime
+from enum import StrEnum
+
 from typing import Optional
 
 from pydantic import EmailStr, BaseModel, ConfigDict, Field
@@ -8,6 +10,13 @@ from src.modules.students.models_dto import UpdateStudentDTO, StudentsResponseDT
 from src.modules.teachers.models_dto import UpdateTeacherDTO, TeachersResponseDTO
 from src.modules.users.models import UserRole
 
+
+class StudentSort(StrEnum):
+    ATTENTION = "attention"
+    RECENT = "recent"
+    GRADE_ASC = "grade_asc"
+    GRADE_DESC = "grade_desc"
+    NAME = "name"
 
 class UserDTO(ORMDTO):
     id: int
@@ -45,6 +54,8 @@ class RegisterUserRequestDTO(BaseModel):
     username: str = Field(min_length=1, max_length=255)
     role: UserRole
 
+    lesson_price_kopecks: int | None = Field(default=None, ge=0, le=2147483647, strict=True)
+    school_grade: int | None = Field(default=None, ge=1, le=11, strict=True)
     first_name: str
     last_name: str
     middle_name: Optional[str] = None
@@ -102,11 +113,39 @@ class CreateUserDTO(BaseModel):
 class MinimalProfileResponseDTO(BaseModel):
     user_id: int
     username: str
+    school_grade: int | None = Field(default=None, ge=1, le=11, strict=True)
     first_name: str
     last_name: str
     avatar_path: str | None = None
 
 
+class TeacherStudentProfileResponseDTO(MinimalProfileResponseDTO):
+    missing_homework: int
+    missing_lecture: int
+
+
 class AdminAccountStatusRequestDTO(BaseModel):
     is_active: bool
+    model_config = ConfigDict(extra="forbid")
+
+
+class AdminUserResponseDTO(BaseModel):
+    user_id: int
+    username: str
+    email: EmailStr | None = None
+    role: UserRole
+    is_active: bool
+    is_activated: bool
+    created_at: datetime
+    school_grade: int | None = Field(default=None, ge=1, le=11, strict=True)
+    first_name: str | None = None
+    last_name: str | None = None
+    middle_name: str | None = None
+    description: str | None = None
+    avatar_path: str | None = None
+
+
+class UpdateSchoolGradeRequestDTO(BaseModel):
+    school_grade: int | None = Field(ge=1, le=11, strict=True)
+    expected_school_grade: int | None = Field(ge=1, le=11, strict=True)
     model_config = ConfigDict(extra="forbid")

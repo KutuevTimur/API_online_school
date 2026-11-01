@@ -1,0 +1,1850 @@
+.heading {
+  margin-bottom: 28px;
+}
+.heading h1 {
+  margin-bottom: 8px;
+}
+.muted {
+  color: var(--lgg-muted);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.panel,
+.lesson,
+.result {
+  padding: 28px;
+  border-radius: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.panel {
+  background: var(--lgg-surface);
+  border: 1px solid var(--lgg-border);
+}
+.lesson {
+  background: var(--lgg-lesson);
+}
+.result {
+  background: var(--lgg-mint);
+}
+.panel h2,
+.lesson h2,
+.result h2 {
+  margin-top: 0;
+}
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 24px;
+}
+.row {
+  border-bottom: 1px solid var(--lgg-border);
+  padding: 18px 0;
+  overflow-wrap: anywhere;
+}
+.row a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 650;
+}
+.row p {
+  margin: 6px 0;
+}
+.readonly {
+  padding: 16px;
+  border: 1px solid var(--lgg-controlBorder);
+  border-radius: 8px;
+}
+.lessonCopy {
+  max-width: 70ch;
+}
+.copy {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .panel,
+  .lesson,
+  .result {
+    padding: 22px;
+  }
+}
+
+.fileButton {
+  height: auto;
+  min-height: 44px;
+  max-width: 100%;
+}
+.fileButton :global(.mantine-Button-label) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.lessonIntro {
+  margin-bottom: 24px;
+}
+
+/* My day follows the approved overview, with independently sized left panels. */
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.dayColumn {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.dayHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 24px;
+}
+.dayHeading h1 {
+  margin: 0;
+}
+.dayHeading > a,
+.studentLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.teacherDay .studentLink {
+  color: var(--lgg-ink);
+}
+.teacherDay {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+.teacherDay .dayColumn {
+  align-content: start;
+  min-height: 180px;
+}
+.teacherDay .dayPanel {
+  padding: 20px;
+}
+.teacherDay .dayLoading {
+  min-height: 240px;
+}
+.teacherDay .muted {
+  font-size: 14px;
+}
+.teacherDay .nextTime {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin: 12px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.nextTime time {
+  font-size: 32px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.nextTime span {
+  font-size: 14px;
+}
+.teacherDay .nextStudent {
+  font-size: 24px;
+  margin: 0;
+}
+.nextTopic {
+  margin: 8px 0 0;
+}
+.teacherDay .lessonActions {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.todayList {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.todayList > li + li {
+  border-top: 1px solid var(--lgg-border);
+}
+.todayRow {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--lgg-ink);
+  text-decoration: none;
+}
+.todayRow time {
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.todayRow > span:first-of-type {
+  font-weight: 650;
+}
+.todayStatus {
+  font-size: 14px;
+  color: var(--lgg-muted);
+}
+.todayNext,
+.todayRow:hover,
+.todayRow:active {
+  background: var(--lgg-lesson);
+}
+.todayNext .todayStatus,
+.todayRow:hover .todayStatus,
+.todayRow:active .todayStatus {
+  color: var(--lgg-ink);
+}
+@media (max-width: 1023px) {
+  .teacherDay {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 479px) {
+  .teacherDay .dayPanel {
+    padding: 16px;
+  }
+  .todayRow {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 2px 8px;
+  }
+  .todayStatus {
+    grid-column: 2;
+  }
+}
+.dot {
+  color: var(--lgg-success);
+}
+.overview h2,
+.courses h2 {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.overview h3 {
+  font-size: 20px;
+  line-height: 1.35;
+  margin: 14px 0 8px;
+}
+.overview .lessonTitle {
+  font-size: 32px;
+  letter-spacing: -0.03em;
+  margin-top: 24px;
+}
+.meetingTime {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.meetingTime span {
+  font-size: 14px;
+  font-weight: 500;
+}
+.lessonActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--lgg-controlBorder);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+.lessonActions p {
+  margin: 0;
+  font-size: 14px;
+}
+.sectionHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.task {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--lgg-border);
+}
+.task:first-child {
+  background: var(--lgg-lesson);
+  padding: 16px;
+  border: 0;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.task:last-child {
+  border: 0;
+  padding-bottom: 0;
+}
+.taskMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+.taskMeta > span:first-child {
+  font-weight: 650;
+}
+.taskStatus {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--lgg-lesson);
+}
+.taskDescription {
+  margin: 8px 0;
+  white-space: pre-wrap;
+}
+.deadline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin: 16px 0;
+}
+.deadline svg {
+  flex-shrink: 0;
+}
+.action {
+  height: auto;
+  min-height: 44px;
+  max-width: 100%;
+}
+.action :global(.mantine-Button-label) {
+  white-space: normal;
+  text-align: left;
+  padding-block: 8px;
+}
+.score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--lgg-success);
+}
+.score strong {
+  font-size: 48px;
+  line-height: 1.1;
+}
+.score > span {
+  font-size: 14px;
+}
+.courses {
+  margin-top: 28px;
+}
+.courseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.courseCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  height: 100%;
+  background: var(--lgg-surface);
+  border: 1px solid var(--lgg-border);
+  border-radius: 16px;
+  padding: 22px;
+  color: var(--lgg-ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.courseCard:hover {
+  border-color: var(--lgg-controlBorder);
+}
+.courseMark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--lgg-lesson);
+  flex-shrink: 0;
+}
+.courseGrid > li:nth-child(even) .courseMark {
+  background: var(--lgg-mint);
+}
+.courseCopy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.courseCopy strong {
+  font-size: 18px;
+}
+.courseCopy > span {
+  font-size: 14px;
+}
+.courseAction {
+  color: var(--lgg-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-weight: 650;
+}
+@media (max-width: 767px) {
+  .overview,
+  .courseGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .overview .lessonTitle {
+    font-size: 28px;
+  }
+  .courseCard {
+    padding: 20px;
+  }
+}
+
+.overview .result h2 {
+  margin-bottom: 12px;
+}
+.overview .result p {
+  margin: 10px 0;
+}
+.overview .result .score {
+  margin: 16px 0;
+}
+
+/* Allow long material filenames to grow the whole button at narrow widths. */
+.fileButton :global(.mantine-Button-inner) {
+  height: auto;
+}
+.fileButton :global(.mantine-Button-label) {
+  height: auto;
+  overflow: visible;
+  line-height: 1.4;
+  padding-block: 8px;
+}
+
+.workspaceHistory {
+  display: grid;
+  gap: 24px;
+  margin-top: 20px;
+}
+.workspaceHistory > .lesson {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 20px;
+  padding: 20px;
+}
+.workspaceHistory > .lesson h2 {
+  grid-column: 1 / -1;
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+.workspaceHistory > .lesson p {
+  margin: 0;
+}
+.workspaceHistory > .lesson > a {
+  grid-column: 2;
+  grid-row: 2 / 4;
+}
+@media (max-width: 767px) {
+  .workspaceHistory > .lesson {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspaceHistory > .lesson > a {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+.workspaceHistory .lesson a {
+  color: var(--lgg-ink);
+}
+.historyLesson {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--lgg-border);
+}
+.historySummary {
+  flex: 1 1 300px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.historySummary > a {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  min-height: 44px;
+  font-weight: 650;
+}
+.historySummary p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+.lessonTopic {
+  color: var(--lgg-muted);
+  max-width: 70ch;
+  overflow-wrap: anywhere;
+}
+.historyMaterials {
+  flex-basis: 100%;
+  border-top: 1px solid var(--lgg-border);
+  padding-top: 16px;
+  min-width: 0;
+}
+
+.noticeList {
+  display: grid;
+  gap: 8px;
+}
+.notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--lgg-border);
+  background: var(--lgg-surface);
+  overflow-wrap: anywhere;
+}
+.notification[data-unread='true'] {
+  background: var(--lgg-lesson);
+  border-color: var(--lgg-primary);
+}
+.noticeCopy {
+  min-width: 0;
+}
+.notification h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 750;
+}
+.notification p {
+  margin: 0;
+  font-size: 14px;
+}
+.notification button {
+  flex-shrink: 0;
+}
+.noticeStatus {
+  display: inline-block;
+  font-size: 14px;
+}
+@media (max-width: 767px) {
+  .notification {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+.materialStates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 20px;
+}
+.materialStates p {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--lgg-successSurface);
+  color: var(--lgg-success);
+  font-weight: 650;
+}
+.materialStates p[data-missing='true'] {
+  background: var(--lgg-surface);
+  color: var(--lgg-danger);
+  border: 1px solid var(--lgg-danger);
+}
+.fileList {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.lessonWork {
+  margin-top: 28px;
+  display: grid;
+  gap: 24px;
+}
+.lessonWork h3 {
+  overflow-wrap: anywhere;
+}
+
+.savedMaterial {
+  color: var(--lgg-success);
+  font-weight: 650;
+}
+.resultGrade {
+  font-size: 24px;
+  font-weight: 750;
+  color: var(--lgg-success);
+}
+
+.attention {
+  color: var(--lgg-danger);
+  font-weight: 650;
+}
+.lessonWork > h3 {
+  margin-bottom: 0;
+  font-size: 24px;
+}
+.lessonWork h4 {
+  margin-top: 0;
+  font-size: 20px;
+}
+
+.result .muted {
+  color: var(--lgg-success);
+}
+.lesson .muted {
+  color: var(--lgg-ink);
+}
+@media (max-width: 600px) {
+  .viewFilters {
+    gap: 8px;
+  }
+  .viewFilters button {
+    padding-inline: 12px;
+    font-size: 14px;
+  }
+}
+
+.resultFilesHeading {
+  font-size: 1.125rem;
+  margin: 0 0 12px;
+}
+
+/* Independent lesson/homework blocks must not visually merge. */
+.pageSections > .panel {
+  margin-top: 24px;
+}
+
+.secondaryDisclosure > summary {
+  box-sizing: border-box;
+  min-height: 44px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--lgg-canvas);
+  cursor: pointer;
+}
+
+/* Owner-requested quiet accents on the teacher overview only. */
+.teacherDay .reviewPanel {
+  background: var(--lgg-reviewSurface);
+}
+
+.materialHeading {
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.materialHeading h2 {
+  margin: 8px 0 0;
+}
+.materialActions,
+.materialPicker {
+  min-width: 0;
+  max-width: 100%;
+}
+.materialPanel[data-material-state='missing'] {
+  background: var(--lgg-materialMissingSurface);
+}
+.materialPanel[data-material-state='ready'] {
+  background: var(--lgg-successSurface);
+}
+.materialPanel[data-material-state='ready']
+  a:not(:global(.mantine-Button-root)) {
+  color: var(--lgg-ink);
+}
+
+.materialRemove:global(.mantine-Button-root) {
+  background: var(--lgg-materialMissingSurface);
+  color: var(--lgg-danger);
+  border-color: var(--lgg-danger);
+}
+
+.lessonComplete:global(.mantine-Button-root) {
+  background: var(--lgg-successSurface);
+  color: var(--lgg-success);
+  border-color: var(--lgg-success);
+}
+
+/* Teacher student card: history first, one quiet settings area. */
+.workspaceToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+.studentHistory {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.lastLesson,
+.monthHistory,
+.studentUpcoming {
+  min-width: 0;
+  padding: 24px;
+  border-radius: 16px;
+  overflow-wrap: anywhere;
+}
+.lastLesson {
+  background: var(--lgg-mint);
+}
+.lastLesson[data-read-only='true'] {
+  background: var(--lgg-surface);
+  border: 1px solid var(--lgg-border);
+}
+.studentUpcoming a:not(:global(.mantine-Button-root)) {
+  color: var(--lgg-ink);
+}
+.lastLesson h2,
+.monthHistory h2,
+.studentUpcoming h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+.lastLesson .meetingTime {
+  margin: 0 0 8px;
+}
+.lastLesson h3 {
+  margin: 0;
+}
+.monthHistory {
+  background: var(--lgg-surface);
+  border: 1px solid var(--lgg-border);
+}
+.monthStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block: 20px;
+}
+.monthStrip > button {
+  flex: 1 1 auto;
+}
+.monthTitle {
+  text-transform: capitalize;
+  margin: 16px 0 8px;
+}
+.studentHistoryPage .lastLesson {
+  padding: 20px;
+}
+.studentHistoryPage .lastLesson h3 {
+  font-size: 22px;
+}
+.historyFiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 16px;
+}
+.historyFiles section {
+  min-width: 0;
+}
+.historyFiles h4,
+.historyFiles p {
+  margin-block: 0 8px;
+}
+.historyHomework + .historyHomework {
+  margin-top: 12px;
+}
+.historyCourse {
+  margin-bottom: 24px;
+  max-width: 100%;
+}
+.studentHistoryPage .monthStrip {
+  display: grid;
+  grid-template-columns: 44px repeat(5, minmax(0, 1fr)) 44px;
+}
+.studentHistoryPage .monthStrip > button {
+  padding-inline: 4px;
+  height: auto;
+  min-height: 44px;
+}
+.studentHistoryPage .monthStrip :global(.mantine-Button-label) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .historyFiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .studentHistoryPage .lastLesson,
+  .studentHistoryPage .monthHistory {
+    padding: 16px;
+  }
+  .studentHistoryPage .monthStrip {
+    grid-template-columns: 44px repeat(3, minmax(0, 1fr)) 44px;
+    gap: 4px;
+  }
+}
+.studentLessonList {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+.studentLessonRow {
+  border-top: 1px solid var(--lgg-border);
+}
+.studentLessonToggle {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.8fr) minmax(0, 1.5fr) auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--lgg-ink);
+  background: var(--lgg-surface);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.studentLessonToggle:hover,
+.studentLessonToggle:active,
+.studentLessonToggle[aria-expanded='true'] {
+  background: var(--lgg-lesson);
+}
+.studentLessonDate,
+.studentLessonTitle {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+.studentLessonDate > span,
+.studentLessonTitle > span {
+  font-size: 14px;
+  font-weight: 400;
+}
+.studentLessonBody {
+  padding: 16px 12px;
+  background: var(--lgg-canvas);
+  border-radius: 8px;
+  margin: 8px 0 16px;
+}
+.studentMaterials {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  padding-block: 20px;
+}
+.studentMaterials > section {
+  min-width: 0;
+  padding: 16px;
+  background: var(--lgg-surface);
+  border-radius: 8px;
+}
+.studentMaterials h3 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+.studentHomework + .studentHomework {
+  border-top: 1px solid var(--lgg-border);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.studentHomework h4 {
+  margin: 0 0 8px;
+}
+.materialLabel {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
+.studentMaterials .fileButton:global(.mantine-Button-root) {
+  color: var(--lgg-ink);
+  background: var(--lgg-lesson);
+  border-color: var(--lgg-controlBorder);
+}
+.studentMaterials .fileButton:global(.mantine-Button-root):hover {
+  border-color: var(--lgg-primary);
+}
+.studentLessonFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+.studentUpcoming {
+  background: var(--lgg-lesson);
+  padding-block: 16px;
+}
+.studentUpcoming h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.studentUpcoming .secondaryDisclosure > summary {
+  background: var(--lgg-surface);
+}
+.studentSettings {
+  margin-top: 24px;
+}
+.studentSettings > summary {
+  background: var(--lgg-lesson);
+  font-weight: 650;
+}
+.studentSetting,
+.studentSettings > section {
+  padding-block: 20px;
+  border-bottom: 1px solid var(--lgg-border);
+}
+.studentSettings h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+@media (max-width: 767px) {
+  .lastLesson,
+  .monthHistory,
+  .studentUpcoming {
+    padding: 16px;
+  }
+  .studentMaterials {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .studentLessonToggle {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .studentLessonDate,
+  .studentLessonTitle {
+    grid-column: 1;
+  }
+  .studentLessonToggle > svg {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .monthStrip {
+    display: grid;
+    grid-template-columns: 44px repeat(3, minmax(0, 1fr)) 44px;
+    gap: 4px;
+  }
+  .monthStrip > button {
+    padding-inline: 4px;
+  }
+}
+
+.lessonIdentity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.lessonIdentity h1 {
+  flex: 1 1 280px;
+  min-width: 0;
+  margin: 0;
+}
+
+.homeworkResponse {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 16px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--lgg-surface);
+}
+.homeworkResponse p {
+  margin: 0;
+  font-weight: 650;
+}
+.homeworkResponse[data-response-state='submitted'] {
+  background: var(--lgg-reviewSurface);
+  color: var(--lgg-ink);
+}
+
+.reviewPendingAction:global(.mantine-Button-root) {
+  background: var(--lgg-reviewActionSurface);
+  color: var(--lgg-ink);
+  border: 1px solid var(--lgg-reviewActionBorder);
+}
+.reviewPendingAction:global(.mantine-Button-root):hover {
+  background: var(--lgg-reviewActionHover);
+}
+.reviewPendingAction:global(.mantine-Button-root):active {
+  background: var(--lgg-reviewActionActive);
+}
+
+.reviewCheckedAction:global(.mantine-Button-root) {
+  background: var(--lgg-mint);
+  color: var(--lgg-success);
+  border: 1px solid var(--lgg-success);
+}
+.reviewCheckedAction:global(.mantine-Button-root):hover,
+.reviewCheckedAction:global(.mantine-Button-root):active {
+  background: var(--lgg-reviewCheckedHover);
+}
+
+.homeworkResponse[data-response-state='checked'] {
+  background: var(--lgg-mint);
+  color: var(--lgg-success);
+  border: 1px solid var(--lgg-success);
+}
+.homeworkResponse .reviewCheckedAction:global(.mantine-Button-root) {
+  background: var(--lgg-surface);
+}
+.homeworkResponse .reviewCheckedAction:global(.mantine-Button-root):hover,
+.homeworkResponse .reviewCheckedAction:global(.mantine-Button-root):active {
+  background: var(--lgg-successSurface);
+}
+
+.lastLesson:not([data-read-only]) .studentMaterials > section {
+  background: var(--lgg-materialInsetSurface);
+}
+
+.studentTodo {
+  background: var(--lgg-reviewSurface);
+}
+.studentTodo .list {
+  display: grid;
+  gap: 12px;
+}
+.studentTodo .task {
+  background: var(--lgg-reviewActionSurface);
+  border: 1px solid var(--lgg-reviewActionBorder);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 0;
+}
+.studentTodo .taskStatus {
+  background: var(--lgg-successSurface);
+  color: var(--lgg-success);
+}
+.studentTodo .taskStatus[data-debt] {
+  background: var(--lgg-materialMissingSurface);
+  color: var(--lgg-danger);
+}
+
+/* Student S3: action belongs to each placement, never to the whole lesson. */
+.studentHomeworkList {
+  margin-top: 24px;
+}
+.studentHomeworkList > h2 {
+  margin-top: 0;
+}
+.studentHomeworkList[data-state='missing'],
+.studentMaterial[data-state='missing'] {
+  background: var(--lgg-materialMissingSurface);
+}
+.studentMaterial[data-state='available'] {
+  background: var(--lgg-successSurface);
+}
+.studentHomework[data-state='empty'],
+.studentHomework[data-state='draft'],
+.studentHomework[data-state='local'] {
+  background: var(--lgg-reviewSurface);
+}
+.studentHomework[data-state='submitted'],
+.studentHomework[data-state='checked'] {
+  background: var(--lgg-successSurface);
+}
+.studentResult {
+  scroll-margin-block: 24px;
+}
+@media (max-width: 600px) {
+  .studentWorkAction:global(.mantine-Button-root) {
+    width: 100%;
+  }
+}
+.studentResult[data-state='unknown'],
+.studentResult[data-state='readonly'] {
+  background: var(--lgg-surface);
+}
+.studentHomework > h3 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+.studentWorkAction:global(.mantine-Button-root) {
+  height: auto;
+  min-height: 44px;
+  padding-block: 10px;
+  max-width: 100%;
+}
+.studentWorkAction :global(.mantine-Button-label) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+/* Student day: source order is nearest → tasks → submitted → result. */
+.studentDay {
+  grid-template-areas: 'nearest tasks' 'recent tasks' 'result tasks';
+  grid-template-rows: auto auto 1fr;
+  gap: 20px 24px;
+}
+.studentNearest {
+  grid-area: nearest;
+}
+.studentTasks {
+  grid-area: tasks;
+}
+.studentLastResult {
+  grid-area: result;
+  align-self: start;
+}
+.studentDay .studentNearest,
+.studentDay .studentLastResult {
+  padding: 20px;
+}
+.studentDay .lessonTitle {
+  font-size: 22px;
+  margin: 12px 0 8px;
+}
+.studentDay .meetingTime {
+  font-size: 18px;
+  margin: 8px 0;
+}
+.studentDay .lessonActions {
+  margin-top: 12px;
+  padding-top: 12px;
+  gap: 8px;
+}
+.studentSubmitted .list {
+  display: grid;
+  gap: 12px;
+}
+.studentSubmitted .task {
+  background: var(--lgg-successSurface);
+  color: var(--lgg-ink);
+  border: 1px solid var(--lgg-controlBorder);
+  padding: 16px;
+  border-radius: 10px;
+  margin: 0;
+}
+.studentDay .studentLastResult h3 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+.studentDay .studentLastResult h2 {
+  margin-bottom: 8px;
+}
+.studentDay .studentLastResult p {
+  margin: 8px 0;
+}
+.courseContext {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.courseContext a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--lgg-ink);
+}
+.courseContext button {
+  margin: 4px;
+}
+@media (max-width: 767px) {
+  .studentDay {
+    grid-template-areas: 'nearest' 'tasks' 'result' 'recent';
+    grid-template-rows: auto;
+    gap: 16px;
+  }
+  .studentDay .studentNearest,
+  .studentDay .studentLastResult {
+    padding: 16px;
+  }
+  .studentTasks {
+    gap: 16px;
+  }
+}
+
+/* Latest completed lesson is a compact entry into the existing student history. */
+.studentRecent {
+  grid-area: recent;
+  align-self: start;
+  padding: 20px;
+}
+.recentMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+.recentDate {
+  margin: 0;
+}
+.recentActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+}
+.recentActions > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .studentRecent {
+    padding: 16px;
+  }
+}
+
+.studentDay .studentTodo,
+.studentDay .studentSubmitted {
+  padding: 20px;
+}
+@media (max-width: 767px) {
+  .studentDay .studentTodo,
+  .studentDay .studentSubmitted {
+    padding: 16px;
+  }
+}
+
+/* Student latest lesson: a compact overview; expanded history keeps its existing layout. */
+.compactHistoryHeading {
+  margin-bottom: 20px;
+}
+.studentHistoryPage .compactLatest {
+  background: var(--lgg-surface);
+  border: 1px solid var(--lgg-border);
+}
+.latestHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.latestHeader h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.latestOpenAction {
+  margin-top: 12px;
+}
+.latestLessonLink {
+  color: var(--lgg-ink);
+  background: var(--lgg-lesson);
+  border-color: var(--lgg-primary);
+}
+.compactLatest
+  .latestLessonLink[data-variant='default']:hover:not([data-disabled]) {
+  background: var(--lgg-primary);
+  border-color: var(--lgg-primary);
+  color: var(--lgg-surface);
+}
+.latestDate {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.latestDate svg {
+  flex-shrink: 0;
+  color: var(--lgg-success);
+}
+.studentHistoryPage .compactLatest .latestTopic {
+  margin: 8px 0 0;
+  font-size: 20px;
+}
+.latestContext,
+.latestHint {
+  margin: 4px 0 0;
+  color: var(--lgg-muted);
+  font-size: 14px;
+}
+.latestActions {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.latestActions > section {
+  min-width: 0;
+  max-width: 100%;
+}
+.latestActions :global(.mantine-Button-root) {
+  height: auto;
+  min-height: 44px;
+  max-width: 100%;
+  color: var(--lgg-ink);
+}
+.latestActions :global(.mantine-Button-label),
+.latestActions :global(.mantine-Button-inner) {
+  height: auto;
+  overflow: visible;
+}
+.latestActions :global(.mantine-Button-label) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.latestActions :global(.mantine-Button-root):hover:not([data-disabled]) {
+  background: var(--lgg-studentHover);
+  border-color: var(--lgg-primary);
+}
+.latestActions .fileList {
+  margin: 0;
+}
+.latestChoices {
+  margin-top: 12px;
+}
+.latestChoices > a + a {
+  margin-top: 8px;
+}
+@media (max-width: 767px) {
+  .latestLessonLink {
+    width: 100%;
+  }
+  .latestHeader h2 {
+    font-size: 20px;
+  }
+}
+
+/* Student monthly history only: preserve the accepted latest lesson and teacher history. */
+.historyHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+.historyHeader h2 {
+  margin: 0;
+}
+.historyControls {
+  display: grid;
+  grid-template-columns: 104px auto;
+  align-items: end;
+  gap: 8px;
+  max-width: 100%;
+}
+.historyControls > div {
+  min-width: 0;
+}
+.historyCurrent {
+  height: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  color: var(--lgg-ink);
+}
+.historyCurrent :global(.mantine-Button-inner),
+.historyCurrent :global(.mantine-Button-label) {
+  height: auto;
+  overflow: visible;
+}
+.historyCurrent :global(.mantine-Button-label) {
+  white-space: normal;
+  line-height: 1.4;
+}
+.studentMonthlyHistory .monthStrip {
+  margin-block: 16px;
+}
+.studentMonthlyHistory
+  .monthStrip
+  button[data-variant='default']:hover:not([data-disabled]),
+.studentMonthlyHistory .historyCurrent:hover:not([data-disabled]) {
+  background: var(--lgg-studentHover);
+  border-color: var(--lgg-primary);
+  color: var(--lgg-ink);
+}
+.studentMonthlyHistory .monthTitle {
+  margin-block: 16px 12px;
+}
+.historyGroupHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 16px 0 8px;
+}
+.historyGroupHeading h4,
+.historyGroupHeading p {
+  margin: 0;
+}
+.historyGroupHeading h4 {
+  font-size: 16px;
+  font-weight: 650;
+}
+.historyGroupHeading h4 span,
+.historyGroupHeading p {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--lgg-muted);
+}
+.studentMonthlyHistory .studentLessonList {
+  margin-block: 8px 16px;
+}
+.studentMonthlyHistory .studentLessonToggle {
+  min-height: 64px;
+  padding: 12px 8px;
+  gap: 12px;
+}
+.studentHistoryAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--lgg-primary);
+  white-space: nowrap;
+}
+.studentHistoryAction svg {
+  flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .historyControls {
+    width: 100%;
+    grid-template-columns: 104px minmax(0, 1fr);
+  }
+  .studentMonthlyHistory .studentLessonToggle {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 8px;
+  }
+  .studentMonthlyHistory .studentLessonDate {
+    display: contents;
+  }
+  .studentMonthlyHistory .studentLessonDate > time {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .studentMonthlyHistory .studentLessonDate > span {
+    grid-column: 1;
+    grid-row: 3;
+    min-width: 0;
+  }
+  .studentMonthlyHistory .studentLessonTitle {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .studentHistoryAction {
+    grid-column: 2;
+    grid-row: 3;
+    justify-self: end;
+  }
+}
+.studentMonthlyHistory .studentLessonToggle:hover .studentHistoryAction,
+.studentMonthlyHistory .studentLessonToggle:active .studentHistoryAction,
+.studentMonthlyHistory
+  .studentLessonToggle[aria-expanded='true']
+  .studentHistoryAction {
+  color: var(--lgg-ink);
+}
+
+/* Compact teacher overview; the full queue and student views retain their layout. */
+.teacherDay {
+  gap: 20px;
+}
+.teacherDay .dayColumn {
+  gap: 20px;
+}
+.dayHeading > a {
+  gap: 8px;
+}
+.teacherDay .daySectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  line-height: 1.35;
+}
+.daySectionTitle > svg {
+  flex: 0 0 auto;
+  color: var(--lgg-ink);
+}
+.dayCount {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--lgg-lesson);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.reviewPanel .dayCount {
+  background: var(--lgg-reviewActionSurface);
+}
+.teacherDay .nextTime time {
+  font-size: 28px;
+}
+.teacherDay .nextStudent {
+  font-size: 22px;
+}
+.dayReviewList > ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.dayReviewRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.dayTaskBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dayTaskBody > * {
+  min-width: 0;
+}
+.dayTaskBody > span {
+  display: block;
+  font-size: 14px;
+}
+.dayCompactReview > li {
+  padding: 12px 0;
+}
+.dayCompactReview > li + li {
+  border-top: 1px solid var(--lgg-border);
+}
+.dayTaskAction:global(.mantine-Button-root) {
+  border-color: var(--lgg-reviewActionBorder);
+  background: var(--lgg-reviewActionSurface);
+  color: var(--lgg-ink);
+}
+.dayTaskAction:global(.mantine-Button-root):hover {
+  background: var(--lgg-reviewActionHover);
+}
+.dayMaterialRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+}
+.dayMaterialRow + .dayMaterialRow {
+  border-top: 1px solid var(--lgg-border);
+}
+.teacherDay .dayMaterialRow h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.dayMaterialRow p {
+  margin: 0;
+  font-size: 14px;
+}
+.dayMaterialRow .dayTaskBody > p:first-of-type {
+  color: var(--lgg-muted);
+}
+.dayMaterialNeeds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--lgg-ink);
+}
+.dayMaterialNeeds > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dayMaterialNeeds svg {
+  flex: 0 0 auto;
+}
+.teacherDay .materialsPanel {
+  background: var(--lgg-materialMissingSurface);
+}
+@media (max-width: 479px) {
+  .dayReviewRow,
+  .dayMaterialRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .dayTaskAction,
+  .dayMaterialRow > a {
+    justify-self: start;
+  }
+}
+
+.teacherDay .nextMeeting {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  margin-top: 16px;
+}
+.teacherDay .nextMeeting .nextTime {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.nextIdentity {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.teacherDay .nextIdentity .nextStudent {
+  margin: 0;
+}
+.teacherDay .nextIdentity .nextTopic {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+@media (max-width: 479px) {
+  .teacherDay .nextMeeting {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .teacherDay .nextMeeting .nextTime {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .teacherDay .lessonActions {
+    gap: 8px;
+  }
+}
+
+.teacherDay .todayStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.todayStatus[data-status]::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.teacherDay .todayStatus[data-status='completed'] {
+  color: var(--lgg-success);
+}
+.teacherDay .todayStatus[data-status='scheduled'] {
+  color: var(--mantine-color-lgg-8);
+}
+
+.materialsPanel .dayCount {
+  background: var(--lgg-materialMissingBadge);
+  color: var(--lgg-danger);
+}
+
+/* Teacher student workspace: latest materials stay visible; only density changes. */
+.workspaceToolbar {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 16px 0 20px;
+}
+.workspaceToolbar > header {
+  min-width: 0;
+  flex: 1 1 420px;
+  margin: 0;
+}
+.workspaceToolbar > header h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.workspaceToolbar > header p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.workspaceToolbar > button {
+  flex-shrink: 0;
+}
+.teacherWorkspaceHistory {
+  gap: 20px;
+}
+.teacherWorkspaceHistory .lastLesson,
+.teacherWorkspaceHistory .monthHistory {
+  padding: 20px;
+}
+.teacherWorkspaceHistory .workspaceSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.workspaceSectionTitle > svg {
+  flex: 0 0 auto;
+}
+.teacherWorkspaceHistory .sectionHeading {
+  gap: 12px 20px;
+}
+.teacherWorkspaceHistory .sectionHeading > div:first-child {
+  min-width: 0;
+}
+.teacherWorkspaceHistory .sectionHeading p {
+  margin-block: 0 6px;
+}
+.teacherWorkspaceHistory .meetingTime {
+  font-size: 18px;
+}
+.teacherWorkspaceHistory .lastLesson h3 {
+  font-size: 18px;
+}
+.teacherWorkspaceHistory .studentMaterials {
+  padding-block: 12px 0;
+  gap: 20px;
+  align-items: start;
+}
+.teacherWorkspaceHistory .studentMaterials > section {
+  background: transparent;
+  border-top: 1px solid var(--lgg-controlBorder);
+  border-radius: 0;
+  padding: 12px 0 0;
+}
+.teacherWorkspaceHistory .studentMaterials h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+.teacherWorkspaceHistory .studentMaterials h3 svg {
+  flex: 0 0 auto;
+}
+.teacherWorkspaceHistory .studentMaterials section > p {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.teacherWorkspaceHistory .studentMaterials .fileList {
+  gap: 8px;
+}
+.teacherWorkspaceHistory .materialLabel {
+  margin: 12px 0 6px;
+  font-size: 14px;
+}
+.teacherWorkspaceHistory .monthHistory > .sectionHeading {
+  align-items: flex-end;
+}
+.teacherWorkspaceHistory .monthHistory > .sectionHeading h2 {
+  margin-bottom: 0;
+}
+.historyControls {
+  display: grid;
+  grid-template-columns: minmax(110px, 140px) auto;
+  align-items: end;
+  gap: 8px;
+}
+.historyControls > div {
+  min-width: 0;
+  width: 100%;
+}
+.teacherWorkspaceHistory .monthStrip {
+  margin-block: 16px 12px;
+  gap: 6px;
+}
+.teacherWorkspaceHistory .monthStrip > button:first-child,
+.teacherWorkspaceHistory .monthStrip > button:last-child {
+  flex: 0 0 44px;
+  padding-inline: 10px;
+}
+.teacherWorkspaceHistory .monthTitle {
+  margin-block: 12px 8px;
+  font-size: 18px;
+}
+.teacherWorkspaceHistory .studentLessonToggle {
+  min-height: 64px;
+  padding: 10px 12px;
+  gap: 12px;
+}
+.historyStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.historyStatus::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.historyStatus[data-status='completed'] {
+  color: var(--lgg-success);
+}
+.historyStatus[data-status='scheduled'] {
+  color: var(--mantine-color-lgg-8);
+}
+.teacherWorkspaceHistory .studentLessonBody {
+  padding: 12px;
+  margin-block: 4px 12px;
+}
+@media (max-width: 767px) {
+  .workspaceToolbar > header {
+    flex-basis: 100%;
+  }
+  .workspaceToolbar > header h1 {
+    font-size: 28px;
+  }
+  .teacherWorkspaceHistory .lastLesson,
+  .teacherWorkspaceHistory .monthHistory {
+    padding: 16px;
+  }
+  .teacherWorkspaceHistory .studentMaterials {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .teacherWorkspaceHistory .workspaceSectionTitle {
+    font-size: 18px;
+  }
+  .teacherWorkspaceHistory .historyControls {
+    width: 100%;
+  }
+}
+
+.teacherWorkspaceHistory
+  .lastLesson:not([data-read-only])
+  .studentMaterials
+  > section {
+  background: transparent;
+}
+.historyControls :global(.mantine-Select-root) {
+  min-width: 0;
+  width: 100%;
+}
+.historyControls :global(.mantine-Select-input) {
+  width: 100%;
+  min-width: 0;
+}
+.teacherWorkspaceHistory .lastLesson a:not(:global(.mantine-Button-root)) {
+  color: var(--mantine-color-lgg-8);
+}

@@ -1,6 +1,7 @@
 from src.modules.users.models_dto import UserAvatarResponseDTO
 from src.modules.storage.download import private_download
 from typing import Optional
+from src.modules.base.list_query import ListView
 
 from fastapi import APIRouter, Depends, UploadFile, File, Response, Query, Request
 from starlette import status
@@ -31,11 +32,13 @@ async def get_courses(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     teacher_user_id: Optional[int] = Query(None, description="Фильтр по создателю курса"),
-    my_courses: Optional[bool] = Query(None, description="Поиск только своих курсов"),
+    my_courses: Optional[bool] = Query(None, deprecated=True, description="Deprecated; role scope is always enforced"),
+    view: ListView = Query(ListView.ALL),
+    student_user_id: int | None = Query(None),
     current_user: UserDTO = Depends(get_current_user),
     courses_service: CoursesService = Depends(get_courses_service),
 ):
-    return await courses_service.list_visible(current_user, limit, offset, teacher_user_id)
+    return await courses_service.list_visible(current_user, limit, offset, teacher_user_id, view, student_user_id)
 
 
 @router.get(
@@ -62,7 +65,8 @@ async def create_course(
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     teacher = await courses_service.owner_profile(current_user)
-    return await courses_service.create_course(teacher_id=teacher.id, data=data)
+    course = await courses_service.create_course(teacher_id=teacher.id, data=data)
+    return await courses_service.detail_visible(current_user, course.id)
 
 
 @router.patch(
@@ -77,7 +81,8 @@ async def update_course(
     courses_service: CoursesService = Depends(get_courses_service),
 ):
     teacher = await courses_service.owner_profile(current_user, course_id)
-    return await courses_service.update_course(course_id=course_id, teacher_id=teacher.id, data=data)
+    await courses_service.update_course(course_id=course_id, teacher_id=teacher.id, data=data)
+    return await courses_service.detail_visible(current_user, course_id)
 
 
 @router.patch(
@@ -117,7 +122,8 @@ async def delete_course(
     if hard:
         raise PermissionErrorService("Purge is a separate admin workflow")
     else:
-        return await courses_service.soft_delete_course(course_id=course_id, teacher_id=teacher.id)
+        await courses_service.soft_delete_course(course_id=course_id, teacher_id=teacher.id)
+        return await courses_service.detail_visible(current_user, course_id)
 
 
 @router.get("/courses/{course_id}/avatar", response_class=FileResponse, status_code=status.HTTP_200_OK)
@@ -128,3 +134,17 @@ async def get_course_avatar(
     service: CoursesService = Depends(get_courses_service),
 ):
     return await private_download(request, str(await service.avatar_file(current_user, course_id)), "avatar.webp", "image/webp")
+
+
+@router.get("/courses/personal/{student_user_id}", response_model=CoursesResponseDTO | None, status_code=200)
+async def read_personal_workspace(student_user_id: int,
+    actor: UserDTO = Depends(get_current_teacher_user),
+    service: CoursesService = Depends(get_courses_service)):
+    return await service.personal_workspace(actor, student_user_id)
+
+
+@router.post("/courses/personal/{student_user_id}", response_model=CoursesResponseDTO, status_code=200)
+async def start_personal_workspace(student_user_id: int,
+    actor: UserDTO = Depends(get_current_teacher_user),
+    service: CoursesService = Depends(get_courses_service)):
+    return await service.personal_workspace(actor, student_user_id, create=True)

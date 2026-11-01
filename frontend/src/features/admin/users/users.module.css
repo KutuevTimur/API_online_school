@@ -1,0 +1,23 @@
+.page {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.page :global(.mantine-Button-root) {
+  max-width: 100%;
+  min-height: 44px;
+  height: auto;
+}
+.page :global(.mantine-Button-label) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 767px) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

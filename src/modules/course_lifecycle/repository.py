@@ -89,3 +89,10 @@ class LifecycleRepository(BaseRepository):
     async def pending_paths(self) -> set[str]:
         return set((await self.session.scalars(select(FileDeletion.path).where(
             FileDeletion.completed.is_(False)))).all())
+
+    async def lock_schedule_for_course(self, course_id: int) -> None:
+        from src.modules.lessons.repository import LessonsRepository
+        user_id = await self.session.scalar(select(Teacher.user_id).join(
+            Course, Course.teacher_id == Teacher.id).where(Course.id == course_id))
+        if user_id is not None:
+            await LessonsRepository(self.session).lock_schedule(user_id)

@@ -1,4 +1,35 @@
-# Локальное окружение — T00
+# Локальное окружение LGG
+
+## Текущий безопасный вход ·30.10.2026
+
+Рабочий repo API_online_school, branch codex/t00-t01-environment, base HEAD95b3560.
+Закреплены локальные Node24.22.0/npm11.19.1, Python3.14.0. Использовать существующий
+.local-runtime/bin через PATH; системный Node26/npm11.12.1 — другой runtime.
+Сводка версий/проверок — [текущий handoff](tasks/T15d_UI_HANDOFF_2026_10_30.md).
+
+Preview5173→8019→test55432 содержит сохраняемые данные владельца, не disposable.
+Никаких seed/reset/миграций/DB-тестов поверх него. Сначала проверить listeners;
+работающие сервисы не перезапускать ради проверки. Возобновление — только existing
+ignored frontend/.artifacts/t15b2-resume.py с прежним media root, без seed.
+[Подробный контракт сохранности](#сохранение-текущего-preview). Старые команды
+создания namespace ниже/в других документах не являются командами resume.
+Read-only scripts/test_preflight.py разрешён для SELECT actual target/role/engine;
+standalone tests_unit с mocks не подключаются к DB. Интеграционные DB tests требуют
+отдельного изолированного target и нового разрешённого сценария.
+
+Исторические проверки ниже сохранены как история, не актуальная инструкция запуска.
+
+## Историческая read-only сверка после T13R, 15.10.2026
+
+Ветка `codex/t00-t01-environment`, HEAD`95b3560`. Source factory/OpenAPI54paths/
+71operations, live `127.0.0.1:8018/openapi.json` HTTP200/54paths. Контейнеры
+`lgg-dev-backend-1` running, dev/test PostgreSQL healthy; данные/volumes не менялись.
+Dev image после T13R не пересобран, версию runtime-кода по paths не выводить.
+Host Node`26.0.0`/npm`11.12.1`, Python `.venv`3.14.0. Для frontend выбран
+Node24.22 LTS/npm11.19.1, ещё не установлен/не подключён: T14d может использовать
+изолированный официальный Node24 container, не менять глобальную систему молча.
+Внешняя БД UNKNOWN; этот осмотр не подключался к ней. Источник нынешнего состояния
+STATUS; факты T00/T01 ниже исторические и относятся к своим сессиям.
 
 Проверено 15.10.2026. T00/T01 DONE. Docker Desktop работает; ниже инвентаризация T00 и актуальное дополнение T01.
 
@@ -143,3 +174,34 @@ DB/shared/manifest refs защищены. Runtime assets=32, pending cleanup=0 �
 
 Финальный preflight: guarded lgg-test head 36a8711f7799, users/courses/assets = 0/0/0;
 both Compose config --quiet и git diff --check PASS. Dev сохранён работающим.
+
+
+## Сохранение текущего preview
+
+Актуальное правило21.10.2026: test55432 содержит сохраняемые данные владельца.
+Текущая доступность и результаты — STATUS; учётные данные не дублировать здесь.
+Не применять generic инструкции seed/reset из старых разделов к этому preview.
+
+- До остановки сохранить точный способ запуска и media root, проверить ignored
+  credentials JSON/helper0600. Сейчас работающий resume — локальный ignored
+  `frontend/.artifacts/t15b2-resume.py`: читает существующий `files.media_root`,
+  проверяет test guard, поднимает8019 без seed. Перед повторным использованием
+  перечитать файл; это локальный инструмент, не portable production entrypoint.
+- Если процессы работают, не перезапускать их ради проверки. Для read-only SQL
+  допустим `scripts/test_preflight.py`; он не очищает БД.
+- До DB pytest/migrations остановить synthetic preview и проверить отсутствие
+  listeners5173/8019. Проверить actual target/engine/session/SQL, подготовить
+  проверенную копию DB+sequence+media и точное восстановление либо отдельный
+  допустимый guarded target. Не ослаблять guard, не использовать dev/UNKNOWN.
+- После проверок возобновить backend с **прежним** media root и frontend через
+  существующий local Node; не запускать `t14e_preview.py` как resume. Проверить
+  login, учебные данные, protected files и актуальность helper без печати секретов.
+- Старые E2E seed сценарии меняют данные/приглашения/пароли; текущий helper может
+  не содержать их accounts. Сначала отдельная fixture и чтение поведения, затем
+  запуск; не переиспользовать owner accounts как disposable tests.
+
+В первоначальном аудите21.10 DB-мутирующих проверок не было, поэтому preview не
+останавливался. В последующем UX-доведении он был временно остановлен, тесты шли
+на отдельном disposable volume, затем исходный контейнер/media/private helper
+восстановлены и проверены; факт — [STATUS](STATUS.md). Это не доказывает production
+persistence/backup restore (T17/T18 остаются открыты).

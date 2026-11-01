@@ -1,0 +1,7 @@
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.text a {
+  text-decoration: underline;
+}

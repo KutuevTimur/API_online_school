@@ -1,3 +1,4 @@
+from src.modules.base.list_query import ListView
 from typing import Optional
 from pydantic import AwareDatetime
 from src.modules.lessons.models import LessonStatus
@@ -13,6 +14,51 @@ from src.modules.lessons.service import LessonsService
 from src.modules.users.models_dto import UserDTO
 
 router = APIRouter(prefix="/lessons", tags=["Lessons"])
+
+from uuid import UUID
+from src.modules.lessons.depends import get_regular_lessons_service
+from src.modules.lessons.service import RegularLessonsService
+from src.modules.lessons.models_dto import (
+    PreviewRegularLessonsRequestDTO, ConfirmRegularLessonsRequestDTO,
+    RegularOperationResponseDTO, RegularSeriesResponseDTO,
+)
+
+
+@router.post("/regular/previews", response_model=RegularOperationResponseDTO, status_code=200)
+async def preview_regular_lessons(
+    data: PreviewRegularLessonsRequestDTO,
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: RegularLessonsService = Depends(get_regular_lessons_service),
+) -> RegularOperationResponseDTO:
+    return await service.preview_regular(current_user.id, data)
+
+
+@router.get("/regular/operations/{operation_id}", response_model=RegularOperationResponseDTO, status_code=200)
+async def get_regular_operation(
+    operation_id: UUID,
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: RegularLessonsService = Depends(get_regular_lessons_service),
+) -> RegularOperationResponseDTO:
+    return await service.get_operation(current_user.id, operation_id)
+
+
+@router.post("/regular/operations/{operation_id}/confirm", response_model=RegularOperationResponseDTO, status_code=200)
+async def confirm_regular_lessons(
+    operation_id: UUID, data: ConfirmRegularLessonsRequestDTO,
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: RegularLessonsService = Depends(get_regular_lessons_service),
+) -> RegularOperationResponseDTO:
+    return await service.confirm_regular(current_user.id, operation_id, data)
+
+
+@router.get("/regular/series/{series_id}", response_model=RegularSeriesResponseDTO, status_code=200)
+async def get_regular_series(
+    series_id: UUID,
+    current_user: UserDTO = Depends(get_current_teacher_user),
+    service: RegularLessonsService = Depends(get_regular_lessons_service),
+) -> RegularSeriesResponseDTO:
+    return await service.get_series(current_user.id, series_id)
+
 
 @router.post(
     "",
@@ -44,6 +90,8 @@ async def get_lessons(
     to_date: Optional[AwareDatetime] = Query(None, description="До даты"),
     course_id: Optional[int] = Query(None, description="Фильтр по курсу"),
     lesson_status: LessonStatus | None = Query(None, alias="status"),
+    view: ListView = Query(ListView.ALL),
+    student_user_id: int | None = Query(None),
     sort_date: str = Query("desc", description="Сортировка по дате (asc/desc)"),
     current_user: UserDTO = Depends(get_current_user),
     service: LessonsService = Depends(get_lessons_service),
@@ -56,7 +104,7 @@ async def get_lessons(
         to_date=to_date,
         course_id=course_id,
         sort_date=sort_date,
-        lesson_status=lesson_status,
+        lesson_status=lesson_status, view=view, student_user_id=student_user_id,
     )
 
 @router.get(

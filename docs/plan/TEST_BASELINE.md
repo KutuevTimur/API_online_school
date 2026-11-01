@@ -1,5 +1,8 @@
 # PostgreSQL baseline — T02, 15.10.2026
 
+> Историческое доказательство своего этапа. Актуальные требования — PRODUCT/DECISIONS,
+> состояние — STATUS. Сохранённые failures/NOT RUN относятся к указанному снимку.
+
 Цель: только созданный проектом disposable lgg-test (PostgreSQL 15,
 127.0.0.1:55432, lgg_test/lgg_test_app). Compose project/container/healthy
 подтверждены перед изменениями; guard T01 проверяет конфиг, фактический DSN

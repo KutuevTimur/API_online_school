@@ -67,6 +67,9 @@ class LecturesService:
             student_user_id=student_user_id,
         )
 
+        if await self.lectures_repo.lock_recipient_and_count(lesson_student.id) >= 4:
+            from src.modules.lectures.exception import LectureLimitReached
+            raise LectureLimitReached()
         file_name = Path(safe_display_name(file.filename)).stem
         file_type = self.handler_documents._validate_extension(file.filename)
 
@@ -115,7 +118,7 @@ class LecturesService:
         self.handler_documents.upload_committed = True
         await self.session_db.refresh(updated_lecture)
         
-        return LectureResponseDTO.model_validate(updated_lecture)
+        return (await self._responses([updated_lecture], teacher_user_id))[0]
 
     async def get_lectures(
         self,
@@ -142,7 +145,7 @@ class LecturesService:
             actor=await ObjectPermissionService(self.session_db).actor(user_id),
         )
         
-        dtos = [LectureResponseDTO.model_validate(l) for l in lectures]
+        dtos = await self._responses(lectures, user_id)
         
         return PaginationResponseDTO(
             items=dtos,
@@ -159,13 +162,15 @@ class LecturesService:
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
         sort_date: str = "desc",
+        course_id: int | None = None,
+        view=None,
     ) -> PaginationResponseDTO[LectureResponseDTO]:
         student = await self.student_repo.get_student_by_user_id(student_user_id)
         if not student:
             raise PermissionErrorService("Student user not found")
             
         lectures, total = await self.lectures_repo.get_all_by_student_id(
-            student_id=student.id,
+            student_id=student.id, course_id=course_id, view=view,
             limit=limit,
             offset=offset,
             from_date=from_date,
@@ -173,7 +178,7 @@ class LecturesService:
             sort_date=sort_date,
             actor=await ObjectPermissionService(self.session_db).actor(student_user_id),
         )
-        dtos = [LectureResponseDTO.model_validate(l) for l in lectures]
+        dtos = await self._responses(lectures, student_user_id)
         
         return PaginationResponseDTO(
             items=dtos,
@@ -223,10 +228,41 @@ class LecturesService:
         if not lecture or lecture.lesson_student_id != lesson_student.id:
             raise LectureNotFound("Lecture does not exist")
 
+        result = (await self._responses([lecture], teacher_user_id))[0]
         from src.modules.course_lifecycle.models import FileDeletion
         self.session_db.add_all([FileDeletion(path=p) for p in sorted(
             {lecture.original_file_path, lecture.pdf_file_path} - {None, ''})])
         deleted = await self.lectures_repo.delete_lecture(lecture.id)
         await self.session_db.commit()
         
-        return LectureResponseDTO.model_validate(deleted)
+        result.can_manage = False
+        return result
+
+    async def _responses(self, lectures: list, user_id: int) -> list[LectureResponseDTO]:
+        from src.modules.check_permission.repository import ReadContextRepository
+        from src.modules.check_permission.read_context import access, recipient_reason
+        from src.modules.files.service import file_descriptors
+        actor = await ObjectPermissionService(self.session_db).actor(user_id)
+        rows = await ReadContextRepository(self.session_db).recipients([l.lesson_student_id for l in lectures])
+        entries, dtos = [], []
+        for lecture in lectures:
+            row = rows[lecture.lesson_student_id]
+            dto = LectureResponseDTO.model_validate(lecture)
+            for key in ['course_id', 'lesson_id', 'student_user_id', 'teacher_user_id', 'course_name', 'lesson_title']:
+                setattr(dto, key, row[key])
+            for key, value in access(recipient_reason(row), actor).items():
+                setattr(dto, key, value)
+            entries.append((lecture.id, lecture.download_asset_id, lecture.pdf_file_name,
+                f"/lectures/{lecture.id}/file?lesson_id={row['lesson_id']}&student_user_id={row['student_user_id']}"))
+            dtos.append(dto)
+        descriptors = await file_descriptors(self.session_db, entries)
+        for dto in dtos:
+            dto.file = descriptors.get(dto.id)
+        return dtos
+
+    async def detail(self, user_id: int, lecture_id: int) -> LectureResponseDTO:
+        actor = await ObjectPermissionService(self.session_db).actor(user_id)
+        lecture = await self.lectures_repo.detail_visible(lecture_id, actor)
+        if lecture is None:
+            raise LectureNotFound()
+        return (await self._responses([lecture], user_id))[0]

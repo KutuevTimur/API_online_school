@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, List
 
-from sqlalchemy import String, func, Integer, ForeignKey
+from sqlalchemy import String, func, Integer, ForeignKey, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
@@ -15,12 +15,15 @@ if TYPE_CHECKING:
 
 class Student(Base):
     __tablename__ = "students"
+    __table_args__ = (CheckConstraint("school_grade IS NULL OR school_grade BETWEEN 1 AND 11", name="ck_students_school_grade"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
 
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    school_grade: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     middle_name: Mapped[str] = mapped_column(String(255), nullable=True)
 
     avatar_path: Mapped[str] = mapped_column(String(1000), nullable=True)

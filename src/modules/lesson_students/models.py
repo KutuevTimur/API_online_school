@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, List
 
-from sqlalchemy import Integer, ForeignKey, UniqueConstraint, func
+from sqlalchemy import Integer, ForeignKey, UniqueConstraint, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import DateTime
 
@@ -27,6 +27,9 @@ class LessonStudent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     access_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    homework_not_needed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    lecture_not_needed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # Relationships
     lesson: Mapped["Lesson"] = relationship("Lesson", back_populates="lesson_students")

@@ -1,0 +1,144 @@
+.listHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.listHeading h1 {
+  margin: 0;
+}
+.filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 120px 260px;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+.identity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.identity > span:last-child {
+  font-size: 14px;
+  font-weight: 400;
+}
+.name {
+  font-size: 18px;
+  font-weight: 650;
+}
+.grade {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  padding: 4px 10px;
+  background: var(--lgg-lesson);
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 650;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.studentHeading {
+  margin: 24px 0 32px;
+}
+.studentHeading h1 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.studentHeading p {
+  margin: 0;
+}
+@media (max-width: 767px) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .listHeading {
+    gap: 16px;
+  }
+}
+
+/* Compact teacher list; shared DataList and student detail keep their owners. */
+.studentListPage .listHeading {
+  margin-bottom: 20px;
+  gap: 12px 20px;
+}
+.studentListPage .listHeading h1 {
+  font-size: 32px;
+}
+.studentListPage .listHeading a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.studentListPage .filters {
+  grid-template-columns: minmax(220px, 1fr) 100px 230px 200px;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.studentListPage .filters > * {
+  min-width: 0;
+}
+.studentListPage ul[aria-label='Свои ученики'] > li > a {
+  min-height: 76px;
+  padding: 12px 16px;
+  gap: 16px;
+}
+.studentListPage .identity {
+  gap: 3px;
+}
+.studentListPage .identity > span {
+  font-size: 14px;
+}
+.studentListPage .identity > .name {
+  font-size: 17px;
+  font-weight: 650;
+}
+.studentListPage .materialAttention {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--lgg-danger);
+}
+.materialAttention > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.materialAttention > span::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 6px;
+  background: currentColor;
+}
+@media (max-width: 1023px) {
+  .studentListPage .filters {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 599px) {
+  .studentListPage .filters {
+    grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.5fr);
+  }
+  .studentListPage .filters > .searchFilter,
+  .studentListPage .filters > .materialsFilter {
+    grid-column: 1 / -1;
+  }
+  .studentListPage .listHeading h1 {
+    font-size: 28px;
+  }
+  .studentListPage ul[aria-label='Свои ученики'] > li > a {
+    padding: 12px;
+    gap: 10px;
+  }
+}

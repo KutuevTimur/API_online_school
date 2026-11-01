@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import field_serializer, BaseModel, ConfigDict
+from pydantic import field_serializer, BaseModel, ConfigDict, Field
 
 from src.modules.base.orm_dto import ORMDTO
 
@@ -9,6 +9,7 @@ from src.modules.base.orm_dto import ORMDTO
 class StudentsDTO(ORMDTO):
     id: int
     user_id: int
+    school_grade: int | None = Field(default=None, ge=1, le=11)
     first_name: str
     last_name: str
     middle_name: Optional[str] = None
@@ -19,6 +20,7 @@ class StudentsDTO(ORMDTO):
 
 class StudentsResponseDTO(ORMDTO):
     user_id: int
+    school_grade: int | None = Field(default=None, ge=1, le=11)
     first_name: str
     last_name: str
     middle_name: Optional[str] = None
@@ -33,6 +35,7 @@ class StudentsResponseDTO(ORMDTO):
 
 class CreateStudentDTO(BaseModel):
     user_id: int
+    school_grade: int | None = Field(default=None, ge=1, le=11)
     first_name: str
     last_name: str
     middle_name: Optional[str] = None
@@ -50,6 +53,7 @@ class UpdateStudentDTO(BaseModel):
 
 class MinimalStudentResponseDTO(ORMDTO):
     user_id: int
+    school_grade: int | None = Field(default=None, ge=1, le=11)
     first_name: str
     last_name: str
     avatar_path: str | None = None

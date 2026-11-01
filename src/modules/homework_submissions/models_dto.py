@@ -1,3 +1,4 @@
+from src.modules.files.models_dto import FileDescriptorDTO
 from datetime import datetime
 from typing import Optional, List, Literal
 
@@ -20,6 +21,7 @@ class HomeworkSubmissionFileDTO(ORMDTO):
 
 
 class HomeworkSubmissionFileResponseDTO(ORMDTO):
+    file: FileDescriptorDTO | None = None
     id: int
     original_file_name: Optional[str] = None
     original_file_type: Optional[str] = None
@@ -64,6 +66,7 @@ class HomeworkSubmissionResponseDTO(ORMDTO):
     updated_at: datetime
     
     files: List[HomeworkSubmissionFileResponseDTO] = []
+    review_files: List[HomeworkSubmissionFileResponseDTO] = []
 
 
 class HomeworkSubmissionRequestDTO(BaseModel):
@@ -84,6 +87,7 @@ class HomeworkSubmissionRequestDTO(BaseModel):
 
 class HomeworkSubmissionFileRequestDTO(BaseModel):
     """Схема для создания записи файла (внутренняя)"""
+    purpose: Literal["answer", "review"] = "answer"
     source_size: int | None = None
     original_asset_id: int | None = None
     download_asset_id: int | None = None
@@ -115,3 +119,7 @@ class ReviewQueueItemDTO(HomeworkSubmissionResponseDTO):
     lesson_id: int
     student_user_id: int
     homework_title: str
+    student_first_name: str
+    student_last_name: str
+    student_username: str
+    course_name: str

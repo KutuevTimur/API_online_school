@@ -30,7 +30,8 @@ def test_t13_refuses_discarding_records(database, kind):
         sql("INSERT INTO notifications(recipient_user_id,event_type,object_type,object_id,dedupe_key) VALUES(20,'homework_assigned','homework',90,'test')")
     else:
         sql("INSERT INTO audit_events(actor_user_id,action,object_type,object_id,result,correlation_id) VALUES(10,'account_create','user',20,'success',repeat('a',32))")
+    revision_before = sql("SELECT version_num FROM alembic_version")
     result = alembic('downgrade', '36a8711f7799', success=False)
     assert 'Refusing to discard notifications or audit events' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version') == [('2048d2eeeaa8',)]
+    assert sql('SELECT version_num FROM alembic_version') == revision_before
     assert_schema(conf)

@@ -1,4 +1,6 @@
+from datetime import datetime
 from pydantic import BaseModel, Field
+from src.modules.users.models_dto import MinimalProfileResponseDTO
 
 
 class LinkTeacherStudentRequestDTO(BaseModel):
@@ -8,3 +10,9 @@ class LinkTeacherStudentRequestDTO(BaseModel):
 
 class TeacherStudentResponseDTO(LinkTeacherStudentRequestDTO):
     active: bool
+
+
+class AdminTeacherStudentResponseDTO(TeacherStudentResponseDTO):
+    teacher: MinimalProfileResponseDTO
+    student: MinimalProfileResponseDTO
+    ended_at: datetime | None

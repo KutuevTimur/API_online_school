@@ -1,3 +1,7 @@
+from src.modules.base.orm_dto import PaginationResponseDTO
+from src.modules.users.models_dto import UserDTO
+from sqlalchemy import true
+from src.modules.base.list_query import ListView, view_scope
 from src.modules.handlers_files.avatar_transaction import atomic_avatar_upload, retire_avatar
 from src.modules.check_permission.service import ObjectPermissionService
 from pathlib import Path
@@ -15,6 +19,7 @@ from src.modules.courses.models_dto import (
     UpdateCourseDTO,
     UpdateCourseDTORequest,
     CoursesDTO,
+    CoursesResponseDTO,
 )
 from src.modules.courses.repository import CourseRepository
 from src.modules.handlers_files.compression_images import CompressionImages
@@ -166,43 +171,53 @@ class CoursesService:
         data: UpdateCourseDTO | UpdateCourseDTORequest,
     ) -> CoursesDTO:
         """Обновляет курс"""
-        course = await self.course_repo.get_course_by_id(course_id)
-        if not course:
-            raise CourseNotFound()
-            
-        if course.is_deleted:
-            from src.modules.check_permission.exception import PermissionErrorService
-            raise PermissionErrorService("Archived course is read-only")
-        if course.teacher_id != teacher_id:
-            raise CourseAccessDenied("You can only modify your own courses")
+        try:
+            from src.modules.course_lifecycle.repository import LifecycleRepository
+            course = await LifecycleRepository(self.session_db).course(course_id)
+            if not course:
+                raise CourseNotFound()
+            if course.is_deleted:
+                from src.modules.check_permission.exception import PermissionErrorService
+                raise PermissionErrorService("Archived course is read-only")
+            if course.teacher_id != teacher_id:
+                raise CourseAccessDenied("You can only modify your own courses")
 
-        if data.slug is not None and data.slug != course.slug:
-            existing = await self.course_repo.get_course_by_slug(data.slug)
-            if existing and existing.id != course_id:
-                raise CourseAlreadyExists(f"Course with slug '{data.slug}' already exists")
+            from src.modules.base.versioning import check_updated_at
+            check_updated_at(data.expected_updated_at, course.updated_at)
 
-        values = data.model_dump(exclude_unset=True)
-        # The legacy PATCH archive must preserve the same timestamp as DELETE.
-        if values.get("is_deleted") is True:
-            values["deleted_at"] = datetime.now(UTC)
+            if data.slug is not None and data.slug != course.slug:
+                existing = await self.course_repo.get_course_by_slug(data.slug)
+                if existing and existing.id != course_id:
+                    raise CourseAlreadyExists(f"Course with slug '{data.slug}' already exists")
 
-        if data.avatar_type and data.avatar_type != AvatarCoursesType.CUSTOM:
-            retire_avatar(self.session_db, course.avatar_path)
-            values["avatar_path"] = None
+            values = data.model_dump(exclude_unset=True, exclude={"expected_updated_at"})
+            # The legacy PATCH archive must preserve the same timestamp as DELETE.
+            if values.get("is_deleted") is True:
+                values["deleted_at"] = datetime.now(UTC)
 
-        if not values:
-            return CoursesDTO.model_validate(course)
+            if data.avatar_type and data.avatar_type != AvatarCoursesType.CUSTOM:
+                retire_avatar(self.session_db, course.avatar_path)
+                values["avatar_path"] = None
 
-        updated_course = await self.course_repo.update_course(
-            course_id=course_id,
-            values=values,
-        )
-        if not updated_course:
-            raise CourseNotFound()
+            if not values:
+                result = CoursesDTO.model_validate(course)
+                await self.session_db.commit()
+                return result
 
-        await self.session_db.commit()
-        await self.session_db.refresh(updated_course)
-        return CoursesDTO.model_validate(updated_course)
+            updated_course = await self.course_repo.update_course(
+                course_id=course_id,
+                values=values,
+            )
+            if not updated_course:
+                raise CourseNotFound()
+
+            await self.session_db.commit()
+            await self.session_db.refresh(updated_course)
+            return CoursesDTO.model_validate(updated_course)
+
+        except Exception:
+            await self.session_db.rollback()
+            raise
 
     @atomic_avatar_upload
     async def update_avatar(
@@ -280,10 +295,16 @@ class CoursesService:
         from src.modules.check_permission.exception import PermissionErrorService
         raise PermissionErrorService("Purge is a separate admin workflow")
 
-    async def list_visible(self, actor, limit: int, offset: int, teacher_user_id: int | None = None):
-        from src.modules.check_permission.repository import course_scope
-        from src.modules.base.orm_dto import PaginationResponseDTO
-        from src.modules.courses.models_dto import CoursesResponseDTO
+    async def list_visible(
+        self, actor: UserDTO, limit: int, offset: int,
+        teacher_user_id: int | None = None, view: ListView = ListView.ALL,
+        student_user_id: int | None = None,
+    ) -> PaginationResponseDTO[CoursesResponseDTO]:
+        from src.modules.check_permission.repository import course_scope, course_active_scope, course_student_filter
+        from src.modules.users.models import UserRole
+        from src.modules.check_permission.exception import PermissionErrorService
+        if actor.role == UserRole.STUDENT and student_user_id not in (None, actor.id):
+            raise PermissionErrorService()
         teacher_id = None
         if teacher_user_id is not None:
             teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
@@ -292,14 +313,19 @@ class CoursesService:
             teacher_id = teacher.id
         courses, total = await self.course_repo.get_all_courses(
             limit=limit, offset=offset, teacher_id=teacher_id, include_deleted=True,
-            access_scope=course_scope(actor.id, actor.role),
+            access_scope=course_scope(actor.id, actor.role) & view_scope(course_active_scope(actor.id, actor.role), view)
+                & (course_student_filter(student_user_id) if student_user_id is not None else true()),
         )
-        return PaginationResponseDTO(items=[CoursesResponseDTO.model_validate(c) for c in courses],
+        from src.modules.check_permission.read_context import ReadContextService
+        items = await ReadContextService(self.session_db).courses([CoursesResponseDTO.model_validate(c) for c in courses], actor)
+        return PaginationResponseDTO(items=items,
                                      total=total, limit=limit, offset=offset)
 
     async def detail_visible(self, actor, course_id: int):
         await ObjectPermissionService(self.session_db).require(actor.id, "course", course_id)
-        return await self.get_course_by_id(course_id)
+        from src.modules.check_permission.read_context import ReadContextService
+        course = await self.course_repo.get_course_by_id(course_id)
+        return (await ReadContextService(self.session_db).courses([CoursesResponseDTO.model_validate(course)], actor))[0]
 
     async def owner_profile(self, actor, course_id: int | None = None):
         from src.modules.check_permission.exception import PermissionErrorService
@@ -315,8 +341,43 @@ class CoursesService:
 
     async def avatar_file(self, actor, course_id: int) -> Path:
         from src.modules.base.exception import NotFoundData
-        course = await self.detail_visible(actor, course_id)
+        await ObjectPermissionService(self.session_db).require(actor.id, "course", course_id)
+        course = await self.get_course_by_id(course_id)
         path = Path(course.avatar_path) if course.avatar_path else None
         if path is None:
             raise NotFoundData()
         return path
+
+    async def personal_workspace(self, actor: UserDTO, student_user_id: int, create: bool = False) -> CoursesResponseDTO | None:
+        """An explicit start is atomic/idempotent across concurrent tabs and retries."""
+        from src.modules.teacher_students.repository import TeacherStudentRepository
+        from src.modules.check_permission.exception import PermissionErrorService
+        from src.modules.student_courses.models_dto import CreateStudentCoursesDTO
+        from src.modules.audit_events.service import AuditEventsService
+        from uuid import uuid4
+        try:
+            teacher = await self.owner_profile(actor)
+            await ObjectPermissionService(self.session_db).require_link(actor.id, student_user_id)
+            student = await self.student_repo.get_student_by_user_id(student_user_id)
+            if student is None:
+                raise CourseNotFound()
+            if create:
+                link = await TeacherStudentRepository(self.session_db).previous_link(teacher.id, student.id)
+                if link is None or link.ended_at is not None:
+                    raise PermissionErrorService()
+            course = await self.course_repo.personal_course(teacher.id, student.id)
+            if course is None and create:
+                course = await self.course_repo.add_course(CreateCourseDTO(
+                    teacher_id=teacher.id, name=f"{student.first_name} {student.last_name}",
+                    slug="student-" + uuid4().hex))
+                await self.session_db.flush()
+                await self.student_courses_repo.add_student_to_course(CreateStudentCoursesDTO(
+                    student_id=student.id, course_id=course.id))
+                AuditEventsService(self.session_db).stage(actor.id, "personal_workspace_create", "course", course.id)
+            course_id = course.id if course else None
+            if create:
+                await self.session_db.commit()
+            return await self.detail_visible(actor, course_id) if course_id else None
+        except Exception:
+            await self.session_db.rollback()
+            raise

@@ -52,15 +52,9 @@ class CourseRepository(BaseRepository):
         if not include_deleted:
             stmt = stmt.where(Course.is_deleted == False)
 
-        # Вычисляем общее количество
-        count_stmt = select(func.count()).select_from(stmt.subquery())
-        total_count = (await self.session.execute(count_stmt)).scalar() or 0
-
-        # Получаем данные с учетом лимита
-        stmt = stmt.order_by(Course.id).limit(limit).offset(offset)
-        result_db = await self.session.execute(stmt)
-        courses = list(result_db.scalars().all())
-        return courses, total_count
+        from src.modules.base.list_query import snapshot_page
+        return await snapshot_page(self.session, Course, stmt,
+            (lambda c: c.created_at.desc(), lambda c: c.id.desc()), limit, offset)
 
     async def get_courses_by_student_id(
         self,
@@ -108,7 +102,7 @@ class CourseRepository(BaseRepository):
         result_db = await self.session.execute(
             update(Course)
             .where(Course.id == course_id)
-            .values(**values)
+            .values(**{**values, "updated_at": func.clock_timestamp()})
             .returning(Course)
         )
         return result_db.scalar_one_or_none()
@@ -121,3 +115,20 @@ class CourseRepository(BaseRepository):
             .returning(Course)
         )
         return result_db.scalar_one_or_none()
+
+    async def personal_course(self, teacher_id: int, student_id: int) -> Course | None:
+        """Oldest active personal space, keeping legacy extra/group courses intact."""
+        from sqlalchemy import exists
+        from sqlalchemy.orm import aliased
+        other = aliased(StudentCourse)
+        return await self.session.scalar(select(Course).join(StudentCourse).where(
+            Course.teacher_id == teacher_id, Course.is_deleted.is_(False),
+            StudentCourse.student_id == student_id, StudentCourse.is_deleted.is_(False),
+            StudentCourse.access_ended_at.is_(None), StudentCourse.history_revoked.is_(False),
+            StudentCourse.started_at <= func.clock_timestamp(),
+            (StudentCourse.expires_at.is_(None)) | (StudentCourse.expires_at > func.clock_timestamp()),
+            ~exists(select(other.id).where(other.course_id == Course.id,
+                other.student_id != student_id, other.is_deleted.is_(False),
+                other.access_ended_at.is_(None),
+                (other.expires_at.is_(None)) | (other.expires_at > func.clock_timestamp())))
+        ).order_by(Course.id).limit(1))

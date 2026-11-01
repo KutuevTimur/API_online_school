@@ -1,0 +1,404 @@
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.heading h1 {
+  margin: 0;
+  font-size: 32px;
+}
+.controls {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 16px;
+}
+.weekNavigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.weekNavigation h2 {
+  margin: 0 4px;
+  font-size: 16px;
+}
+.history {
+  font-size: 14px;
+}
+.history summary {
+  min-height: 44px;
+  padding: 10px 4px;
+  cursor: pointer;
+}
+.filters {
+  display: grid;
+  gap: 12px;
+  padding: 8px 0;
+}
+.caption,
+.dragStatus {
+  margin: 8px 0;
+  font-size: 14px;
+  color: var(--lgg-muted);
+}
+.calendar {
+  --calendar-hour: 88px;
+  display: grid;
+  grid-template-columns: 48px repeat(7, minmax(0, 1fr));
+  position: relative;
+  margin: 12px 0;
+  border: 1px solid var(--lgg-border);
+  border-radius: 12px;
+  background: var(--lgg-surface);
+  overflow: auto;
+  max-height: min(840px, calc(100dvh - 220px));
+  min-height: 320px;
+  scrollbar-gutter: stable;
+}
+.calendarRegion {
+  min-height: min(864px, calc(100dvh - 196px));
+}
+.day {
+  min-width: 0;
+  border-left: 1px solid var(--lgg-border);
+  position: relative;
+}
+.day h3,
+.axisHeader {
+  margin: 0;
+  height: 52px;
+  padding: 6px;
+  text-transform: capitalize;
+  font-size: 16px;
+  background: var(--lgg-canvas);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+.day h3 span {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.day[data-today='true'] h3 {
+  background: var(--lgg-lesson);
+}
+.timeAxis {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--lgg-surface);
+}
+.timeLabel {
+  height: var(--calendar-slot-height, var(--calendar-hour));
+  font-size: 14px;
+  color: var(--lgg-muted);
+  padding-top: 4px;
+  text-align: center;
+  border-top: 1px solid var(--lgg-border);
+}
+.hour {
+  height: var(--calendar-slot-height, var(--calendar-hour));
+  border-top: 1px solid var(--lgg-border);
+  padding: 3px;
+  position: relative;
+}
+.addSlot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.addSlot:hover {
+  background: var(--lgg-canvas);
+}
+.event {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  border-radius: 8px;
+  background: var(--lgg-lesson);
+}
+.event[draggable='true'] {
+  cursor: grab;
+}
+.event[data-dragging='true'] {
+  opacity: 0.5;
+  animation: none;
+}
+.event[data-status='completed'] {
+  background: var(--lgg-mint);
+}
+.event[data-status='cancelled'] {
+  background: var(--lgg-canvas);
+  outline: 1px dashed var(--lgg-controlBorder);
+  outline-offset: -1px;
+}
+.eventLink {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+  padding: 6px 44px 6px 6px;
+  color: var(--lgg-ink);
+  text-decoration: none;
+  border-radius: 8px;
+  min-width: 0;
+}
+.eventLink:hover {
+  color: var(--lgg-ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--lgg-controlBorder);
+  text-decoration: none;
+}
+.eventLink:active {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--lgg-primary);
+}
+.eventTime {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.eventName {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 750;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.eventMenu {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.menuLabel {
+  max-width: 300px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.mobileStatus {
+  display: none;
+}
+.dropPreview {
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  border: 2px dashed var(--lgg-primary);
+  background: var(--lgg-lesson);
+  opacity: 1;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 14px;
+  z-index: 2;
+}
+.overlaps {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--lgg-controlBorder);
+  background: var(--lgg-lesson);
+  border-radius: 8px;
+  color: var(--lgg-ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+.overlaps span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.overlaps:hover {
+  background: var(--lgg-lesson);
+  box-shadow: inset 0 0 0 1px var(--lgg-controlBorder);
+}
+.mobileOverlap {
+  display: none;
+}
+.overlapList {
+  display: grid;
+  gap: 8px;
+}
+.listEvent {
+  min-height: 88px;
+}
+.listEvent .eventName {
+  display: block;
+  overflow: visible;
+}
+.empty {
+  display: none;
+}
+.dayButtons {
+  display: none;
+}
+.studentOption {
+  display: grid;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+.studentOption > span {
+  font-size: 14px;
+  color: var(--lgg-muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .eventLink {
+    transition: box-shadow 140ms ease-out;
+  }
+  .event {
+    animation: lessonArrive 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 120ms ease-out;
+  }
+}
+@keyframes lessonArrive {
+  from {
+    transform: translateY(3px);
+    opacity: 0.65;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (max-width: 1023px) {
+  .calendarRegion {
+    min-height: 0;
+  }
+  .heading h1 {
+    font-size: 28px;
+  }
+  .controls {
+    margin-top: 12px;
+  }
+  .weekNavigation {
+    width: 100%;
+  }
+  .weekNavigation h2 {
+    flex: 1;
+    text-align: center;
+    font-size: 14px;
+  }
+  .weekNavigation > button:last-child {
+    margin-left: auto;
+  }
+  .calendar {
+    display: block;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    margin: 8px 0;
+    border: 0;
+    background: transparent;
+  }
+  .timeAxis {
+    display: none;
+  }
+  .day {
+    display: none;
+    border: 0;
+  }
+  .day[data-selected='true'] {
+    display: block;
+  }
+  .day h3 {
+    display: none;
+  }
+  .dayButtons {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+    margin: 8px 0 12px;
+  }
+  .dayButtons button {
+    padding-inline: 2px;
+    min-width: 0;
+    height: auto;
+    min-height: 64px;
+  }
+  .dayCount {
+    display: block;
+    font-size: 12px;
+  }
+  .hour {
+    height: auto;
+    min-height: 0;
+    border: 0;
+    padding: 0;
+  }
+  .hour:has(.event) {
+    margin-bottom: 8px;
+  }
+  .addSlot {
+    display: none;
+  }
+  .event {
+    min-height: 88px;
+    height: auto;
+  }
+  .eventLink {
+    padding: 12px 48px 12px 12px;
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 2px 8px;
+  }
+  .eventTime {
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+  .eventName {
+    display: block;
+    overflow: visible;
+  }
+  .mobileStatus {
+    display: block;
+    grid-column: 2;
+    font-size: 14px;
+  }
+  .eventMenu {
+    top: 8px;
+  }
+  .overlaps {
+    display: none;
+  }
+  .mobileOverlap {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .empty {
+    display: block;
+    padding: 20px 0;
+    color: var(--lgg-muted);
+  }
+}
+@media (max-width: 540px) {
+  .weekNavigation {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+  .weekNavigation h2 {
+    margin: 0;
+    min-width: 0;
+  }
+  .weekNavigation > button:last-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+    margin-left: 0;
+  }
+}

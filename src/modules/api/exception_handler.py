@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 
 from src.modules.courses.exception import CourseAlreadyExists, CourseRemovedException
@@ -8,7 +8,7 @@ from src.modules.auth.exception import InvalidCredentials, InvalidJWTToken
 from src.modules.base.exception import ServiceException, NoDataForUpdate, NotFoundData
 from src.modules.check_permission.exception import PermissionErrorService
 from src.modules.lesson_students.exception import LessonStudentAlreadyExists
-from src.modules.lectures.exception import LectureAlreadyExists
+from src.modules.lectures.exception import LectureAlreadyExists, LectureLimitReached
 from src.modules.homeworks.exception import HomeworkNotFound
 from src.modules.lessons.exception import LessonNotFound
 from src.modules.handlers_files.exception import (
@@ -21,6 +21,22 @@ from src.modules.handlers_files.exception import (
 
 
 def register_exception_handlers(app: FastAPI):
+    @app.exception_handler(LectureLimitReached)
+    async def lecture_limit_reached(request: Request, exc: LectureLimitReached):
+        return JSONResponse(status_code=409, content={"code": "lecture_limit", "detail": "At most four material files per lesson recipient"})
+
+    from src.modules.lessons.exception import RegularPreviewChanged
+
+    @app.exception_handler(RegularPreviewChanged)
+    async def regular_preview_changed_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc), "preview": exc.preview})
+
+    from src.modules.base.exception import StaleUpdate
+
+    @app.exception_handler(StaleUpdate)
+    async def stale_update_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
+
     from src.modules.handlers_files.exception import FileTooLarge
 
     @app.exception_handler(FileTooLarge)

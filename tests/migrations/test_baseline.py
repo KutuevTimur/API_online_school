@@ -177,10 +177,11 @@ def test_t05_enum_admin_downgrade_refusal(database):
     alembic('upgrade', 'head')
     sql("""INSERT INTO users(email,username,role,hashed_password,is_active)
         VALUES ('admin@synthetic.invalid','admin','admin','dummy',true)""")
+    revision_before = sql("SELECT version_num FROM alembic_version")
     result = alembic('downgrade', 'c3882e989a1e', success=False)
     assert 'Cannot downgrade T05 while admin accounts exist' in result.stderr
     assert sql("SELECT role::text FROM users") == [('admin',)]
-    assert sql("SELECT version_num FROM alembic_version") == [('2048d2eeeaa8',)]
+    assert sql("SELECT version_num FROM alembic_version") == revision_before
     assert_schema(conf)
 
 
@@ -229,8 +230,9 @@ def test_t05b_downgrade_refuses_data_loss(database, pending):
     else:
         sql("""INSERT INTO users(email,username,role,hashed_password,is_active,is_activated)
             VALUES (NULL,'nullable','student','dummy',true,true)""")
+    revision_before = sql("SELECT version_num FROM alembic_version")
     result = alembic('downgrade','d897e9b55d47',success=False)
     assert 'Cannot downgrade T05b' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version') == [('2048d2eeeaa8',)]
+    assert sql('SELECT version_num FROM alembic_version') == revision_before
     assert sql('SELECT count(*) FROM users') == [(1,)]
     assert_schema(conf)

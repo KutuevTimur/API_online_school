@@ -1,7 +1,8 @@
+from src.modules.check_permission.models_dto import AccessContextDTO
 from datetime import datetime
 from typing import Optional
 
-from pydantic import field_serializer, field_validator, Field, BaseModel, ConfigDict
+from pydantic import AwareDatetime, field_serializer, field_validator, Field, BaseModel, ConfigDict
 
 from src.modules.base.orm_dto import ORMDTO
 from src.modules.base.url_validation import CallURL
@@ -25,7 +26,9 @@ class CoursesDTO(ORMDTO):
     deleted_at: Optional[datetime] = None
 
 
-class CoursesResponseDTO(ORMDTO):
+class CoursesResponseDTO(ORMDTO, AccessContextDTO):
+    teacher_name: str = ""
+    can_create_lesson: bool = False
     id: int
     teacher_user_id: int
     name: str
@@ -65,6 +68,7 @@ class CreateCourseDTORequest(BaseModel):
 
 
 class UpdateCourseDTO(BaseModel):
+    expected_updated_at: AwareDatetime | None = None
     name: Optional[str] = Field(default=None, min_length=1, max_length=500)
     slug: Optional[str] = Field(default=None, min_length=1, max_length=500)
     description: Optional[str] = None
@@ -84,6 +88,7 @@ class UpdateCourseDTO(BaseModel):
 
 
 class UpdateCourseDTORequest(BaseModel):
+    expected_updated_at: AwareDatetime | None = None
     name: Optional[str] = Field(default=None, min_length=1, max_length=500)
     slug: Optional[str] = Field(default=None, min_length=1, max_length=500)
     description: Optional[str] = None

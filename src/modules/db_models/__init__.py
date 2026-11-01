@@ -1,3 +1,4 @@
+from src.modules.teacher_planning.models import WeeklyLessonNorm
 from src.modules.notifications.models import Notification
 from src.modules.audit_events.models import AuditEvent
 from src.modules.files.models import FileAsset
@@ -7,7 +8,7 @@ from src.modules.teachers.models import Teacher
 from src.modules.students.models import Student
 from src.modules.courses.models import Course
 from src.modules.student_courses.models import StudentCourse
-from src.modules.lessons.models import Lesson
+from src.modules.lessons.models import Lesson, RegularLessonSeries, RegularLessonOperation
 from src.modules.lesson_students.models import LessonStudent
 from src.modules.lectures.models import Lecture
 from src.modules.homeworks.models import Homework
@@ -22,6 +23,7 @@ from src.modules.course_lifecycle.models import EnrollmentGap, LifecycleAudit, F
 from src.modules.homework_placements.models import HomeworkPlacement, HomeworkDeadlineEvent
 
 __all__ = [
+    "WeeklyLessonNorm",
     "Notification", "AuditEvent",
     "FileAsset",
     "HomeworkPlacement", "HomeworkDeadlineEvent",
@@ -34,7 +36,7 @@ __all__ = [
     "Student",
     "Course",
     "StudentCourse",
-    "Lesson",
+    "Lesson", "RegularLessonSeries", "RegularLessonOperation",
     "LessonStudent",
     "Lecture",
     "Homework",

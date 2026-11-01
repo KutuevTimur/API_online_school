@@ -19,3 +19,13 @@ def get_lessons_service(
         teacher_repo=TeacherRepository(session=session),
         session_db=session,
     )
+
+
+from src.modules.lessons.service import RegularLessonsService
+
+
+def get_regular_lessons_service(session: AsyncSession = Depends(get_db)) -> RegularLessonsService:
+    return RegularLessonsService(
+        lessons_repo=LessonsRepository(session), course_repo=CourseRepository(session),
+        student_repo=StudentRepository(session), teacher_repo=TeacherRepository(session),
+        session_db=session)

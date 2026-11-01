@@ -30,9 +30,10 @@ def test_t12_fk_and_metadata_downgrade_guard(database):
     import pytest
     with pytest.raises(Exception, match='foreign key'):
         sql('DELETE FROM file_assets WHERE id=1')
+    revision_before = sql("SELECT version_num FROM alembic_version")
     result = alembic('downgrade', '689ceabc2b0c', success=False)
     assert 'Refusing to discard file asset metadata' in result.stderr
-    assert sql('SELECT version_num FROM alembic_version') == [('2048d2eeeaa8',)]
+    assert sql('SELECT version_num FROM alembic_version') == revision_before
     assert_schema(conf)
     assert sql('SELECT count(*) FROM file_assets') == [(1,)]
 

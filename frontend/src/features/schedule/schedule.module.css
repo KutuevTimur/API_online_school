@@ -1,0 +1,155 @@
+.calendar {
+  border: 1px solid var(--lgg-border);
+  border-radius: 16px;
+  background: var(--lgg-surface);
+  margin-top: 20px;
+  overflow: hidden;
+}
+.day {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 1px solid var(--lgg-border);
+}
+.day:last-child {
+  border-bottom: 0;
+}
+.day h3 {
+  margin: 0;
+  font-size: 18px;
+  text-transform: capitalize;
+  overflow-wrap: anywhere;
+}
+.day h3 span {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: none;
+}
+.day[data-today='true'] h3 {
+  color: var(--lgg-primary);
+}
+.dayLessons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.event {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  background: var(--lgg-lesson);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--lgg-ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.eventHeading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.eventTime {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.lessonLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  height: auto;
+  max-width: 100%;
+  color: var(--lgg-ink);
+  font-size: 16px;
+  font-weight: 750;
+}
+.courseLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--lgg-ink);
+}
+.event > a:last-child {
+  justify-self: start;
+}
+.event[data-status='completed'] {
+  background: var(--lgg-mint);
+}
+.event[data-status='cancelled'] {
+  background: var(--lgg-canvas);
+  border: 1px dashed var(--lgg-controlBorder);
+}
+.emptyDay {
+  margin: 0;
+  align-self: center;
+  font-size: 14px;
+  color: var(--lgg-muted);
+}
+.dayButtons {
+  display: none;
+}
+@media (max-width: 767px) {
+  .day {
+    display: none;
+    padding: 20px;
+  }
+  .day[data-selected='true'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .dayButtons {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
+    margin-bottom: 16px;
+  }
+  .dayButtons button {
+    padding: 4px;
+    height: auto;
+    min-height: 52px;
+    font-size: 14px;
+  }
+  .weekButtons button {
+    padding-inline: 8px;
+  }
+}
+
+.lessonLink :global(.mantine-Button-label) {
+  white-space: normal;
+  text-align: left;
+  padding-block: 8px;
+}
+.day[data-empty='true'] {
+  padding-block: 12px;
+}
+.day[data-empty='true'] h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 14px;
+}
+.day[data-empty='true'] h3 span {
+  margin: 0;
+}
+
+.elapsed {
+  justify-self: start;
+  color: var(--lgg-muted);
+  background: var(--lgg-surface);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 14px;
+}
+
+.lessonLink :global(.mantine-Button-inner),
+.lessonLink :global(.mantine-Button-label) {
+  height: auto;
+  overflow: visible;
+}

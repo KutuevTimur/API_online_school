@@ -122,3 +122,21 @@ class LessonStudentsService:
         await self.session_db.commit()
 
         return LessonStudentResponseDTO.model_validate(deleted_ls)
+
+    async def visible_page(self, user_id: int, lesson_id: int, limit: int, offset: int):
+        from src.modules.base.orm_dto import PaginationResponseDTO
+        from src.modules.check_permission.models_dto import LessonRecipientResponseDTO
+        from src.modules.check_permission.repository import ReadContextRepository
+        from src.modules.check_permission.read_context import access, recipient_reason
+        from src.modules.storage.download import safe_display_name
+        permissions = ObjectPermissionService(self.session_db)
+        actor = await permissions.require(user_id, 'lesson', lesson_id)
+        ids, total = await self.lesson_students_repo.visible_page(actor, lesson_id, limit, offset)
+        rows = await ReadContextRepository(self.session_db).recipients(ids)
+        states = await ReadContextRepository(self.session_db).lesson_states([lesson_id])
+        legacy = states[lesson_id].recipients > 1
+        items = [LessonRecipientResponseDTO(student_user_id=r['student_user_id'], school_grade=r['school_grade'],
+            display_name=safe_display_name(f"{r['first_name']} {r['last_name']}"),
+            username=r['username'], **access(recipient_reason(r) or ('history_only' if legacy else None), actor))
+            for r in rows.values()]
+        return PaginationResponseDTO(items=items, total=total, limit=limit, offset=offset)

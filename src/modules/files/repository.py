@@ -2,8 +2,10 @@ from sqlalchemy import func, or_, select, union, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.files.models import FileAsset
-from src.modules.users.models import User
+from src.modules.users.models import User, UserRole
 from src.modules.students.models import Student
+from src.modules.teachers.models import Teacher
+from src.modules.courses.models import Course
 from src.modules.lectures.models import Lecture
 from src.modules.homeworks.models import Homework
 from src.modules.homework_submissions.models import HomeworkSubmission, HomeworkSubmissionFile
@@ -95,7 +97,7 @@ class StorageQuotaRepository(BaseRepository):
             raise NotFoundData()
         return value
 
-    def _assets(self,user_id: int):
+    def _assets(self,user_id: int, *, teacher_courses: bool = False):
         queries=[]
         for model in (Lecture,Homework,HomeworkSubmissionFile):
             for column in (model.original_asset_id,model.download_asset_id):
@@ -105,8 +107,13 @@ class StorageQuotaRepository(BaseRepository):
                         Homework,Homework.id==HomeworkSubmission.homework_id).join(LessonStudent,LessonStudent.id==Homework.lesson_student_id)
                 else:
                     stmt=stmt.join(LessonStudent,LessonStudent.id==model.lesson_student_id)
-                queries.append(stmt.join(Student,Student.id==LessonStudent.student_id).join(
-                    Lesson,Lesson.id==LessonStudent.lesson_id).where(Student.user_id==user_id,column.is_not(None)))
+                stmt = stmt.join(Lesson, Lesson.id == LessonStudent.lesson_id)
+                if teacher_courses:
+                    stmt = stmt.join(Course, Course.id == Lesson.course_id).join(
+                        Teacher, Teacher.id == Course.teacher_id).where(Teacher.user_id == user_id)
+                else:
+                    stmt = stmt.join(Student, Student.id == LessonStudent.student_id).where(Student.user_id == user_id)
+                queries.append(stmt.where(column.is_not(None)))
         return union(*queries).subquery()
 
     async def usage(self,user_id: int,pending: set[int] | None=None) -> int:
@@ -122,5 +129,34 @@ class StorageQuotaRepository(BaseRepository):
             FileAsset,FileAsset.id==assets.c.asset_id).group_by(assets.c.course_id).order_by(assets.c.course_id))).all()
         return [{'course_id':cid,'bytes':int(size)} for cid,size in rows]
 
+    async def teacher_exists(self, user_id: int) -> bool:
+        return await self.session.scalar(select(Teacher.id).join(User, User.id == Teacher.user_id).where(
+            Teacher.user_id == user_id, User.role == UserRole.TEACHER)) is not None
+
+    async def teacher_storage(self, user_id: int) -> tuple[int, list[dict]]:
+        assets = self._assets(user_id, teacher_courses=True)
+        # One statement gives a consistent total and breakdown; each linked asset
+        # counts once per course, even when original/download or recipients share it.
+        totals = select(func.coalesce(func.sum(FileAsset.size), 0)).where(
+            FileAsset.id.in_(select(assets.c.asset_id))).scalar_subquery()
+        rows = (await self.session.execute(select(
+            Course.id.label('course_id'), Course.name.label('course_name'),
+            func.sum(FileAsset.size).label('bytes'), totals.label('total')
+        ).select_from(assets).join(FileAsset, FileAsset.id == assets.c.asset_id).join(
+            Course, Course.id == assets.c.course_id
+        ).group_by(Course.id).order_by(Course.id))).mappings().all()
+        return (int(rows[0]['total']) if rows else 0,
+                [{'course_id': row['course_id'], 'course_name': row['course_name'],
+                  'bytes': int(row['bytes'])} for row in rows])
+
     async def set_limit(self,user_id: int,limit: int) -> None:
         await self.session.execute(update(User).where(User.id==user_id).values(file_quota_bytes=limit))
+
+
+async def descriptor_assets(session, ids: set[int]) -> dict:
+    """Metadata only: never expose storage keys or touch bytes during a read."""
+    from sqlalchemy import select
+    from src.modules.files.models import FileAsset
+    rows = (await session.execute(select(FileAsset.id, FileAsset.mime, FileAsset.size, FileAsset.display_name)
+        .where(FileAsset.id.in_(ids), FileAsset.state == 'ready', FileAsset.backend == 'local'))).all()
+    return {r.id: r for r in rows}

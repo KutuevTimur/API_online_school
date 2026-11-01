@@ -1,3 +1,4 @@
+from src.modules.base.list_query import ListView
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Request
@@ -69,6 +70,8 @@ async def get_lectures_list(
     summary="Get list of uploaded lectures for the current student across all lessons",
 )
 async def get_my_lectures(
+    course_id: int | None = Query(None),
+    view: ListView = Query(ListView.ALL),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     from_date: Optional[datetime] = Query(None, description="От даты"),
@@ -78,13 +81,19 @@ async def get_my_lectures(
     service: LecturesService = Depends(get_lectures_service),
 ):
     return await service.get_my_lectures(
-        student_user_id=current_user.id,
+        student_user_id=current_user.id, course_id=course_id, view=view,
         limit=limit,
         offset=offset,
         from_date=from_date,
         to_date=to_date,
         sort_date=sort_date,
     )
+
+@router.get("/{lecture_id}", response_model=LectureResponseDTO, status_code=200)
+async def lecture_detail(lecture_id: int, current_user: UserDTO = Depends(get_current_user),
+                         service: LecturesService = Depends(get_lectures_service)) -> LectureResponseDTO:
+    return await service.detail(current_user.id, lecture_id)
+
 
 @router.get(
     "/{lecture_id}/file",

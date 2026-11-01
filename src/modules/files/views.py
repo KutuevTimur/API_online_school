@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from src.modules.auth.depends import get_current_user
 from src.modules.check_permission.depends import get_current_admin_user
-from src.modules.files.models_dto import StorageQuotaRequest, StorageQuotaResponse
+from src.modules.files.models_dto import StorageQuotaRequest, StorageQuotaResponse, TeacherStorageResponse
 from src.modules.files.service import StorageQuotaService
 from src.modules.files.depends import get_storage_quota_service
 from src.modules.users.models_dto import UserDTO
@@ -18,3 +18,9 @@ async def storage_usage(user_id: int,actor: UserDTO=Depends(get_current_user),se
 async def storage_quota(user_id: int,data: StorageQuotaRequest,actor: UserDTO=Depends(get_current_admin_user),
                         service: StorageQuotaService=Depends(get_storage_quota_service)):
     return await service.change(actor.id,user_id,data.limit_bytes)
+
+
+@router.get('/admin/users/{user_id}/course-storage', response_model=TeacherStorageResponse, status_code=200)
+async def teacher_course_storage(user_id: int, actor: UserDTO = Depends(get_current_admin_user),
+                                 service: StorageQuotaService = Depends(get_storage_quota_service)) -> TeacherStorageResponse:
+    return await service.teacher_report(actor.id, user_id)

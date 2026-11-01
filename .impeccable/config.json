@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "georgia",
+        "files": [
+          "frontend/src/dev/StudentPreview.module.css"
+        ],
+        "createdAt": "2026-10-16T00:30:14.714Z",
+        "reason": "Project approved reference docs/plan/assets/lgg-hybrid-overview.html uses Georgia only for mathematical subject marks; body and headings remain Manrope."
+      },
+      {
+        "rule": "design-system-font",
+        "value": "manrope variable",
+        "createdAt": "2026-10-21T19:26:41.812Z",
+        "reason": "DESIGN.md Typography declares Manrope variable; app/styles.css uses the existing Fontsource family name Manrope Variable. The approved font is unchanged."
+      }
+    ]
+  }
+}

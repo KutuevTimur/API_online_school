@@ -1,0 +1,29 @@
+/* Opt-in student navigation/action geometry; default teacher/admin buttons are unchanged. */
+.navigation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 44px;
+  max-width: 100%;
+  padding-block: 10px;
+}
+.navigation :global(.mantine-Button-inner),
+.navigation :global(.mantine-Button-label) {
+  height: auto;
+  overflow: visible;
+}
+.navigation :global(.mantine-Button-label) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+  padding-block: 0;
+}
+.navigation[data-variant='default']:hover:not([data-disabled]) {
+  background: var(--lgg-studentHover);
+  border-color: var(--lgg-primary);
+  color: var(--lgg-ink);
+}
+.navigation[data-variant='default']:active:not([data-disabled]) {
+  background: var(--lgg-lesson);
+}

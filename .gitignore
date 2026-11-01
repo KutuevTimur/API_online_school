@@ -13,3 +13,15 @@ media*/
 .pytest_cache/
 .coverage
 .DS_Store
+
+.local-runtime/
+frontend/node_modules/
+frontend/dist/
+frontend/.artifacts/
+frontend/test-results/
+frontend/playwright-report/
+
+frontend/public/pdfjs/
+
+# Default generated Premium report; maintained manifest is premium-ui.json.
+/premium-audit.json
