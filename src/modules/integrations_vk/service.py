@@ -1,4 +1,4 @@
-"""Local identity transaction owner. Transport admission belongs to F01.4.
+"""Local identity transaction owner. Transport admission belongs to F01.5.
 
 observe_trusted is an internal port: only a verified adapter may call it. It is
 not registered as an HTTP route. No bot imports, network I/O or live secrets.
@@ -147,7 +147,7 @@ class IdentityService:
     async def observe_trusted(self, connection_id: UUID, group_id: str, subject: str,
                               peer: str, teacher_user_id: int, candidate: Candidate,
                               child_subject: str | None = None) -> dict:
-        """Internal verified message_new admission, synthetic adapter until F01.4.
+        """Internal verified message_new admission, synthetic adapter until F01.5.
 
         Parent's child_subject is a candidate only. A child must independently
         speak before teacher binding; grant approval never sets sender proof.

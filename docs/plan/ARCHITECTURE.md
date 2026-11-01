@@ -1229,7 +1229,7 @@ VK ID auth, Google export F05.1, backend backup T18 — самостоятель
 booking/transport/delivery endpoints/helpers/constraints остаются спецификацией.
 В .2 standalone recipient resolve-invite отделён от будущего booking wrapper;
 `stage_materialize` отказывает для непустого batch до .3. Actor admission пока
-внутренний synthetic port, HTTP connector claim закрыт до .4; не live contract.
+внутренний synthetic port, HTTP connector claim закрыт до .5; не live contract.
 
 **Lock graph и границы транзакции.** До первой блокировки read-only discovery
 собирает полные sets teacher/course/recipient/contact/pair/User и expected revisions.

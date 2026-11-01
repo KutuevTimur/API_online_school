@@ -17,15 +17,19 @@ fake transports/clock, strict normalized events, temporary JSON/replay/restart,
 explicit offline entrypoint, fail-closed isolation до import. **43 tests PASS**,
 clean env subprocess/tripwires и diff/docs links PASS. Это fixture HTTP admission; история .1 сохранена в карточке.
 **F01.2 local завершён** по отдельному явному переносу перед MVP/P03:
-[результат/файлы/gates/Git-блокер](tasks/F01.md#результат-f012-02112026).
+[результат/файлы/gates/Git-сохранение](tasks/F01.md#результат-f012-02112026).
 Scoped recipients/identity/parent grants, session-bound challenges, atomic inactive
 account/workspace/invite и operations; additive `f01220261102`. **72 actual DB tests
 PASS +61 standalone regression PASS**; новая guarded synthetic DB55433/media,
-retained55432/dev55431 не использованы. Connector claim fail-closed до .4, UI позже;
+retained55432/dev55431 не использованы. Connector claim fail-closed до .5, UI позже;
 Booking/Lesson materialization в .3 не реализована. Только .2 разрешена ранним scope,
 F01.3+ требуют нового явного запроса. VK/P01 external gates остаются открытыми.
-Commit/push условно разрешены, но **NOT RUN: Git blocker** — зависимости .1/общие
-модули/карточка ещё dirty/untracked относительно HEAD; не включались в новый commit.
+**Git blocker снят** последующим явным поручением сохранить накопленную работу:
+новая ветка `codex/save-project-f012-20261102`; `daabcb5` — вся платформа/frontend/
+документы до .2, `1456d76` — отдельно .2. Пользовательский origin,
+без PR/merge/deploy. Дополнительная проверка накопленного frontend:213/40 unit PASS,
+types/lint/build/scoped format PASS; исправлены только test Date/config workers,
+не UI. Initial10 FAIL сохранены в SESSION_LOG. Для следующего чата готов [актуальный prompt F01.3](PROMPTS.md#актуальный-следующий-чат-f013).
 Остальная F01 после MVP/P03; исключение приоритета не распространяется на .3+.
 Текущий основной план T15d → T16.1/.2 → подготовка запуска прежний.
 F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Markdown/
@@ -37,15 +41,17 @@ F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Mar
 
 ## Рабочая точка и сохранность
 
-- Internal repo `API_online_school`, branch `codex/t00-t01-environment`, базовый
-  HEAD `95b3560bdb429a06e7e5567a78ed6ef589886e4a`; dirty/untracked сохранён.
+- Internal repo `API_online_school`, новая branch `codex/save-project-f012-20261102`.
+  Предыдущий HEAD95b3560 и ветка сохранены; накопленная работа теперь в daabcb5,
+  F01.2 в1456d76. Секреты/данные/runtime artifacts остаются ignored локально.
 - Внешний root main без первого commit/HEAD; не добавлять inner repo как gitlink.
 - Локальный bot main/`cae7b8f175fc4b967bb9cfacd8764e3c14494f6e`, dirty/staged
   сохранены, read-only. Серверная версия/процессы не проверены.
 - F01.2: app/router/model registry и commit-free account/workspace stages обновлены;
   только новая synthetic DB55433/ограниченная роль, контейнер после gates остановлен,
   volume сохранён. Retained preview/бот/существующие БД не менялись. Чужой dirty/
-  untracked и staged0 сохранены; без stash/reset. Commit/push блокирует baseline.
+  untracked сохранены без stash/reset. Последующее поручение разрешило отдельное
+  сохранение всей накопленной проектной работы и сняло Git blocker.
   E2E/live/Long Poll/VK/Google/SSH/server/install/PR/merge/deploy NOT RUN.
 - Ночной порядок согласован как будущий .8; Даниил test scope разрешён ранее,
   mapping/JSON/reminders/получатели требуют проверки перед запуском. Тимур и
@@ -75,7 +81,7 @@ Storage owner acceptance принят. Визуальная приёмка те�
 5173→8019→retained test55432, прежний media. Работающие процессы не перезапускать.
 Resume по [ENVIRONMENT](ENVIRONMENT.md#сохранение-текущего-preview), без seed/reset/
 DB tests поверх preview. Данные/ДЗ58 не трогать. Логины только ignored login files,
-не документы/чат. Commit/push/PR/merge/deploy/установки не разрешены.
+не документы/чат. Git scope выше; PR/merge/deploy/установки не разрешены.
 
 ## История
 

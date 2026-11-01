@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { Providers } from '../../app/providers';
 import { MyDayPage } from './MyDayPage';
 import { SchedulePage } from '../schedule/SchedulePage';
@@ -166,7 +166,10 @@ it('keeps independent task sections during nearest loading', () => {
     2,
   );
 });
+afterEach(() => vi.useRealTimers());
 it('schedule uses topic, teacher and planned status without duration', () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-26T09:00:00Z'));
   show(<SchedulePage />);
   expect(
     screen.getByRole('link', { name: 'Открыть занятие: Тема из API' }),

@@ -2528,3 +2528,12 @@ missing0; relative links архива STATUS пересчитаны после �
 - PASS: новый container/actual DB-engine-session-role-media preflight55433;72 DB/migration/access/concurrency/failure/retry/HTTP tests +61 standalone regression; compile/diff/docs. Retained55432/dev55431/media/бот не использованы.
 - Conditional Git разрешён, но branch/commit/push NOT RUN: F01.1/общие зависимости/карточка отсутствуют в HEAD и dirty/untracked; чужое не включалось/не stash/reset. Нужен отдельный baseline checkpoint.
 - Synthetic container остановлен с сохранением volume; UI/live/VK/Google/Long Poll/server/install/PR/merge/deploy NOT RUN. VK/P01 gates открыты; F01.3 только новым запросом.
+
+
+## 02.11.2026 — сохранение накопленной работы и понятный следующий вход
+
+- По последующему явному поручению владельца Git-разделение решено исполнителем: `codex/save-project-f012-20261102`, `daabcb5` — прежняя платформа/frontend/документы/F01.0–.1, `1456d76` — отдельно F01.2. Рабочие файлы при разделении не заменялись; без stash/reset/delete.
+- Проверены706 project files/689 pre-.2 index blobs, исходные hashes, оба Git roots и пользовательский origin; private-key/token scan0, совпадения password/URL — templates/runtime variables/явные synthetic fixtures. .env/DB/media/private artifacts/runtime dependencies исключены. Внешний root и upstream не изменялись.
+- Frontend: initial203 PASS/10 FAIL (таймауты и зависимость fixture от текущей недели); Date теста зафиксирован, Vitest maxWorkers2; final **213/40 PASS**, types/lint/build/scoped formatting PASS. Сохранён прежний build chunk warning; UI не менялся. Ошибка cwd первого scoped Prettier исправлена до PASS. F01.2 прежние72 DB+61 standalone PASS остаются; DB/preview/browser/live повторно не запускались.
+- Git blocker снят. Итоговая служебная запись отдельно сохраняет test/config fix и текущий handoff; push в origin проверяется по exact remote branch SHA. PR/merge/deploy/server/VK/Google/Long Poll/install NOT RUN.
+- [Один актуальный prompt F01.3](PROMPTS.md#актуальный-следующий-чат-f013) подготовлен без реализации .3+: затем .4 UI → .5 offline bot adapter → .6 reminders → .7 synthetic E2E; live gates отдельно. От владельца техническое решение по Git не требуется.
