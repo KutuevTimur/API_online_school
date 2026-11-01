@@ -16,6 +16,7 @@ from src.modules.handlers_files.compression_images import CompressionImages
 from src.modules.handlers_files.converter_images import HandlerImages
 from src.modules.path_builder import PathBuilder
 from src.modules.students.models_dto import CreateStudentDTO, UpdateStudentDTO, StudentsDTO
+from src.modules.students.models import Student
 from src.modules.students.repository import StudentRepository
 from src.modules.students.service import StudentService
 from src.modules.teachers.repository import TeacherRepository
@@ -95,6 +96,48 @@ class UsersService:
         result = await self.users_repo.get_user_by_email(email)
         return UserDTO.model_validate(result) if result else None
 
+    async def stage_create_inactive_account(
+        self, new_user: RegisterUserRequestDTO,
+    ) -> tuple[User, Student | None]:
+        """Commit-free account/profile stage; caller validates rights and prelocks FKs."""
+        hashed_password = self._get_hash_password(uuid.uuid4().hex)
+        student = None
+        user_orm = await self.users_repo.add_user(
+            data=CreateUserDTO(
+                email=new_user.email,
+                username=new_user.username,
+                hashed_password=hashed_password,
+                role=new_user.role,
+                is_activated=False,
+            )
+        )
+
+        await self.session_db.flush()
+
+        if new_user.role == UserRole.TEACHER:
+            await self.teacher_repo.add_teacher(
+                CreateTeacherDTO(
+                    user_id=user_orm.id,
+                    first_name=new_user.first_name,
+                    last_name=new_user.last_name,
+                    middle_name=new_user.middle_name,
+                    description=new_user.description,
+                )
+            )
+        elif new_user.role == UserRole.STUDENT:
+            student = await self.student_repo.add_student(
+                CreateStudentDTO(
+                    user_id=user_orm.id,
+                    first_name=new_user.first_name,
+                    last_name=new_user.last_name,
+                    middle_name=new_user.middle_name,
+                    school_grade=new_user.school_grade,
+                )
+            )
+        else:
+            raise InvalidRole()
+        return user_orm, student
+
     async def create_user(
         self,
         new_user: RegisterUserRequestDTO,
@@ -121,43 +164,8 @@ class UsersService:
         if new_user.email and await self.get_user_by_email(new_user.email):
             raise UserAlreadyExit()
 
-        hashed_password = self._get_hash_password(uuid.uuid4().hex)
-
         try:
-            user_orm = await self.users_repo.add_user(
-                data=CreateUserDTO(
-                    email=new_user.email,
-                    username=new_user.username,
-                    hashed_password=hashed_password,
-                    role=new_user.role,
-                    is_activated=False,
-                )
-            )
-
-            await self.session_db.flush()
-
-            if new_user.role == UserRole.TEACHER:
-                await self.teacher_repo.add_teacher(
-                    CreateTeacherDTO(
-                        user_id=user_orm.id,
-                        first_name=new_user.first_name,
-                        last_name=new_user.last_name,
-                        middle_name=new_user.middle_name,
-                        description=new_user.description,
-                    )
-                )
-            elif new_user.role == UserRole.STUDENT:
-                student = await self.student_repo.add_student(
-                    CreateStudentDTO(
-                        user_id=user_orm.id,
-                        first_name=new_user.first_name,
-                        last_name=new_user.last_name,
-                        middle_name=new_user.middle_name,
-                        school_grade=new_user.school_grade,
-                    )
-                )
-            else:
-                raise InvalidRole()
+            user_orm, student = await self.stage_create_inactive_account(new_user)
 
             if teacher is not None:
                 await self.session_db.flush()

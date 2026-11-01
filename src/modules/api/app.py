@@ -29,6 +29,8 @@ from src.modules.homework_placements.views import router as homework_placements_
 
 
 def _include_routers(app: FastAPI) -> FastAPI:
+    from src.modules.integrations_vk.views import router as vk_identity_router
+    app.include_router(vk_identity_router)
     from src.modules.notifications.views import router as notifications_router
     from src.modules.audit_events.views import router as audit_events_router
     from src.modules.teacher_planning.views import router as planning_router

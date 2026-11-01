@@ -1,6 +1,6 @@
 # Текущее состояние LGG
 
-**02.11.2026 · F01.1 local DONE: synthetic offline harness, без live.**
+**02.11.2026 · F01.2 local DONE: synthetic identity/parent/invite, без live.**
 Принято новое уточнение: бронь сразу занимает время/видна teacher, аккаунт при
 приглашении; известная подтверждённая связь создаёт Lesson сразу. Полные ответы
 [PRODUCT/F01](PRODUCT.md#будущий-f01--существующий-vk-бот--принято301001112026)/[D13](DECISIONS.md#d13),
@@ -15,10 +15,18 @@
 `src/modules/integrations_vk/` + standalone `tests_unit/integrations_vk/`:
 fake transports/clock, strict normalized events, temporary JSON/replay/restart,
 explicit offline entrypoint, fail-closed isolation до import. **43 tests PASS**,
-clean env subprocess/tripwires и diff/docs links PASS. Это fixture HTTP admission,
-не booking/parent domain, не live adapter. F01.2+ не реализованы/не разрешены;
-следующий VK ID F01.2 только новым запросом с отдельным synthetic DB scope.
-Остальная F01 после MVP/P03; исключение приоритета относится только к F01.1.
+clean env subprocess/tripwires и diff/docs links PASS. Это fixture HTTP admission; история .1 сохранена в карточке.
+**F01.2 local завершён** по отдельному явному переносу перед MVP/P03:
+[результат/файлы/gates/Git-блокер](tasks/F01.md#результат-f012-02112026).
+Scoped recipients/identity/parent grants, session-bound challenges, atomic inactive
+account/workspace/invite и operations; additive `f01220261102`. **72 actual DB tests
+PASS +61 standalone regression PASS**; новая guarded synthetic DB55433/media,
+retained55432/dev55431 не использованы. Connector claim fail-closed до .4, UI позже;
+Booking/Lesson materialization в .3 не реализована. Только .2 разрешена ранним scope,
+F01.3+ требуют нового явного запроса. VK/P01 external gates остаются открытыми.
+Commit/push условно разрешены, но **NOT RUN: Git blocker** — зависимости .1/общие
+модули/карточка ещё dirty/untracked относительно HEAD; не включались в новый commit.
+Остальная F01 после MVP/P03; исключение приоритета не распространяется на .3+.
 Текущий основной план T15d → T16.1/.2 → подготовка запуска прежний.
 F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Markdown/
 538 file targets missing0;519 source hashes changes0, diff/whitespace PASS.
@@ -34,9 +42,11 @@ F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Mar
 - Внешний root main без первого commit/HEAD; не добавлять inner repo как gitlink.
 - Локальный bot main/`cae7b8f175fc4b967bb9cfacd8764e3c14494f6e`, dirty/staged
   сохранены, read-only. Серверная версия/процессы не проверены.
-- F01.1: новый offline module и synthetic unit tests; существующий app startup,
-  bot repo и данные не менялись. Bot/DB/preview/E2E/Long Poll/VK/Google/SSH/server
-  stop/install/commit/push/PR/merge/deploy NOT RUN. Чужой dirty/untracked сохранён.
+- F01.2: app/router/model registry и commit-free account/workspace stages обновлены;
+  только новая synthetic DB55433/ограниченная роль, контейнер после gates остановлен,
+  volume сохранён. Retained preview/бот/существующие БД не менялись. Чужой dirty/
+  untracked и staged0 сохранены; без stash/reset. Commit/push блокирует baseline.
+  E2E/live/Long Poll/VK/Google/SSH/server/install/PR/merge/deploy NOT RUN.
 - Ночной порядок согласован как будущий .8; Даниил test scope разрешён ранее,
   mapping/JSON/reminders/получатели требуют проверки перед запуском. Тимур и
   настоящие пользователи/общий JSON не disposable. Сейчас live действия запрещены.

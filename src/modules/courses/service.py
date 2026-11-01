@@ -352,9 +352,7 @@ class CoursesService:
         """An explicit start is atomic/idempotent across concurrent tabs and retries."""
         from src.modules.teacher_students.repository import TeacherStudentRepository
         from src.modules.check_permission.exception import PermissionErrorService
-        from src.modules.student_courses.models_dto import CreateStudentCoursesDTO
         from src.modules.audit_events.service import AuditEventsService
-        from uuid import uuid4
         try:
             teacher = await self.owner_profile(actor)
             await ObjectPermissionService(self.session_db).require_link(actor.id, student_user_id)
@@ -362,17 +360,17 @@ class CoursesService:
             if student is None:
                 raise CourseNotFound()
             if create:
+                from src.modules.courses.workspace_lock import lock_workspace_pair
+                await lock_workspace_pair(self.session_db, teacher.id, student.id)
+                await TeacherStudentRepository(self.session_db).lock_courses(teacher.id, student.id)
                 link = await TeacherStudentRepository(self.session_db).previous_link(teacher.id, student.id)
                 if link is None or link.ended_at is not None:
                     raise PermissionErrorService()
             course = await self.course_repo.personal_course(teacher.id, student.id)
             if course is None and create:
-                course = await self.course_repo.add_course(CreateCourseDTO(
-                    teacher_id=teacher.id, name=f"{student.first_name} {student.last_name}",
-                    slug="student-" + uuid4().hex))
-                await self.session_db.flush()
-                await self.student_courses_repo.add_student_to_course(CreateStudentCoursesDTO(
-                    student_id=student.id, course_id=course.id))
+                from src.modules.integrations_vk.stages import PrelockedWorkspace, stage_ensure_workspace
+                course = await stage_ensure_workspace(self.session_db,
+                    PrelockedWorkspace(teacher.id, student.id, None, link), student)
                 AuditEventsService(self.session_db).stage(actor.id, "personal_workspace_create", "course", course.id)
             course_id = course.id if course else None
             if create:

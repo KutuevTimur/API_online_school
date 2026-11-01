@@ -1,3 +1,8 @@
+from src.modules.integrations_vk.models import (
+    IntegrationConnection, ConnectionTeacher, ExternalContact, BookingRecipient,
+    RecipientTeacher, ExternalIdentityLink, ParentGrant, IdentityChallenge,
+    IdentityOperation, VkActorContext,
+)
 from src.modules.teacher_planning.models import WeeklyLessonNorm
 from src.modules.notifications.models import Notification
 from src.modules.audit_events.models import AuditEvent
@@ -23,6 +28,9 @@ from src.modules.course_lifecycle.models import EnrollmentGap, LifecycleAudit, F
 from src.modules.homework_placements.models import HomeworkPlacement, HomeworkDeadlineEvent
 
 __all__ = [
+    "IntegrationConnection", "ConnectionTeacher", "ExternalContact", "BookingRecipient",
+    "RecipientTeacher", "ExternalIdentityLink", "ParentGrant", "IdentityChallenge",
+    "IdentityOperation", "VkActorContext",
     "WeeklyLessonNorm",
     "Notification", "AuditEvent",
     "FileAsset",

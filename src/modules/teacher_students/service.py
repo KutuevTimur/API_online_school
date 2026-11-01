@@ -34,6 +34,8 @@ class TeacherStudentService:
                 raise NotFoundData()
             repo = TeacherStudentRepository(self.session)
             # Course locks precede enrollment/teacher-link locks, as in homework writes.
+            from src.modules.courses.workspace_lock import lock_workspace_pair
+            await lock_workspace_pair(self.session, teacher.id, student.id)
             course_ids = await repo.lock_courses(teacher.id, student.id)
             previous = await repo.previous_link(teacher.id, student.id)
             if previous is not None and previous.ended_at is not None:
@@ -93,6 +95,8 @@ class TeacherStudentService:
             if teacher is None or student is None:
                 raise NotFoundData()
             repo = TeacherStudentRepository(self.session)
+            from src.modules.courses.workspace_lock import lock_workspace_pair
+            await lock_workspace_pair(self.session, teacher.id, student.id)
             course_ids = await repo.lock_courses(teacher.id, student.id)
             link = await repo.previous_link(teacher.id, student.id)
             if link is None:

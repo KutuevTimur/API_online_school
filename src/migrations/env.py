@@ -20,12 +20,19 @@ from src.modules.db_models import *
 
 config = context.config
 # TEST uses the explicit guarded .env.test target. Media is unused by Alembic.
-_media = TemporaryDirectory(prefix="lgg-alembic-")
-app_config = create_config(media_root=Path(_media.name))
-if app_config.env.mode == "TEST":
-    require_test_config(app_config)
-config.set_main_option("sqlalchemy.url",
-                       app_config.db_connection.sql_db_url.replace("%", "%%"))
+_external = config.attributes.get("connection")
+if _external is None:
+    _media = TemporaryDirectory(prefix="lgg-alembic-")
+    app_config = create_config(media_root=Path(_media.name))
+    if app_config.env.mode == "TEST":
+        require_test_config(app_config)
+    config.set_main_option("sqlalchemy.url",
+                           app_config.db_connection.sql_db_url.replace("%", "%%"))
+else:
+    # Programmatic synthetic runner supplies a connection and its strict preflight.
+    # No .env/.env.test or retained preview engine is constructed on this path.
+    from src.core.config.synthetic_guard import require_f012_connection
+    require_f012_connection(_external)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -112,7 +119,10 @@ async def run_async_migrations() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
 
-    asyncio.run(run_async_migrations())
+    if _external is not None:
+        do_run_migrations(_external)
+    else:
+        asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():

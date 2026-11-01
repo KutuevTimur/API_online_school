@@ -22,7 +22,11 @@ Storage принят; остальные ручные приёмки сохра�
 F01.0 local DONE02.11: A14.7/ревизии источников, external gates остаются;
 F01.1 local DONE02.11 по явному переносу только этой задачи перед MVP/P03:
 offline harness/43 tests PASS, без live; результат в tasks/F01.md и STATUS.
-F01.2+ только новым запросом; остальной MVP/T16/P01/P03 порядок прежний.
+F01.2 local DONE02.11 по отдельному explicit приоритету: identity/parent/invite,
+новая synthetic DB55433;72 DB+61 standalone PASS, retained preview не тронут.
+Результат/Git blocker в tasks/F01.md: .1/общий baseline ещё dirty/untracked,
+условно разрешённый task commit/push не выполнен; staged0. F01.3+ только новым
+запросом; остальной MVP/T16/P01/P03 порядок прежний.
 Правила/квоты VK и правовой допуск P01 полностью не подтверждены.
 D12: архивные занятия/курсы исключены из денег и количества.
 Commit/push/deploy/установки не разрешены. Preview содержит сохранённые данные:

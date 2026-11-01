@@ -19,6 +19,11 @@ async def start_test(config_fix, app_fastapi):
 async def clearing_db(session_db: AsyncSession, config_fix):
     """Очиста бд перед тестами"""
     require_test_config(config_fix)
+    # F01.2 compound FKs: leaves before recipients/contacts/connections and Users.
+    for model in (IdentityOperation, IdentityChallenge, VkActorContext, ParentGrant,
+                  ExternalIdentityLink, RecipientTeacher, BookingRecipient,
+                  ExternalContact, ConnectionTeacher, IntegrationConnection):
+        await session_db.execute(delete(model))
     await session_db.execute(delete(Notification))
     await session_db.execute(delete(AuditEvent))
     await session_db.execute(delete(FileDeletion))

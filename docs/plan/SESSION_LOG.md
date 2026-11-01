@@ -2519,3 +2519,12 @@ missing0; relative links архива STATUS пересчитаны после �
 - Synthetic ports/fakes/clock, strict normalized events, temporary JSON checkpoint/replay/restart, explicit offline CLI; app startup/бот/данные не менялись.
 - PASS:43 standalone tests, clean-env subprocess с guard до import и negative network/JSON/reminder/credentials probes, self review/diff/scoped33 docs links. Два первых isolation FAIL (PYTHONPATH/tempdir probe) исправлены; expanded docs scan FAIL на3 старых anchors вне scope, история в карточке.
 - DB/browser/retained preview/VK/Google/Long Poll/бот/server/install/commit/push/PR/merge/deploy NOT RUN. VK external gates UNVERIFIED/P01 открыт; далее F01.2 только по новому запросу.
+
+
+## 02.11.2026 — F01.2: local identity/parent/invite DONE
+
+- Отдельный explicit приоритет только .2 перед MVP/P03; [результат/файлы/gates](tasks/F01.md#результат-f012-02112026). .3+ не реализованы.
+- Additive `f01220261102`, canonical recipient/identity/grants/challenges/operations; atomic inactive account/workspace/invite; public D01 и admin-only second teacher сохранены, connector HTTP закрыт до .4.
+- PASS: новый container/actual DB-engine-session-role-media preflight55433;72 DB/migration/access/concurrency/failure/retry/HTTP tests +61 standalone regression; compile/diff/docs. Retained55432/dev55431/media/бот не использованы.
+- Conditional Git разрешён, но branch/commit/push NOT RUN: F01.1/общие зависимости/карточка отсутствуют в HEAD и dirty/untracked; чужое не включалось/не stash/reset. Нужен отдельный baseline checkpoint.
+- Synthetic container остановлен с сохранением volume; UI/live/VK/Google/Long Poll/server/install/PR/merge/deploy NOT RUN. VK/P01 gates открыты; F01.3 только новым запросом.

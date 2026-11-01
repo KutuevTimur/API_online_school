@@ -21,6 +21,14 @@ from src.modules.handlers_files.exception import (
 
 
 def register_exception_handlers(app: FastAPI):
+    from src.modules.integrations_vk.exception import IdentityError
+
+    @app.exception_handler(IdentityError)
+    async def vk_identity_error(request: Request, exc: IdentityError):
+        return JSONResponse(status_code=exc.status, content={
+            "code": exc.code, "retryable": exc.status in {429, 503}},
+            headers={"Cache-Control": "no-store", **({"Retry-After": "1"} if exc.status in {429, 503} else {})})
+
     @app.exception_handler(LectureLimitReached)
     async def lecture_limit_reached(request: Request, exc: LectureLimitReached):
         return JSONResponse(status_code=409, content={"code": "lecture_limit", "detail": "At most four material files per lesson recipient"})
