@@ -7,7 +7,7 @@ from httpx import AsyncClient, ASGITransport
 from src.core.config.config import PathsConfig, TokensConfig
 from src.core.config.browser import BrowserConfig
 from src.core.database.database import get_db
-from src.core.config.synthetic_guard import require_f012_session
+from src.core.config.synthetic_guard import require_f013_session
 from src.modules.api.app import init_fastapi_app
 from src.modules.auth.depends import get_current_user
 from src.modules.auth.login import oauth2_scheme
@@ -31,7 +31,7 @@ async def client(w,actor='s1',enabled=True):
     app.state.cr_context=w.crypto
     async def db_override():
         async with w.db.factory() as s:
-            await require_f012_session(s,w.db.engine,w.db.media,w.db.media)
+            await require_f013_session(s,w.db.engine,w.db.media,w.db.media)
             yield s
     async def actor_override(session=Depends(get_db)):
         return UserDTO.model_validate(await session.get(User,w.ids[actor]))

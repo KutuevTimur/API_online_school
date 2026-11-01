@@ -31,8 +31,11 @@ if _external is None:
 else:
     # Programmatic synthetic runner supplies a connection and its strict preflight.
     # No .env/.env.test or retained preview engine is constructed on this path.
-    from src.core.config.synthetic_guard import require_f012_connection
-    require_f012_connection(_external)
+    from src.core.config.synthetic_guard import require_f012_connection, require_f013_connection
+    if _external.engine.url.port == 55434:
+        require_f013_connection(_external)
+    else:
+        require_f012_connection(_external)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

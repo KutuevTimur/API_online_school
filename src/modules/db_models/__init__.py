@@ -28,6 +28,7 @@ from src.modules.course_lifecycle.models import EnrollmentGap, LifecycleAudit, F
 from src.modules.homework_placements.models import HomeworkPlacement, HomeworkDeadlineEvent
 
 __all__ = [
+    "BookingWindow", "Booking", "BookingInteraction", "BookingEvent",
     "IntegrationConnection", "ConnectionTeacher", "ExternalContact", "BookingRecipient",
     "RecipientTeacher", "ExternalIdentityLink", "ParentGrant", "IdentityChallenge",
     "IdentityOperation", "VkActorContext",
@@ -51,3 +52,5 @@ __all__ = [
     "HomeworkSubmission",
     "HomeworkSubmissionFile",
 ]
+
+from src.modules.integrations_vk.models import BookingWindow, Booking, BookingInteraction, BookingEvent

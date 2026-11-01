@@ -156,10 +156,24 @@ class LessonsRepository(BaseRepository):
                        StudentCourse.started_at <= func.clock_timestamp(),
                        TeacherStudent.teacher_id == teacher_id, TeacherStudent.ended_at.is_(None),
                        User.is_active.is_(True), User.role == UserRole.STUDENT)
-                .order_by(Student.id).with_for_update(of=(StudentCourse, TeacherStudent, User)))
+                .order_by(Student.id))
         if student_user_id is not None:
             stmt = stmt.where(Student.user_id == student_user_id)
+        discovered = list((await self.session.scalars(stmt)).all())
+        ids = [student.id for student in discovered]
+        for model, predicates in (
+            (TeacherStudent, (TeacherStudent.teacher_id == teacher_id, TeacherStudent.student_id.in_(ids))),
+            (StudentCourse, (StudentCourse.course_id == course_id, StudentCourse.student_id.in_(ids))),
+            (User, (User.id.in_([student.user_id for student in discovered]),)),
+        ):
+            await self.session.execute(select(model.id).where(*predicates).order_by(model.id).with_for_update(of=model))
         return list((await self.session.scalars(stmt)).all())
+
+    async def overlapping_booking_ids(self, teacher_id: int, start: datetime, end: datetime) -> list[UUID]:
+        from src.modules.integrations_vk.booking_repository import BookingRepository
+        from src.modules.teachers.models import Teacher
+        user_id = await self.session.scalar(select(Teacher.user_id).where(Teacher.id == teacher_id))
+        return [b.id for b in await BookingRepository(self.session).overlaps(user_id, start, end)]
 
     async def overlapping_ids(self, teacher_id: int, start: datetime, end: datetime,
                               exclude_id: int) -> list[int]:

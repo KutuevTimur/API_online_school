@@ -1224,11 +1224,19 @@ VK ID auth, Google export F05.1, backend backup T18 — самостоятель
 
 Каноническое уточнение A14.1–.5; не новая бизнес-политика. Внешние доказательства
 и live gates — [research](VK_RESEARCH_2026_10_30.md#f010--ревизии-и-внешние-gates).
-Статус02.11: .1 offline harness и .2 synthetic identity/grants/invite реализованы;
+Статус02.11: .1 offline harness, .2 synthetic identity/grants/invite и .3 local booking реализованы;
 [границы .2/проверки](tasks/F01.md#результат-f012-02112026). Остальные описанные
-booking/transport/delivery endpoints/helpers/constraints остаются спецификацией.
-В .2 standalone recipient resolve-invite отделён от будущего booking wrapper;
-`stage_materialize` отказывает для непустого batch до .3. Actor admission пока
+transport/delivery endpoints/helpers/constraints остаются спецификацией.
+Реализованный .3 subset и фактические проверки — [результат F01.3](tasks/F01.md#результат-f013-02112026).
+Local teacher window publish/list требует explicit `connection_id`; own week lists
+возвращают `{items,next_cursor}`, opaque UUID cursor, limit1–100/default25. Connector
+windows/interaction/confirm/receipt HTTP зарегистрированы, admission fail-closed
+до .5; delivery worker .6 отсутствует. Snapshot Booking сохранён при move,
+обычный календарь использует актуальный Lesson; .4 объединяет строки по booking_id.
+В .3 recipient resolve-invite подхватывает свой teacher batch; booking wrapper
+добавляет CAS booking/recipient и explicit past review. После existing self-link
+сохранённые брони подхватывает отдельная owning teacher materialize command; новый
+known confirm создаёт Lesson сразу. `stage_materialize` теперь commit-free async. Actor admission пока
 внутренний synthetic port, HTTP connector claim закрыт до .5; не live contract.
 
 **Lock graph и границы транзакции.** До первой блокировки read-only discovery

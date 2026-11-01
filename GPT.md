@@ -26,8 +26,11 @@ F01.2 local DONE02.11 по отдельному explicit приоритету: i
 новая synthetic DB55433;72 DB+61 standalone PASS, retained preview не тронут.
 Git blocker снят последующим поручением сохранить накопленную работу:
 ветка codex/save-project-f012-20261102, daabcb5 — прежняя платформа/frontend/.1,
-1456d76 — отдельно .2; детали tasks/F01.md/STATUS. Следующий вход — актуальный
-prompt F01.3 в docs/plan/PROMPTS.md; .3+ только новым запросом, основной порядок прежний.
+1456d76 — отдельно .2; детали tasks/F01.md/STATUS. F01.3 local backend DONE02.11 по новому explicit scope/приоритету/commit-push:
+115 actual DB+61 standalone PASS, новая synthetic55434; windows/Booking/receipts/
+atomic materialization/D04/domain outbox, без UI/live. Отдельная branch
+codex/f013-booking-20261102 от17923bb; прежняя история сохранена. Следующий вход —
+prompt F01.4 в docs/plan/PROMPTS.md; .4+ только новым запросом, основной порядок прежний.
 Правила/квоты VK и правовой допуск P01 полностью не подтверждены.
 D12: архивные занятия/курсы исключены из денег и количества.
 Git сохранение разрешено в текущем scope; PR/merge/deploy/установки не разрешены.

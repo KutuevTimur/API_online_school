@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from src.core.database.database import Base
-from src.core.config.synthetic_guard import require_f012_session
+from src.core.config.synthetic_guard import require_f013_session
 from src.modules.db_models import *
 from src.modules.integrations_vk.service import IdentityService
 from src.modules.users.models import UserRole
@@ -21,8 +21,8 @@ from tests_unit.integrations_vk.domain.db import engine, migrate
 def network_guard():
     original = socket.socket.connect
     def connect(sock, address):
-        if sock.family in (socket.AF_INET, socket.AF_INET6) and address != ('127.0.0.1', 55433):
-            raise AssertionError('F01.2 prohibits external/retained network targets')
+        if sock.family in (socket.AF_INET, socket.AF_INET6) and address != ('127.0.0.1', 55434):
+            raise AssertionError('F01.3 prohibits external/retained network targets')
         return original(sock, address)
     socket.socket.connect = connect
     yield
@@ -32,11 +32,11 @@ def network_guard():
 @pytest_asyncio.fixture(scope='session')
 async def db():
     e = engine()
-    with tempfile.TemporaryDirectory(prefix='lgg-f012-media-', dir='/tmp') as root:
+    with tempfile.TemporaryDirectory(prefix='lgg-f013-media-', dir='/tmp') as root:
         media = Path(root)
         factory = async_sessionmaker(e, expire_on_commit=False, autoflush=False)
         async with factory() as session:
-            await require_f012_session(session, e, media, media)
+            await require_f013_session(session, e, media, media)
             await session.rollback()
         async with e.begin() as connection:
             await connection.run_sync(migrate)
@@ -47,7 +47,7 @@ async def db():
 @pytest_asyncio.fixture
 async def world(db):
     async with db.factory() as session:
-        await require_f012_session(session, db.engine, db.media, db.media)
+        await require_f013_session(session, db.engine, db.media, db.media)
         for table in reversed(Base.metadata.sorted_tables):
             await session.execute(delete(table))
         await session.commit()

@@ -2537,3 +2537,12 @@ missing0; relative links архива STATUS пересчитаны после �
 - Frontend: initial203 PASS/10 FAIL (таймауты и зависимость fixture от текущей недели); Date теста зафиксирован, Vitest maxWorkers2; final **213/40 PASS**, types/lint/build/scoped formatting PASS. Сохранён прежний build chunk warning; UI не менялся. Ошибка cwd первого scoped Prettier исправлена до PASS. F01.2 прежние72 DB+61 standalone PASS остаются; DB/preview/browser/live повторно не запускались.
 - Git blocker снят. Итоговая служебная запись отдельно сохраняет test/config fix и текущий handoff; push в origin проверяется по exact remote branch SHA. PR/merge/deploy/server/VK/Google/Long Poll/install NOT RUN.
 - [Один актуальный prompt F01.3](PROMPTS.md#актуальный-следующий-чат-f013) подготовлен без реализации .3+: затем .4 UI → .5 offline bot adapter → .6 reminders → .7 synthetic E2E; live gates отдельно. От владельца техническое решение по Git не требуется.
+
+
+## 02.11.2026 — F01.3 local booking backend DONE
+
+- По новому explicit prompt/приоритету/scope/commit-push реализована только .3: [результат/файлы/границы](tasks/F01.md#результат-f013-02112026). Dated windows, CAS/handles/receipts, confirmed Booking, atomic resolve/invite/Lesson/D04/outbox; teacher warnings/series/restore и cancellation reopen, без UI/live.
+- Новый контейнер dbd480208622…/labels F01.3 synthetic/DB55434, restricted role и actual engine/session/media preflight PASS; прежние DB55433/55432/55431/retained preview/бот не тронуты. Additive f01320261102 и protected downgrade, clean/prior upgrade metadata diff0.
+- Final **115 actual DB PASS /71.47s +61 standalone PASS**, 2 retained-env tests deselected;42 booking checks включая concurrent connections/rollback/timeout/access/OpenAPI/D04 checked/D12. Initial fixture/assertion/concurrent preview failures исправлены и сохранены в карточке, final FAIL0.
+- Отдельная codex/f013-booking-20261102 от17923bb, только изменения .3 в origin после PASS; baseline commits не переписываются. PR/merge/deploy/server/install/VK/Google/Long Poll/live NOT RUN; UI acceptance ожидает .4, external VK/P01 gates открыты.
+- Следующий вход — [один prompt F01.4](PROMPTS.md#актуальный-следующий-чат-f014), только новым запросом; .4+ не начинались.

@@ -32,6 +32,7 @@ class LessonDTO(ORMDTO):
 class ScheduleWarning(BaseModel):
     code: str = "teacher_time_overlap"
     lesson_ids: list[int]
+    booking_ids: list[UUID] = Field(default_factory=list)
 
 
 class RecipientMaterialStatusDTO(BaseModel):
@@ -186,6 +187,7 @@ class RegularOccurrencePreviewDTO(BaseModel):
     duration_minutes: int
     lesson_id: int | None = None
     conflict_lesson_ids: list[int] = Field(default_factory=list)
+    conflict_booking_ids: list[UUID] = Field(default_factory=list)
     conflict_occurrence_dates: list[AwareDatetime] = Field(default_factory=list)
 
 

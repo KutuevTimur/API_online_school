@@ -1,6 +1,6 @@
 """Commit-free F01.2 stages. Caller owns prefix locks and transaction.
 
-No booking tables exist until F01.3; materialization accepts no pending bookings.
+Booking materialization shares the caller transaction and immutable price snapshot.
 """
 from dataclasses import dataclass
 from uuid import uuid4
@@ -77,7 +77,8 @@ def stage_bind_recipient(recipient: BookingRecipient, user: User) -> None:
         recipient.revision += 1
 
 
-def stage_materialize(*, pending_bookings: tuple = ()) -> None:
-    """F01.3 extension point; never silently drops work from a future caller."""
-    if pending_bookings:
-        raise IdentityError('REVIEW_REQUIRED')
+async def stage_materialize(session: AsyncSession, *, pending_bookings: list,
+                            course_id: int, teacher_id: int, student_id: int) -> None:
+    from src.modules.integrations_vk.booking_stages import stage_lesson_with_snapshot
+    for booking in pending_bookings:
+        await stage_lesson_with_snapshot(session, booking, course_id, teacher_id, student_id)

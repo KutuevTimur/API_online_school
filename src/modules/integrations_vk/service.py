@@ -88,7 +88,7 @@ class IdentityService:
                     if previous.payload_hash != payload_hash:
                         raise IdentityError('PAYLOAD_MISMATCH')
                     if previous.state == 'rejected':
-                        raise IdentityError(previous.error_code, 410 if previous.error_code == 'CHALLENGE_EXPIRED' else 409)
+                        raise IdentityError(previous.error_code, 410 if previous.error_code in {'CHALLENGE_EXPIRED', 'HANDLE_EXPIRED'} else 409)
                     await self.session.commit()
                     return OperationResult(operation_id=operation, result=previous.result), {}
                 if admit is not None:
@@ -433,7 +433,7 @@ class IdentityService:
             await self.user(recipient.linked_student_user_id)
         return grant
 
-    async def resolve_invite(self, actor_id: int, recipient_id: UUID, data) -> ResolveResponse:
+    async def resolve_invite(self, actor_id: int, recipient_id: UUID, data, *, booking_id=None, booking_data=None) -> ResolveResponse:
         recipient = await self.repo.one(BookingRecipient, BookingRecipient.id == recipient_id)
         if recipient is None or actor_id not in await self.repo.recipient_teachers(recipient_id):
             raise IdentityError('NOT_FOUND', 404)
@@ -460,6 +460,16 @@ class IdentityService:
                     raise IdentityError('IDENTITY_COLLISION')
             if links and (data.mode != 'own_student' or links[0].user_id != data.student_user_id):
                 raise IdentityError('IDENTITY_COLLISION')
+            from src.modules.integrations_vk.models import Booking
+            pending = await self.repo.rows(Booking, Booking.recipient_id == recipient_id,
+                Booking.teacher_user_id == actor_id, Booking.status == 'confirmed', lock=True)
+            if booking_id is not None:
+                selected = next((b for b in pending if b.id == booking_id), None)
+                if selected is None or selected.revision != booking_data.expected_revision:
+                    raise IdentityError('STALE_REVISION')
+            pending = [b for b in pending if b.lesson_id is None]
+            if any(b.start_at <= self.clock() for b in pending) and not (booking_data and booking_data.review_past):
+                raise IdentityError('REVIEW_REQUIRED')
             teacher = await self.repo.one(Teacher, Teacher.user_id == actor_id)
             student = await self.repo.one(Student, Student.user_id == data.student_user_id) if data.student_user_id else None
             if data.mode == 'own_student' and student is None:
@@ -497,12 +507,13 @@ class IdentityService:
                     current.first_name, current.last_name, current.grade)
             context = PrelockedWorkspace(teacher.id, student.id, course, pair)
             await stage_link_student(self.session, context, student, allow_new=data.mode == 'new_student')
-            await stage_ensure_workspace(self.session, context, student)
+            workspace = await stage_ensure_workspace(self.session, context, student)
             stage_bind_recipient(current, target)
             if not links:
                 self.repo.stage(ExternalIdentityLink, connection_id=connection, contact_id=contact.id,
                     user_id=target.id, purpose='student', verified_method='teacher_inactive', verified_by=actor_id)
-            stage_materialize()
+            await stage_materialize(self.session, pending_bookings=pending, course_id=workspace.id,
+                teacher_id=teacher.id, student_id=student.id)
             invitation = None
             if not target.is_activated:
                 from src.modules.account_invitations.service import InvitationService
@@ -511,7 +522,8 @@ class IdentityService:
             AuditEventsService(self.session).stage(actor_id, 'vk_recipient_resolve', 'user', target.id)
             return {'kind': 'recipient_resolved', 'invitation_issued': invitation is not None}, {'invitation': invitation}
         op, extra = await self._operation(connection, 'recipient_resolve', data.operation_id,
-            {'recipient': str(recipient_id), **data.model_dump(exclude={'operation_id'})}, work, user_id=actor_id)
+            {'recipient': str(recipient_id), **data.model_dump(exclude={'operation_id'}),
+             **({'booking': str(booking_id), 'booking_request': booking_data.model_dump(exclude={'operation_id'})} if booking_id else {})}, work, user_id=actor_id)
         return ResolveResponse(operation=op, invitation=extra.get('invitation'))
 
     async def operation_status(self, actor_id: int, operation_id: UUID, action: str) -> OperationResult:

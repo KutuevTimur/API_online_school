@@ -1,7 +1,7 @@
-"""F01.2 identity storage. No transport, booking or live configuration."""
-from datetime import datetime
+"""F01.2 identity and F01.3 booking storage. No live transport configuration."""
+from datetime import date, datetime
 from uuid import UUID, uuid4
-from sqlalchemy import (Boolean, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint,
+from sqlalchemy import (Boolean, CheckConstraint, Date, DateTime, ForeignKey, ForeignKeyConstraint,
                         Index, Integer, String, UniqueConstraint, Uuid, func, text)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -158,3 +158,76 @@ class VkActorContext(ScopedRow, Base):
     digest: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     contact_revision: Mapped[int] = mapped_column(Integer, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class BookingWindow(ScopedRow, Base):
+    __tablename__ = 'vk_booking_windows'
+    __table_args__ = (*scoped_constraints('vk_windows'),
+        ForeignKeyConstraint(['connection_id', 'teacher_user_id'],
+            ['vk_connection_teachers.connection_id', 'vk_connection_teachers.teacher_user_id']),
+        CheckConstraint('start_at < end_at', name='ck_vk_window_interval'),
+        CheckConstraint("EXTRACT(ISODOW FROM week_start) = 1 AND start_at >= (week_start::timestamp AT TIME ZONE 'Europe/Moscow') AND end_at <= ((week_start + 7)::timestamp AT TIME ZONE 'Europe/Moscow')", name='ck_vk_window_week'),
+        CheckConstraint("status IN ('published','closed','consumed')", name='ck_vk_window_status'),
+        Index('ix_vk_windows_teacher_start_status', 'teacher_user_id', 'start_at', 'status'))
+    teacher_user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    week_start: Mapped[date] = mapped_column(Date, nullable=False)
+    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default='published')
+    withdrawn: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_by: Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=False)
+
+
+class Booking(ScopedRow, Base):
+    __tablename__ = 'vk_bookings'
+    __table_args__ = (*scoped_constraints('vk_bookings'),
+        ForeignKeyConstraint(['connection_id', 'window_id'], ['vk_booking_windows.connection_id', 'vk_booking_windows.id']),
+        ForeignKeyConstraint(['connection_id', 'recipient_id'], ['vk_recipients.connection_id', 'vk_recipients.id']),
+        ForeignKeyConstraint(['connection_id', 'actor_contact_id'], ['vk_contacts.connection_id', 'vk_contacts.id']),
+        ForeignKeyConstraint(['connection_id', 'parent_grant_id'], ['vk_parent_grants.connection_id', 'vk_parent_grants.id']),
+        ForeignKeyConstraint(['connection_id', 'teacher_user_id'],
+            ['vk_connection_teachers.connection_id', 'vk_connection_teachers.teacher_user_id']),
+        CheckConstraint('start_at < end_at AND (lesson_price_kopecks IS NULL OR lesson_price_kopecks >= 0)', name='ck_vk_booking_values'),
+        CheckConstraint("status IN ('confirmed','cancelled')", name='ck_vk_booking_status'),
+        CheckConstraint('(parent_grant_id IS NULL AND parent_grant_revision IS NULL) OR (parent_grant_id IS NOT NULL AND parent_grant_revision > 0)', name='ck_vk_booking_grant'),
+        Index('uq_vk_confirmed_window', 'window_id', unique=True, postgresql_where=text("status = 'confirmed'")),
+        Index('ix_vk_bookings_teacher_start_status', 'teacher_user_id', 'start_at', 'status'),
+        Index('ix_vk_bookings_recipient_status_start', 'recipient_id', 'status', 'start_at'))
+    window_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    teacher_user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    recipient_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    actor_contact_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    parent_grant_id: Mapped[UUID | None] = mapped_column(Uuid)
+    parent_grant_revision: Mapped[int | None] = mapped_column(Integer)
+    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default='confirmed')
+    lesson_price_kopecks: Mapped[int | None] = mapped_column(Integer)
+    lesson_id: Mapped[int | None] = mapped_column(ForeignKey('lessons.id', ondelete='RESTRICT'), unique=True)
+
+
+class BookingInteraction(ScopedRow, Base):
+    __tablename__ = 'vk_booking_interactions'
+    __table_args__ = (*scoped_constraints('vk_interactions'),
+        ForeignKeyConstraint(['connection_id', 'actor_contact_id'], ['vk_contacts.connection_id', 'vk_contacts.id']),
+        ForeignKeyConstraint(['connection_id', 'recipient_id'], ['vk_recipients.connection_id', 'vk_recipients.id']),
+        ForeignKeyConstraint(['connection_id', 'window_id'], ['vk_booking_windows.connection_id', 'vk_booking_windows.id']),
+        CheckConstraint('window_revision > 0', name='ck_vk_interaction_revision'))
+    digest: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    operation_id: Mapped[UUID] = mapped_column(Uuid, nullable=False, unique=True)
+    actor_contact_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    recipient_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    window_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    window_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class BookingEvent(Base):
+    """Durable domain outbox only; transport/delivery is F01.6."""
+    __tablename__ = 'vk_booking_events'
+    __table_args__ = (UniqueConstraint('booking_id', 'kind', 'revision', name='uq_vk_booking_event'),)
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    booking_id: Mapped[UUID] = mapped_column(ForeignKey('vk_bookings.id'), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

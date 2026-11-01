@@ -139,6 +139,8 @@ class LessonsService:
     async def update_lesson(self, teacher_user_id: int, lesson_id: int, data: UpdateLessonRequestDTO) -> LessonResponseDTO:
         try:
             await self.lessons_repo.lock_schedule(teacher_user_id)
+            from src.modules.integrations_vk.booking_service import BookingService
+            booking = await BookingService(self.session_db).prelock_lesson_booking(teacher_user_id, lesson_id)
             await ObjectPermissionService(self.session_db).require(
                 teacher_user_id, "lesson", lesson_id, write=True)
             teacher = await self.teacher_repo.get_teacher_by_user_id(teacher_user_id)
@@ -160,6 +162,10 @@ class LessonsService:
             from src.modules.notifications.service import NotificationsService
             notifications = NotificationsService(self.session_db)
             if cancelled:
+                if booking is not None:
+                    from datetime import UTC
+                    from src.modules.integrations_vk.booking_stages import stage_cancel_booking
+                    await stage_cancel_booking(self.session_db, booking, datetime.now(UTC))
                 await notifications.lesson_event(lesson_id, "lesson_cancelled")
             elif restored:
                 await notifications.lesson_event(lesson_id, "lesson_restored")
@@ -188,8 +194,10 @@ class LessonsService:
             conflicts = await self.lessons_repo.overlapping_ids(
                 lesson.teacher_id, lesson.scheduled_at,
                 self._end_time(lesson.scheduled_at, lesson.duration_minutes), lesson.id)
-            if conflicts:
-                dto.warnings = [ScheduleWarning(lesson_ids=conflicts)]
+            bookings = await self.lessons_repo.overlapping_booking_ids(lesson.teacher_id,
+                lesson.scheduled_at, self._end_time(lesson.scheduled_at, lesson.duration_minutes))
+            if conflicts or bookings:
+                dto.warnings = [ScheduleWarning(lesson_ids=conflicts, booking_ids=bookings)]
         from src.modules.check_permission.read_context import ReadContextService
         return (await ReadContextService(self.session_db).lessons([dto], actor))[0]
 
@@ -331,7 +339,8 @@ class RegularLessonsService(LessonsService):
                 end = self._end_time(date, spec.duration_minutes)
                 conflicts = await self.lessons_repo.overlapping_ids(teacher_id, date, end, 0)
                 occurrences.append(dict(scheduled_at=date.isoformat(), duration_minutes=spec.duration_minutes,
-                                        lesson_id=None, conflict_lesson_ids=conflicts))
+                                        lesson_id=None, conflict_lesson_ids=conflicts,
+                                        conflict_booking_ids=[str(id) for id in await self.lessons_repo.overlapping_booking_ids(teacher_id, date, end)]))
             for occurrence, date in zip(occurrences, dates):
                 occurrence["conflict_occurrence_dates"] = [other.isoformat() for other in dates
                     if other != date and other < self._end_time(date, spec.duration_minutes)
@@ -402,7 +411,7 @@ class RegularLessonsService(LessonsService):
                 raise RegularPreviewChanged(refreshed)
             if confirmation.preview_revision != operation.preview_revision:
                 raise RegularPreviewChanged(self._operation_response(operation).model_dump(mode="json"))
-            if any(o["conflict_lesson_ids"] or o.get("conflict_occurrence_dates") for o in preview["occurrences"]) and not confirmation.acknowledge_conflicts:
+            if any(o["conflict_lesson_ids"] or o.get("conflict_booking_ids") or o.get("conflict_occurrence_dates") for o in preview["occurrences"]) and not confirmation.acknowledge_conflicts:
                 raise StaleUpdate("Подтвердите предупреждения о пересечениях перед созданием занятий.")
             if series is None:
                 series = self.lessons_repo.add_regular_series(id=uuid4(), teacher_id=teacher.id,

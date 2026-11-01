@@ -1,6 +1,6 @@
 # Текущее состояние LGG
 
-**02.11.2026 · F01.2 local DONE: synthetic identity/parent/invite, без live.**
+**02.11.2026 · F01.3 local backend DONE: synthetic windows/Booking/materialization, без UI/live.**
 Принято новое уточнение: бронь сразу занимает время/видна teacher, аккаунт при
 приглашении; известная подтверждённая связь создаёт Lesson сразу. Полные ответы
 [PRODUCT/F01](PRODUCT.md#будущий-f01--существующий-vk-бот--принято301001112026)/[D13](DECISIONS.md#d13),
@@ -18,19 +18,27 @@ explicit offline entrypoint, fail-closed isolation до import. **43 tests PASS*
 clean env subprocess/tripwires и diff/docs links PASS. Это fixture HTTP admission; история .1 сохранена в карточке.
 **F01.2 local завершён** по отдельному явному переносу перед MVP/P03:
 [результат/файлы/gates/Git-сохранение](tasks/F01.md#результат-f012-02112026).
-Scoped recipients/identity/parent grants, session-bound challenges, atomic inactive
-account/workspace/invite и operations; additive `f01220261102`. **72 actual DB tests
-PASS +61 standalone regression PASS**; новая guarded synthetic DB55433/media,
-retained55432/dev55431 не использованы. Connector claim fail-closed до .5, UI позже;
-Booking/Lesson materialization в .3 не реализована. Только .2 разрешена ранним scope,
-F01.3+ требуют нового явного запроса. VK/P01 external gates остаются открытыми.
+Scoped recipients/identity/parent grants, challenges, inactive accounts/invites;
+исторические72 DB+61 standalone PASS. Результат .2 сохраняется в карточке.
+**F01.3 local завершён** по новому явному переносу приоритета/scope/commit-push:
+[результат/файлы/gates](tasks/F01.md#результат-f013-02112026).
+Dated окна/confirmed Booking, CAS/handles/immutable receipts, atomic resolve/invite/
+Lesson/D04/domain outbox, own teacher API; предупреждения одиночных/серий/restore
+учитывают provisional Booking, отмена условно переоткрывает исходное окно.
+**115 actual DB tests PASS +61 standalone PASS**, новая guarded synthetic DB55434/
+restricted role/media; retained55432/dev55431/прежняя55433 не использованы.
+Connector HTTP fail-closed до .5, delivery .6 и UI .4 не реализованы. Separate owner
+UI acceptance ожидает .4; VK/P01 gates открыты. F01.4+ только новым запросом.
+Git задачи: отдельная `codex/f013-booking-20261102` от `17923bb`, commit/push в
+пользовательский origin после PASS; без PR/merge/deploy и переписывания истории.
+Следующий вход — [актуальный prompt F01.4](PROMPTS.md#актуальный-следующий-чат-f014).
 **Git blocker снят** последующим явным поручением сохранить накопленную работу:
 новая ветка `codex/save-project-f012-20261102`; `daabcb5` — вся платформа/frontend/
 документы до .2, `1456d76` — отдельно .2. Пользовательский origin,
 без PR/merge/deploy. Дополнительная проверка накопленного frontend:213/40 unit PASS,
 types/lint/build/scoped format PASS; исправлены только test Date/config workers,
-не UI. Initial10 FAIL сохранены в SESSION_LOG. Для следующего чата готов [актуальный prompt F01.3](PROMPTS.md#актуальный-следующий-чат-f013).
-Остальная F01 после MVP/P03; исключение приоритета не распространяется на .3+.
+не UI. Initial10 FAIL сохранены в SESSION_LOG. Исторический prompt F01.3 выполнен; следующий F01.4 указан выше.
+Остальная F01 после MVP/P03; исключение приоритета не распространяется на .4+.
 Текущий основной план T15d → T16.1/.2 → подготовка запуска прежний.
 F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Markdown/
 538 file targets missing0;519 source hashes changes0, diff/whitespace PASS.
@@ -41,7 +49,8 @@ F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Mar
 
 ## Рабочая точка и сохранность
 
-- Internal repo `API_online_school`, новая branch `codex/save-project-f012-20261102`.
+- Internal repo `API_online_school`, branch задачи `codex/f013-booking-20261102` от `17923bb`.
+  Сохранённая baseline branch `codex/save-project-f012-20261102` не переписывается.
   Предыдущий HEAD95b3560 и ветка сохранены; накопленная работа теперь в daabcb5,
   F01.2 в1456d76. Секреты/данные/runtime artifacts остаются ignored локально.
 - Внешний root main без первого commit/HEAD; не добавлять inner repo как gitlink.
@@ -56,6 +65,10 @@ F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Mar
 - Ночной порядок согласован как будущий .8; Даниил test scope разрешён ранее,
   mapping/JSON/reminders/получатели требуют проверки перед запуском. Тимур и
   настоящие пользователи/общий JSON не disposable. Сейчас live действия запрещены.
+
+- F01.3: новый container `lgg-f013-synthetic-20261102`/55434, собственная DB/роль/media;
+  после gates останавливается с сохранением synthetic volume. Только .3 commit/push
+  в origin разрешены текущим запросом; UI/live/server/bot/PR/merge/deploy NOT RUN.
 
 ## Существующая платформа ·30.10 local VERIFY
 

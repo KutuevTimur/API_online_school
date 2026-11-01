@@ -56,6 +56,15 @@ class LifecycleService:
             attributes = ["updated_at"] + (["effective_status"] if kind == "lesson" else [])
             await self.session.refresh(obj, attribute_names=attributes)
             dto = (CoursesResponseDTO if kind == 'course' else LessonResponseDTO).model_validate(obj)
+            if kind == 'lesson':
+                from datetime import timedelta
+                from src.modules.lessons.repository import LessonsRepository
+                from src.modules.lessons.models_dto import ScheduleWarning
+                lessons = LessonsRepository(self.session)
+                end = obj.scheduled_at + timedelta(minutes=obj.duration_minutes)
+                conflicts = await lessons.overlapping_ids(obj.teacher_id, obj.scheduled_at, end, obj.id)
+                bookings = await lessons.overlapping_booking_ids(obj.teacher_id, obj.scheduled_at, end)
+                if conflicts or bookings: dto.warnings = [ScheduleWarning(lesson_ids=conflicts, booking_ids=bookings)]
             await self.session.commit()
             return dto
         except Exception:
@@ -80,6 +89,11 @@ class LifecycleService:
     async def purge(self, actor_id: int, course_id: int, confirmation: PurgeCourseRequest) -> PurgeResponse:
         await self.admin(actor_id)
         try:
+            await self.repo.lock_schedule_for_course(course_id)
+            from src.modules.integrations_vk.booking_repository import BookingRepository
+            from src.modules.integrations_vk.exception import IdentityError
+            if await BookingRepository(self.session).course_references(course_id):
+                raise IdentityError('PURGE_BLOCKED')
             course = await self.repo.course(course_id)
             if course is None:
                 raise NotFoundData()

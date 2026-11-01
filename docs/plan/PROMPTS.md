@@ -1,6 +1,35 @@
 # Короткие промпты
 
+## Актуальный следующий чат F01.4
+
+F01.0–.3 local DONE. F01.3:115 actual DB +61 standalone PASS, новый synthetic
+55434; retained preview/старые базы/бот не использованы. Результат и ограничения —
+[tasks/F01](tasks/F01.md#результат-f013-02112026). Исследование/интервью не повторять.
+Текст ниже не разрешает .4 до отправки владельцем в новый чат.
+
+```text
+Продолжаем API_online_school. Выполни только F01.4 по docs/plan/tasks/F01.md.
+Явно переношу приоритет этой локальной задачи перед MVP/P03. Разрешаю teacher UI
+и связывание кабинета в scope F01.4, необходимые backend исправления и проверки
+на новой отдельной disposable synthetic DB/media. Исследование/интервью не повторять.
+Прочитай AGENTS.md, GPT.md, STATUS, F01.4, результат .3 и нужные A14/A14.7,
+rules_project.md; для UI обязательные skills/DESIGN/A12–A13 по AGENTS.
+Retained preview, существующие БД/данные и VK_math_bot не менять/не очищать.
+Backend .3 уже содержит окна/Booking/receipt/resolve/materialize и domain outbox;
+connector HTTP fail-closed до .5, workers/delivery .6 отсутствуют. При UI merge
+booking_id связывает provisional строку с Lesson, snapshots цены не менять.
+Проверь actual DB/engine/session/role/media до тестов. Выполни gates карточки,
+review diff, обнови карточку/STATUS/SESSION_LOG; ручную owner acceptance не отмечай
+за меня. Разрешаю после PASS отдельную codex/ ветку, commit/push только задачи в
+пользовательский origin, без переписывания прежних коммитов. Без PR/merge/deploy,
+установок/серверных действий/VK/Google/Long Poll/живых credentials/внешних отправок.
+F01.5+ не начинать; VK/P01 gates не закрывать. В конце: готовность, проверки,
+Git commit/push, мои действия и один prompt следующего чата.
+```
+
 ## Актуальный следующий чат F01.3
+
+Исторический prompt: выполнен02.11; следующий — F01.4 выше.
 
 F01.0–.2 local DONE. Прежняя накопленная работа сохранена в `daabcb5`, F01.2 —
 `1456d76`, рабочая ветка `codex/save-project-f012-20261102`. Повторное исследование,
