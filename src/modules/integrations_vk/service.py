@@ -49,7 +49,7 @@ class IdentityService:
         connection = await self.repo.one(IntegrationConnection, IntegrationConnection.id == id)
         if connection is None:
             raise IdentityError('NOT_FOUND', 404)
-        if not connection.enabled:
+        if not connection.enabled and not getattr(self, 'readonly', False):
             raise IdentityError('CONNECTION_DISABLED', 403)
         return connection
 
@@ -353,7 +353,8 @@ class IdentityService:
             pending.append({'challenge_id': str(challenge.id), 'revision': challenge.revision,
                 'claimed_contact': '…' + contact.subject[-2:] if contact else None,
                 'expires_at': challenge.expires_at.isoformat().replace('+00:00', 'Z')})
-        return IdentityStatus(items=[{'connection_id': str(link.connection_id), 'purpose': link.purpose,
+        connections = await self.repo.rows(IntegrationConnection, IntegrationConnection.enabled.is_(True))
+        return IdentityStatus(connections=[{'connection_id': str(c.id), 'label': 'Запись · ' + c.group_id} for c in connections], items=[{'connection_id': str(link.connection_id), 'purpose': link.purpose,
             'revision': link.revision} for link in links], challenges=pending)
 
     async def unlink(self, actor_id: int, session_key: str, password: str, connection: UUID,
@@ -520,11 +521,11 @@ class IdentityService:
                 from src.modules.users.models_dto import UserDTO
                 invitation = await InvitationService(self.users).stage_issue(target, 'invite', UserDTO.model_validate(locked[actor_id]))
             AuditEventsService(self.session).stage(actor_id, 'vk_recipient_resolve', 'user', target.id)
-            return {'kind': 'recipient_resolved', 'invitation_issued': invitation is not None}, {'invitation': invitation}
+            return {'kind': 'recipient_resolved', 'invitation_issued': invitation is not None}, {'invitation': invitation, 'student_username': target.username}
         op, extra = await self._operation(connection, 'recipient_resolve', data.operation_id,
             {'recipient': str(recipient_id), **data.model_dump(exclude={'operation_id'}),
              **({'booking': str(booking_id), 'booking_request': booking_data.model_dump(exclude={'operation_id'})} if booking_id else {})}, work, user_id=actor_id)
-        return ResolveResponse(operation=op, invitation=extra.get('invitation'))
+        return ResolveResponse(operation=op, invitation=extra.get('invitation'), student_username=extra.get('student_username'))
 
     async def operation_status(self, actor_id: int, operation_id: UUID, action: str) -> OperationResult:
         await self.user(actor_id, activated=True)

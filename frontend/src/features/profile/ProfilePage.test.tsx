@@ -30,19 +30,21 @@ beforeEach(() => {
     isPending: false,
     refetch: vi.fn().mockResolvedValue({}),
     data:
-      path === '/users/me'
-        ? { id: 7, role: 'teacher', username: 'teacher', email: null }
-        : {
-            id: 7,
-            username: 'teacher',
-            email: null,
-            teacher: {
-              first_name: 'Тимур',
-              last_name: '',
-              middle_name: '',
-              avatar_path: null,
+      path === '/users/me/integrations/vk'
+        ? { items: [], challenges: [], connections: [] }
+        : path === '/users/me'
+          ? { id: 7, role: 'teacher', username: 'teacher', email: null }
+          : {
+              id: 7,
+              username: 'teacher',
+              email: null,
+              teacher: {
+                first_name: 'Тимур',
+                last_name: '',
+                middle_name: '',
+                avatar_path: null,
+              },
             },
-          },
   }));
 });
 function show() {

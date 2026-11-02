@@ -263,7 +263,9 @@ class BookingService(IdentityService):
         if row.start_at <= self.clock() and row.lesson_id is None: access = 'review_required'
         return BookingView(booking_id=row.id, revision=row.revision, start_at=row.start_at, end_at=row.end_at,
             status=row.status, recipient={'recipient_id': str(recipient.id), 'first_name': recipient.first_name,
-            'last_name': recipient.last_name, 'grade': recipient.grade}, lesson_id=row.lesson_id,
+            'last_name': recipient.last_name, 'grade': recipient.grade, 'revision': recipient.revision,
+            'linked_student_user_id': recipient.linked_student_user_id,
+            'parent_grants': await self.parent_grants(actor, recipient)}, lesson_id=row.lesson_id,
             access_state=access, lesson_price_kopecks=row.lesson_price_kopecks)
 
     async def connector_receipt(self, actor_context: str, operation_id: UUID) -> OperationResult:
@@ -318,3 +320,46 @@ class BookingService(IdentityService):
         return [WindowView(window_id=r.id, revision=r.revision, start_at=r.start_at, end_at=r.end_at,
             status=r.status) for r in rows[:100] if r.status == 'published' and r.start_at > self.clock()
             and not await slot_busy(self.session, teacher, r.start_at, r.end_at)]
+
+
+    async def parent_grants(self, actor: int, recipient: BookingRecipient) -> list[dict]:
+        grants = await self.repo.rows(ParentGrant, ParentGrant.connection_id == recipient.connection_id,
+            ParentGrant.recipient_id == recipient.id, ParentGrant.teacher_user_id == actor)
+        result = []
+        for grant in grants:
+            contact = await self.repo.scoped(ExternalContact, recipient.connection_id, grant.parent_contact_id)
+            result.append({'grant_id': grant.id, 'revision': grant.revision, 'state': grant.state,
+                'parent_label': 'Родитель · …' + contact.subject[-2:]})
+        return result
+
+
+    async def calendar(self, actor: int, week: date) -> BookingsPage:
+        self.validate_page(week, 100)
+        user = await self.user(actor, activated=True)
+        if user.role != UserRole.TEACHER:
+            raise IdentityError('SCOPE_DENIED', 403)
+        from zoneinfo import ZoneInfo
+        start = datetime.combine(week, datetime.min.time(), ZoneInfo('Europe/Moscow'))
+        rows = await self.repo.calendar_page(actor, start, start + timedelta(days=7), 100)
+        return BookingsPage(items=[await self.booking_view(actor, row.id) for row in rows[:100]],
+            next_cursor=rows[99].id if len(rows)>100 else None)
+
+    async def linked_bookings(self, actor: int, connection: UUID, student_user_id: int,
+                              cursor: UUID | None, limit: int) -> BookingsPage:
+        if not 1 <= limit <= 100:
+            raise IdentityError('INVALID_REQUEST', 422)
+        await self.teacher(actor, connection)
+        rows = await self.repo.linked_page(actor, connection, student_user_id, cursor, limit)
+        return BookingsPage(items=[await self.booking_view(actor, row.id) for row in rows[:limit]],
+            next_cursor=rows[limit-1].id if len(rows)>limit else None)
+
+
+    async def capabilities(self, actor: int, enabled: bool) -> "PlanningCapabilities":
+        from src.modules.integrations_vk.models_dto import PlanningCapabilities, PlanningConnection
+        user = await self.user(actor, activated=True)
+        if user.role != UserRole.TEACHER:
+            raise IdentityError('SCOPE_DENIED', 403)
+        rows = await self.repo.planning_connections(actor)
+        return PlanningCapabilities(enabled=enabled,
+            items=[PlanningConnection(connection_id=row.id, label='Запись · ' + row.group_id,
+                                      enabled=row.enabled) for row in rows])

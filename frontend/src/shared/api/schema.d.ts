@@ -637,6 +637,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/vk/bookings/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Booking */
+        post: operations["confirm_booking_integrations_vk_bookings_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/vk/challenges/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim */
+        post: operations["claim_integrations_vk_challenges_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/vk/interactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prepare Booking */
+        post: operations["prepare_booking_integrations_vk_interactions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/vk/operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Booking Operation */
+        get: operations["booking_operation_integrations_vk_operations__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/vk/windows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Available Windows */
+        get: operations["available_windows_integrations_vk_windows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/lectures": {
         parameters: {
             query?: never;
@@ -1057,6 +1142,143 @@ export interface paths {
         patch: operations["update_homework_submission_teacher_submissions__submission_id__teacher_patch"];
         trace?: never;
     };
+    "/teacher-planning/booking-calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Booking Calendar */
+        get: operations["booking_calendar_teacher_planning_booking_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/booking-capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Booking Capabilities */
+        get: operations["booking_capabilities_teacher_planning_booking_capabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/booking-windows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Windows */
+        get: operations["list_windows_teacher_planning_booking_windows_get"];
+        put?: never;
+        /** Publish Windows */
+        post: operations["publish_windows_teacher_planning_booking_windows_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/booking-windows/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Window */
+        post: operations["close_window_teacher_planning_booking_windows__id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Bookings */
+        get: operations["list_bookings_teacher_planning_bookings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Booking */
+        get: operations["get_booking_teacher_planning_bookings__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/bookings/{id}/materialize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Materialize Booking */
+        post: operations["materialize_booking_teacher_planning_bookings__id__materialize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/bookings/{id}/resolve-invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve Booking */
+        post: operations["resolve_booking_teacher_planning_bookings__id__resolve_invite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/teacher-planning/lessons/{lesson_id}/students/{student_user_id}": {
         parameters: {
             query?: never;
@@ -1072,6 +1294,57 @@ export interface paths {
         head?: never;
         /** Mark Material Not Needed */
         patch: operations["mark_material_not_needed_teacher_planning_lessons__lesson_id__students__student_user_id__patch"];
+        trace?: never;
+    };
+    "/teacher-planning/linked-bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Linked Bookings */
+        get: operations["linked_bookings_teacher_planning_linked_bookings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/parent-grants/{id}/{decision}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide */
+        post: operations["decide_teacher_planning_parent_grants__id___decision__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher-planning/recipients/{id}/resolve-invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve */
+        post: operations["resolve_teacher_planning_recipients__id__resolve_invite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/teacher-planning/reminders": {
@@ -1204,6 +1477,59 @@ export interface paths {
         };
         /** Get Me */
         get: operations["get_me_users_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/integrations/vk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_users_me_integrations_vk_get"];
+        put?: never;
+        /** Issue */
+        post: operations["issue_users_me_integrations_vk_post"];
+        /** Unlink */
+        delete: operations["unlink_users_me_integrations_vk_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/integrations/vk/challenges/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm */
+        post: operations["confirm_users_me_integrations_vk_challenges__id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/integrations/vk/operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operation */
+        get: operations["operation_users_me_integrations_vk_operations__id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1541,12 +1867,96 @@ export interface components {
             /** Student User Id */
             student_user_id: number;
         };
+        /** BookingResolveRequest */
+        BookingResolveRequest: {
+            /** Expected Recipient Revision */
+            expected_recipient_revision: number;
+            /** Expected Revision */
+            expected_revision: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "new_student" | "own_student";
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /**
+             * Review Past
+             * @default false
+             */
+            review_past: boolean;
+            /** Student User Id */
+            student_user_id?: number | null;
+        };
+        /** BookingView */
+        BookingView: {
+            /** Access State */
+            access_state: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Delivery State
+             * @default not_planned
+             */
+            delivery_state: string;
+            /**
+             * End At
+             * Format: date-time
+             */
+            end_at: string;
+            /** Lesson Id */
+            lesson_id: number | null;
+            /** Lesson Price Kopecks */
+            lesson_price_kopecks: number | null;
+            recipient: components["schemas"]["RecipientView"];
+            /** Revision */
+            revision: number;
+            /**
+             * Start At
+             * Format: date-time
+             */
+            start_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "confirmed" | "cancelled";
+        };
+        /** BookingsPage */
+        BookingsPage: {
+            /** Items */
+            items: components["schemas"]["BookingView"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /** BrowserTokenResponse */
         BrowserTokenResponse: {
             /** Access Token */
             access_token: string;
             /** Token Type */
             token_type: string;
+        };
+        /** ChallengeResponse */
+        ChallengeResponse: {
+            /**
+             * Challenge Id
+             * Format: uuid
+             */
+            challenge_id: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            operation: components["schemas"]["OperationResult"];
+            /** Secret */
+            secret?: string | null;
         };
         /** ChangePasswordRequestDTO */
         ChangePasswordRequestDTO: {
@@ -1555,12 +1965,38 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ClaimChallengeRequest */
+        ClaimChallengeRequest: {
+            /** Actor Context */
+            actor_context: string;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Secret */
+            secret: string;
+        };
         /** CleanupResponse */
         CleanupResponse: {
             /** Completed */
             completed: number;
             /** Failed */
             failed: number;
+        };
+        /** ConfirmBookingRequest */
+        ConfirmBookingRequest: {
+            /** Actor Context */
+            actor_context: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Handle */
+            handle: string;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
         };
         /** ConfirmRegularLessonsRequestDTO */
         ConfirmRegularLessonsRequestDTO: {
@@ -1900,6 +2336,21 @@ export interface components {
          * @enum {string}
          */
         HomeworkSubmissionStatus: "draft" | "submitted" | "checked";
+        /** IdentityStatus */
+        IdentityStatus: {
+            /** Challenges */
+            challenges: {
+                [key: string]: unknown;
+            }[];
+            /** Connections */
+            connections?: {
+                [key: string]: unknown;
+            }[];
+            /** Items */
+            items: {
+                [key: string]: unknown;
+            }[];
+        };
         /** InvitationResponse */
         InvitationResponse: {
             /** Activation Link */
@@ -1925,6 +2376,24 @@ export interface components {
             role: components["schemas"]["UserRole"];
             /** Username */
             username: string;
+        };
+        /** IssueChallengeRequest */
+        IssueChallengeRequest: {
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "student" | "teacher";
         };
         /** IssueInvitationRequest */
         IssueInvitationRequest: {
@@ -2145,6 +2614,23 @@ export interface components {
             /** Success */
             success: boolean;
         };
+        /** MaterializeRequest */
+        MaterializeRequest: {
+            /** Expected Recipient Revision */
+            expected_recipient_revision: number;
+            /** Expected Revision */
+            expected_revision: number;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /**
+             * Review Past
+             * @default false
+             */
+            review_past: boolean;
+        };
         /** MinimalProfileResponseDTO */
         MinimalProfileResponseDTO: {
             /** Avatar Path */
@@ -2234,6 +2720,36 @@ export interface components {
             object_id?: number | null;
             /** Object Type */
             object_type?: ("lesson" | "homework" | "submission") | null;
+        };
+        /** OperationResult */
+        OperationResult: {
+            /** Current */
+            current?: {
+                [key: string]: unknown;
+            } | null;
+            /** Delivery */
+            delivery?: {
+                [key: string]: unknown;
+            };
+            /** Error */
+            error?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * State
+             * @default committed
+             * @enum {string}
+             */
+            state: "committed" | "rejected";
         };
         /** PaginationResponseDTO[AdminTeacherStudentResponseDTO] */
         PaginationResponseDTO_AdminTeacherStudentResponseDTO_: {
@@ -2411,6 +2927,23 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ParentGrantView */
+        ParentGrantView: {
+            /**
+             * Grant Id
+             * Format: uuid
+             */
+            grant_id: string;
+            /** Parent Label */
+            parent_label: string;
+            /** Revision */
+            revision: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "pending" | "confirmed" | "rejected" | "revoked";
+        };
         /** PlacementResponseDTO */
         PlacementResponseDTO: {
             /**
@@ -2435,6 +2968,25 @@ export interface components {
             /** Lesson Id */
             lesson_id: number;
         };
+        /** PlanningCapabilities */
+        PlanningCapabilities: {
+            /** Enabled */
+            enabled: boolean;
+            /** Items */
+            items: components["schemas"]["PlanningConnection"][];
+        };
+        /** PlanningConnection */
+        PlanningConnection: {
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Label */
+            label: string;
+        };
         /** PlanningStudentDTO */
         PlanningStudentDTO: {
             /** First Name */
@@ -2457,6 +3009,38 @@ export interface components {
             user_id: number;
             /** Username */
             username: string;
+        };
+        /** PrepareBookingRequest */
+        PrepareBookingRequest: {
+            /** Actor Context */
+            actor_context: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /**
+             * Recipient Id
+             * Format: uuid
+             */
+            recipient_id: string;
+            /**
+             * Window Id
+             * Format: uuid
+             */
+            window_id: string;
+        };
+        /** PreparedBookingResponse */
+        PreparedBookingResponse: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Handle */
+            handle: string;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
         };
         /** PreviewRegularLessonsRequestDTO */
         PreviewRegularLessonsRequestDTO: {
@@ -2495,6 +3079,26 @@ export interface components {
             teacher?: components["schemas"]["TeachersResponseDTO"] | null;
             /** Username */
             username: string;
+        };
+        /** PublishWindowsRequest */
+        PublishWindowsRequest: {
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            /** Items */
+            items: components["schemas"]["WindowItem"][];
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
         };
         /** PurgeCourseRequest */
         PurgeCourseRequest: {
@@ -2559,6 +3163,26 @@ export interface components {
             student_user_id: number;
             /** Title */
             title: string;
+        };
+        /** RecipientView */
+        RecipientView: {
+            /** First Name */
+            first_name: string;
+            /** Grade */
+            grade: number | null;
+            /** Last Name */
+            last_name: string;
+            /** Linked Student User Id */
+            linked_student_user_id: number | null;
+            /** Parent Grants */
+            parent_grants: components["schemas"]["ParentGrantView"][];
+            /**
+             * Recipient Id
+             * Format: uuid
+             */
+            recipient_id: string;
+            /** Revision */
+            revision: number;
         };
         /** RefreshTokenRequest */
         RefreshTokenRequest: {
@@ -2640,6 +3264,8 @@ export interface components {
         };
         /** RegularOccurrencePreviewDTO */
         RegularOccurrencePreviewDTO: {
+            /** Conflict Booking Ids */
+            conflict_booking_ids?: string[];
             /** Conflict Lesson Ids */
             conflict_lesson_ids?: number[];
             /** Conflict Occurrence Dates */
@@ -2747,6 +3373,30 @@ export interface components {
             /** Lecture Not Needed */
             lecture_not_needed?: boolean | null;
         };
+        /** ResolveRecipientRequest */
+        ResolveRecipientRequest: {
+            /** Expected Revision */
+            expected_revision: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "new_student" | "own_student";
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Student User Id */
+            student_user_id?: number | null;
+        };
+        /** ResolveResponse */
+        ResolveResponse: {
+            invitation?: components["schemas"]["InvitationResponse"] | null;
+            operation: components["schemas"]["OperationResult"];
+            /** Student Username */
+            student_username?: string | null;
+        };
         /** ReviewQueueItemDTO */
         ReviewQueueItemDTO: {
             /** Attempt Number */
@@ -2818,8 +3468,20 @@ export interface components {
              */
             version: number;
         };
+        /** RevisionRequest */
+        RevisionRequest: {
+            /** Expected Revision */
+            expected_revision: number;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+        };
         /** ScheduleWarning */
         ScheduleWarning: {
+            /** Booking Ids */
+            booking_ids?: string[];
             /**
              * Code
              * @default teacher_time_overlap
@@ -3133,6 +3795,48 @@ export interface components {
              * Format: date
              */
             week: string;
+        };
+        /** WindowItem */
+        WindowItem: {
+            /**
+             * End At
+             * Format: date-time
+             */
+            end_at: string;
+            /**
+             * Start At
+             * Format: date-time
+             */
+            start_at: string;
+        };
+        /** WindowView */
+        WindowView: {
+            /**
+             * End At
+             * Format: date-time
+             */
+            end_at: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Start At
+             * Format: date-time
+             */
+            start_at: string;
+            /** Status */
+            status: string;
+            /**
+             * Window Id
+             * Format: uuid
+             */
+            window_id: string;
+        };
+        /** WindowsPage */
+        WindowsPage: {
+            /** Items */
+            items: components["schemas"]["WindowView"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
         };
     };
     responses: never;
@@ -4599,6 +5303,171 @@ export interface operations {
             };
         };
     };
+    confirm_booking_integrations_vk_bookings_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_integrations_vk_challenges_claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_booking_integrations_vk_interactions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrepareBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreparedBookingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    booking_operation_integrations_vk_operations__id__get: {
+        parameters: {
+            query: {
+                actor_context: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    available_windows_integrations_vk_windows_get: {
+        parameters: {
+            query: {
+                actor_context: string;
+                teacher_user_id: number;
+                week_start: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WindowView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_lectures_list_lectures_get: {
         parameters: {
             query: {
@@ -5718,6 +6587,294 @@ export interface operations {
             };
         };
     };
+    booking_calendar_teacher_planning_booking_calendar_get: {
+        parameters: {
+            query: {
+                week_start: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    booking_capabilities_teacher_planning_booking_capabilities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanningCapabilities"];
+                };
+            };
+        };
+    };
+    list_windows_teacher_planning_booking_windows_get: {
+        parameters: {
+            query: {
+                connection_id: string;
+                week_start: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WindowsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_windows_teacher_planning_booking_windows_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishWindowsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_window_teacher_planning_booking_windows__id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bookings_teacher_planning_bookings_get: {
+        parameters: {
+            query: {
+                connection_id: string;
+                week_start: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_booking_teacher_planning_bookings__id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    materialize_booking_teacher_planning_bookings__id__materialize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterializeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_booking_teacher_planning_bookings__id__resolve_invite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     mark_material_not_needed_teacher_planning_lessons__lesson_id__students__student_user_id__patch: {
         parameters: {
             query?: never;
@@ -5741,6 +6898,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginationResponseDTO_RecipientReminderDTO_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    linked_bookings_teacher_planning_linked_bookings_get: {
+        parameters: {
+            query: {
+                connection_id: string;
+                student_user_id: number;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_teacher_planning_parent_grants__id___decision__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                decision: "confirm" | "reject" | "revoke";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_teacher_planning_recipients__id__resolve_invite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveRecipientRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6071,6 +7333,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    status_users_me_integrations_vk_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdentityStatus"];
+                };
+            };
+        };
+    };
+    issue_users_me_integrations_vk_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-LGG-Reauth": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_users_me_integrations_vk_delete: {
+        parameters: {
+            query: {
+                connection_id: string;
+            };
+            header: {
+                "X-LGG-Reauth": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_users_me_integrations_vk_challenges__id__confirm_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-LGG-Reauth": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    operation_users_me_integrations_vk_operations__id__get: {
+        parameters: {
+            query: {
+                action: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

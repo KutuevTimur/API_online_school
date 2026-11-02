@@ -1218,6 +1218,19 @@ identity/teacher grant; её окончание не удаляет D02 исто
 VK ID auth, Google export F05.1, backend backup T18 — самостоятельные границы.
 
 
+F01.4 local runtime02.11: `features/booking/BookingPanel` используется в canonical
+TeacherSchedulePage/StudentWorkspace; `AccountLink` — профиль, существующая auth session.
+ConfirmDialog/InvitationDialog/DateTimeField/SelectField остаются владельцами primitives.
+OperationDialog хранит unknown UUID по User/path/action только в памяти, проверяет scoped
+receipt без повторного POST; explicit rejected reload сохраняет ввод. Booking calendar
+feed объединён с Lesson по `booking_id`/`lesson_id`, без изменения price snapshot.
+Read-only scoped reads работают при disabled capability/connection, mutations закрыты.
+Только dedicated F01.4 preview имеет свою refresh cookie; default browser cookie прежняя.
+Teacher recipient DTO содержит revision/own masked parent grants; linked-bookings —
+свой teacher + linked User, все даты с cursor/limit. В новом resolve response username
+показан рядом с приглашением; одноразовая ссылка не входит в receipt/replay.
+Ручная приёмка/границы и фактические gates — [F01.4](tasks/F01.md#результат-f014-02112026).
+
 <a id="a147-f010-local"></a>
 
 ### A14.7. F01.0 — локальная спецификация перед первым кодом ·02.11.2026

@@ -66,11 +66,13 @@ class ChallengeResponse(StrictDTO):
 class ResolveResponse(StrictDTO):
     operation: OperationResult
     invitation: InvitationResponse | None = None
+    student_username: str | None = None
 
 
 class IdentityStatus(StrictDTO):
     items: list[dict]
     challenges: list[dict]
+    connections: list[dict] = Field(default_factory=list)
 
 
 from datetime import date, UTC, timedelta
@@ -143,13 +145,30 @@ class WindowView(StrictDTO):
     status: str
 
 
+class ParentGrantView(StrictDTO):
+    grant_id: UUID
+    revision: int
+    state: Literal['pending', 'confirmed', 'rejected', 'revoked']
+    parent_label: str
+
+
+class RecipientView(StrictDTO):
+    recipient_id: UUID
+    revision: int
+    first_name: str
+    last_name: str
+    grade: int | None
+    linked_student_user_id: int | None
+    parent_grants: list[ParentGrantView]
+
+
 class BookingView(StrictDTO):
     booking_id: UUID
     revision: int
     start_at: datetime
     end_at: datetime
     status: Literal['confirmed', 'cancelled']
-    recipient: dict
+    recipient: RecipientView
     lesson_id: int | None
     access_state: str
     lesson_price_kopecks: int | None
@@ -170,3 +189,14 @@ class WindowsPage(StrictDTO):
 class BookingsPage(StrictDTO):
     items: list[BookingView]
     next_cursor: UUID | None = None
+
+
+class PlanningConnection(StrictDTO):
+    connection_id: UUID
+    label: str
+    enabled: bool
+
+
+class PlanningCapabilities(StrictDTO):
+    enabled: bool
+    items: list[PlanningConnection]

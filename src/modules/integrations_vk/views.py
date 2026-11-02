@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 from uuid import UUID
-from fastapi import APIRouter, Depends, Header, Response, Query
+from fastapi import APIRouter, Depends, Header, Response, Query, Request
 from src.modules.auth.browser import browser_guard
 from src.modules.auth.depends import get_current_user
 from src.modules.auth.login import oauth2_scheme
@@ -82,13 +82,14 @@ async def operation(id: UUID, action: str, response: Response, service: Service,
 
 
 from datetime import date
-from src.modules.integrations_vk.depends import get_booking_service
+from src.modules.integrations_vk.depends import get_booking_service, get_booking_read_service
 from src.modules.integrations_vk.booking_service import BookingService
 from src.modules.integrations_vk.models_dto import (
     PublishWindowsRequest, PrepareBookingRequest, ConfirmBookingRequest,
     MaterializeRequest, BookingResolveRequest, BookingView, WindowView, WindowsPage, BookingsPage, PreparedBookingResponse,
 )
 BookingAPI = Annotated[BookingService, Depends(get_booking_service)]
+BookingReadAPI = Annotated[BookingService, Depends(get_booking_read_service)]
 
 
 @router.post('/teacher-planning/booking-windows', response_model=OperationResult, status_code=200, dependencies=mutations)
@@ -97,7 +98,7 @@ async def publish_windows(data: PublishWindowsRequest, service: BookingAPI, acto
 
 
 @router.get('/teacher-planning/booking-windows', response_model=WindowsPage, status_code=200)
-async def list_windows(connection_id: UUID, week_start: date, service: BookingAPI, actor: Actor,
+async def list_windows(connection_id: UUID, week_start: date, service: BookingReadAPI, actor: Actor,
                        cursor: UUID | None = None, limit: int = Query(25, ge=1, le=100)) -> WindowsPage:
     return await service.list_windows(actor.id, connection_id, week_start, cursor, limit)
 
@@ -108,13 +109,18 @@ async def close_window(id: UUID, data: RevisionRequest, service: BookingAPI, act
 
 
 @router.get('/teacher-planning/bookings', response_model=BookingsPage, status_code=200)
-async def list_bookings(connection_id: UUID, week_start: date, service: BookingAPI, actor: Actor,
+async def list_bookings(connection_id: UUID, week_start: date, service: BookingReadAPI, actor: Actor,
                         cursor: UUID | None = None, limit: int = Query(25, ge=1, le=100)) -> BookingsPage:
     return await service.list_bookings(actor.id, connection_id, week_start, cursor, limit)
 
 
+@router.get('/teacher-planning/booking-calendar', response_model=BookingsPage, status_code=200)
+async def booking_calendar(week_start: date, service: BookingReadAPI, actor: Actor) -> BookingsPage:
+    return await service.calendar(actor.id, week_start)
+
+
 @router.get('/teacher-planning/bookings/{id}', response_model=BookingView, status_code=200)
-async def get_booking(id: UUID, service: BookingAPI, actor: Actor) -> BookingView:
+async def get_booking(id: UUID, service: BookingReadAPI, actor: Actor) -> BookingView:
     return await service.booking_view(actor.id, id)
 
 
@@ -146,3 +152,17 @@ async def booking_operation(id: UUID, actor_context: str, service: BookingAPI) -
 @router.get('/integrations/vk/windows', response_model=list[WindowView], status_code=200, dependencies=[Depends(require_connector)])
 async def available_windows(actor_context: str, teacher_user_id: int, week_start: date, service: BookingAPI) -> list[WindowView]:
     return await service.available_windows(actor_context, teacher_user_id, week_start)
+
+
+from src.modules.integrations_vk.models_dto import PlanningCapabilities
+
+
+@router.get('/teacher-planning/booking-capabilities', response_model=PlanningCapabilities, status_code=200)
+async def booking_capabilities(request: Request, actor: Actor, service: BookingReadAPI) -> PlanningCapabilities:
+    return await service.capabilities(actor.id, getattr(request.app.state.config, 'vk_identity_enabled', False))
+
+
+@router.get('/teacher-planning/linked-bookings', response_model=BookingsPage, status_code=200)
+async def linked_bookings(connection_id: UUID, student_user_id: int, service: BookingReadAPI, actor: Actor,
+                          cursor: UUID | None = None, limit: int = Query(25, ge=1, le=100)) -> BookingsPage:
+    return await service.linked_bookings(actor.id, connection_id, student_user_id, cursor, limit)

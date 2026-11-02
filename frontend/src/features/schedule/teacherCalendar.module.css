@@ -402,3 +402,43 @@
     margin-left: 0;
   }
 }
+
+.bookingEvent {
+  height: 100%;
+  line-height: 18px;
+  position: relative;
+  z-index: 2;
+  background: var(--lgg-lesson);
+  border: 1px solid var(--lgg-controlBorder);
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.bookingEvent a {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--lgg-ink);
+}
+.bookingEvent:has(a:hover) {
+  background: var(--lgg-studentHover);
+}
+
+.bookingName {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 1023px) {
+  .hour:has(.bookingEvent) {
+    margin-bottom: 8px;
+  }
+  .bookingEvent {
+    height: auto;
+    min-height: 88px;
+  }
+}

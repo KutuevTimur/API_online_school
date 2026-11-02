@@ -7,7 +7,7 @@ from httpx import AsyncClient, ASGITransport
 from src.core.config.config import PathsConfig, TokensConfig
 from src.core.config.browser import BrowserConfig
 from src.core.database.database import get_db
-from src.core.config.synthetic_guard import require_f013_session
+from tests_unit.integrations_vk.domain.db import require_session as require_f013_session, PORT
 from src.modules.api.app import init_fastapi_app
 from src.modules.auth.depends import get_current_user
 from src.modules.auth.login import oauth2_scheme
@@ -22,10 +22,10 @@ HEADERS={'origin':'http://127.0.0.1:5173','x-lgg-request':'browser','content-typ
 
 
 @asynccontextmanager
-async def client(w,actor='s1',enabled=True):
+async def client(w,actor='s1',enabled=True,cookie_name='lgg_refresh'):
     conf=SimpleNamespace(paths=PathsConfig.build(media_root=w.db.media), tokens=TokensConfig(algorithm='HS256'),
-        browser=BrowserConfig.build({},'TEST'), file_maintenance_enabled=False,
-        env=SimpleNamespace(mode='TEST'), vk_identity_enabled=enabled,
+        browser=BrowserConfig.build({},'TEST').model_copy(update={'cookie_name':cookie_name}), file_maintenance_enabled=False,
+        env=SimpleNamespace(mode='TEST',secret_key='synthetic-http-only-secret'), vk_identity_enabled=enabled,
         db_connection=SimpleNamespace(engine=w.db.engine,session_local=w.db.factory))
     app=init_fastapi_app(conf)
     app.state.cr_context=w.crypto

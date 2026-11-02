@@ -1,3 +1,5 @@
+import { BookingPanel } from '../booking/BookingPanel';
+import { weekStart } from '../../shared/lib/datetime';
 import { Settings } from 'lucide-react';
 import { Link } from 'react-router';
 import type { components } from '../../shared/api/schema';
@@ -480,6 +482,10 @@ export function StudentWorkspace({
           )
         }
       </ReadState>
+      <BookingPanel
+        week={weekStart().format('YYYY-MM-DD')}
+        studentId={student.user_id}
+      />
       <TeacherReminders studentId={student.user_id} />
       <details
         ref={settings}

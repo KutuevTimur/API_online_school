@@ -1,6 +1,7 @@
 import { session } from '../../features/auth/session';
 import { ApiError, responseError } from './error';
 export type RequestOptions = {
+  headers?: Record<string, string>;
   params?: Record<string, string | number | undefined>;
   method?: string;
   body?: unknown;
@@ -86,7 +87,10 @@ export async function request<T>(
     const sentToken = session.accessToken();
     const response = await fetch(apiUrl(path, options.params), {
       method: options.method ?? 'GET',
-      headers: headers(options.body),
+      headers: new Headers({
+        ...Object.fromEntries(headers(options.body)),
+        ...options.headers,
+      }),
       body:
         options.body === undefined
           ? undefined

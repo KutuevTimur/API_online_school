@@ -73,3 +73,10 @@ class IdentityRepository(BaseRepository):
                 StudentCourse.started_at <= func.clock_timestamp(),
                 (StudentCourse.expires_at.is_(None)) | (StudentCourse.expires_at > func.clock_timestamp()))
         return list((await self.session.scalars(stmt.order_by(Course.id))).unique().all())
+
+
+    async def planning_connections(self, actor_id: int) -> list:
+        from src.modules.integrations_vk.models import IntegrationConnection, ConnectionTeacher
+        return list((await self.session.scalars(select(IntegrationConnection).join(
+            ConnectionTeacher, ConnectionTeacher.connection_id == IntegrationConnection.id).where(
+            ConnectionTeacher.teacher_user_id == actor_id).order_by(IntegrationConnection.id))).all())

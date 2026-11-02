@@ -25,3 +25,10 @@ async def require_connector() -> None:
 def get_booking_service(identity: IdentityService = Depends(get_identity_service)) -> "BookingService":
     from src.modules.integrations_vk.booking_service import BookingService
     return BookingService(identity.session, identity.users, identity.clock)
+
+
+def get_booking_read_service(session=Depends(get_db)) -> "BookingService":
+    from src.modules.integrations_vk.booking_service import BookingService
+    service = BookingService(session)
+    service.readonly = True
+    return service

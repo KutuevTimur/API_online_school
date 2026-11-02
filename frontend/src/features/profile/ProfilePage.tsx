@@ -1,3 +1,4 @@
+import { AccountLink } from '../booking/AccountLink';
 import { useState, useEffect, useRef, useContext } from 'react';
 import { Stack, Button } from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
@@ -436,6 +437,7 @@ export function ProfilePage() {
             )}
             <div className={styles.lessonIntro} />
             <PasswordForm id={account.id} onDirty={setPasswordDirty} />
+            <AccountLink />
           </>
         )}
       </ReadState>

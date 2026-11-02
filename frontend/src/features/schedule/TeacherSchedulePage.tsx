@@ -1,3 +1,5 @@
+import { accessLabel, provisional, type Booking } from '../booking/api';
+import { BookingPanel } from '../booking/BookingPanel';
 import { WeeklyNeeds } from './WeeklyNeeds';
 import { WeeklyEarnings } from './WeeklyEarnings';
 import {
@@ -54,6 +56,10 @@ export function TeacherSchedulePage() {
   const includeCancelled = view !== 'active' || params.get('cancelled') === '1';
   const update = (values: Record<string, string | number>) => {
     const next = new URLSearchParams(params);
+    if (values.week) {
+      next.delete('booking_cursor');
+      next.delete('window_cursor');
+    }
     Object.entries(values).forEach(([k, v]) => next.set(k, String(v)));
     set(next);
   };
@@ -69,6 +75,19 @@ export function TeacherSchedulePage() {
     true,
     60000,
   );
+  const bookingQuery = useRead<{
+    items: Booking[];
+    next_cursor?: string | null;
+  }>(
+    '/teacher-planning/booking-calendar',
+    { week_start: start.format('YYYY-MM-DD') },
+    true,
+    60000,
+  );
+  const pendingBookings = provisional(
+    bookingQuery.data?.items || [],
+    query.data?.items.map((l) => l.id) || [],
+  );
   const lessons = useMemo(
     () =>
       (query.data?.items || []).filter(
@@ -78,8 +97,11 @@ export function TeacherSchedulePage() {
   );
   const slotHeights = useMemo(
     () =>
-      calendarSlotHeights(lessons.map((l) => moscow(l.scheduled_at).hour())),
-    [lessons],
+      calendarSlotHeights([
+        ...lessons.map((l) => moscow(l.scheduled_at).hour()),
+        ...pendingBookings.map((b) => moscow(b.start_at).hour()),
+      ]),
+    [lessons, pendingBookings],
   );
   const slotStyle = (n: number) =>
     ({ '--calendar-slot-height': `${slotHeights[n]}px` }) as CSSProperties;
@@ -120,6 +142,7 @@ export function TeacherSchedulePage() {
     if (
       !query.data ||
       query.isFetching ||
+      bookingQuery.isPending ||
       !calendar.current ||
       !desktop ||
       positionedWeek.current === weekKey
@@ -136,6 +159,12 @@ export function TeacherSchedulePage() {
     const hours = (selectedItems.length ? selectedItems : visible)
       .map((l) => moscow(l.scheduled_at).hour())
       .filter((h) => h >= 8 && h < 22);
+    hours.push(
+      ...pendingBookings
+        .filter((b) => moscow(b.start_at).isSame(selectedDate, 'day'))
+        .map((b) => moscow(b.start_at).hour())
+        .filter((h) => h >= 8 && h < 22),
+    );
     const hour = hours.length ? Math.max(8, Math.min(...hours) - 1) : 8;
     const row = calendar.current.querySelector<HTMLElement>(
       `[data-time-label="${hour}"]`,
@@ -144,6 +173,8 @@ export function TeacherSchedulePage() {
   }, [
     query.data,
     query.isFetching,
+    bookingQuery.isPending,
+    pendingBookings,
     weekKey,
     includeCancelled,
     day,
@@ -228,6 +259,9 @@ export function TeacherSchedulePage() {
       beginMove(lesson, initial);
   }
   function event(lesson: Lesson, list = false) {
+    const sourceBooking = bookingQuery.data?.items.find(
+      (b) => b.lesson_id === lesson.id,
+    );
     const label =
       lesson.student_labels?.map((s) => s.display_name).join(', ') ||
       lesson.course_name ||
@@ -236,7 +270,8 @@ export function TeacherSchedulePage() {
       !!lesson.can_manage && lesson.status === 'scheduled' && !list && desktop;
     return (
       <article
-        key={lesson.id}
+        key={sourceBooking?.booking_id || lesson.id}
+        data-calendar-booking-id={sourceBooking?.booking_id}
         className={`${styles.event} ${list ? styles.listEvent : ''}`}
         data-status={lesson.status}
         data-dragging={dragging === lesson.id}
@@ -478,6 +513,22 @@ export function TeacherSchedulePage() {
       {seriesPending && <p role="status">Загружаем даты серии…</p>}
       {seriesError && <p role="alert">{seriesError}</p>}
       {!!warnings.length && <OverlapWarnings warnings={warnings} />}
+      {bookingQuery.isPending && (
+        <p role="status">Загружаем подтверждённые брони…</p>
+      )}
+      {bookingQuery.isError && (
+        <p role="alert">
+          Не удалось обновить брони. Расписание может быть неполным.{' '}
+          <Button variant="default" onClick={() => void bookingQuery.refetch()}>
+            Повторить загрузку броней
+          </Button>
+        </p>
+      )}
+      {bookingQuery.data?.next_cursor && (
+        <p role="alert">
+          В неделе больше 100 броней. Проверьте полный список записи ниже.
+        </p>
+      )}
       <div className={styles.calendarRegion} data-schedule-region>
         <ReadState query={query}>
           {(data) =>
@@ -604,6 +655,32 @@ export function TeacherSchedulePage() {
                                 ) : (
                                   slot.map((l) => event(l))
                                 )}
+                                {pendingBookings
+                                  .filter(
+                                    (b) =>
+                                      moscow(b.start_at).isSame(d, 'day') &&
+                                      moscow(b.start_at).hour() === hour,
+                                  )
+                                  .map((b) => (
+                                    <article
+                                      key={b.booking_id}
+                                      data-booking-id={b.booking_id}
+                                      data-calendar-booking-id={b.booking_id}
+                                      className={styles.bookingEvent}
+                                    >
+                                      <a
+                                        href="#booking-management"
+                                        aria-label={`${moscow(b.start_at).format('HH:mm')} ${b.recipient.first_name} ${b.recipient.last_name}. Бронь подтверждена. ${accessLabel(b.access_state)}`}
+                                      >
+                                        <span className={styles.bookingName}>
+                                          {moscow(b.start_at).format('HH:mm')}{' '}
+                                          {b.recipient.first_name}{' '}
+                                          {b.recipient.last_name}
+                                        </span>
+                                        <span>Бронь подтверждена</span>
+                                      </a>
+                                    </article>
+                                  ))}
                                 {drop === initial && (
                                   <span
                                     className={styles.dropPreview}
@@ -617,9 +694,12 @@ export function TeacherSchedulePage() {
                           },
                         )}
                       </div>
-                      {!items.length && (
-                        <p className={styles.empty}>Нет занятий</p>
-                      )}
+                      {!items.length &&
+                        !pendingBookings.some((b) =>
+                          moscow(b.start_at).isSame(d, 'day'),
+                        ) && (
+                          <p className={styles.empty}>Нет занятий или броней</p>
+                        )}
                     </section>
                   );
                 })}
@@ -633,6 +713,9 @@ export function TeacherSchedulePage() {
           ? `Новое время: ${moscow(drop).format('D MMMM, HH:mm')} МСК. Отпустите для подтверждения переноса.`
           : 'Нажатие открывает занятие. Действия — в меню ⋯.'}
       </p>
+      <div id="booking-management">
+        <BookingPanel week={start.format('YYYY-MM-DD')} />
+      </div>
       <WeeklyNeeds week={start.format('YYYY-MM-DD')} />
       <WeeklyEarnings week={start.format('YYYY-MM-DD')} />
       {adding && (

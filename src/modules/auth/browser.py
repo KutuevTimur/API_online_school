@@ -25,7 +25,7 @@ router = APIRouter(prefix='/auth/browser', tags=['Browser authentication'], depe
 async def browser_response(request: Request, response: Response, tokens: TokenResponse, service: TokenService) -> BrowserTokenResponse:
     config = request.app.state.config
     response.headers['Cache-Control'] = 'no-store'
-    response.set_cookie(COOKIE, tokens.refresh_token, httponly=True, secure=config.browser.secure,
+    response.set_cookie(config.browser.cookie_name, tokens.refresh_token, httponly=True, secure=config.browser.secure,
                         samesite='lax', path=config.browser.cookie_path,
                         max_age=await service.browser_cookie_max_age(tokens.refresh_token))
     return BrowserTokenResponse(access_token=tokens.access_token, token_type=tokens.token_type)
@@ -42,7 +42,7 @@ async def login(request: Request, response: Response, form: OAuth2PasswordReques
 @router.post('/refresh', response_model=BrowserTokenResponse, status_code=200)
 async def refresh(request: Request, response: Response,
                   service: TokenService = Depends(get_token_service)) -> BrowserTokenResponse:
-    raw = request.cookies.get(COOKIE)
+    raw = request.cookies.get(request.app.state.config.browser.cookie_name)
     if not raw:
         raise InvalidCredentials()
     return await browser_response(request, response, await service.refresh_tokens(raw), service)
@@ -51,8 +51,8 @@ async def refresh(request: Request, response: Response,
 @router.post('/logout', response_model=LogoutResponse, status_code=200)
 async def logout(request: Request, response: Response,
                  service: TokenService = Depends(get_token_service)) -> LogoutResponse:
-    await service.refresh_token_service.browser_logout(request.cookies.get(COOKIE, ''))
-    response.delete_cookie(COOKIE, path=request.app.state.config.browser.cookie_path,
+    await service.refresh_token_service.browser_logout(request.cookies.get(request.app.state.config.browser.cookie_name, ''))
+    response.delete_cookie(request.app.state.config.browser.cookie_name, path=request.app.state.config.browser.cookie_path,
                            httponly=True, secure=request.app.state.config.browser.secure, samesite='lax')
     response.headers['Cache-Control'] = 'no-store'
     return LogoutResponse(success=True)

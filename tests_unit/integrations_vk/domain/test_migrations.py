@@ -5,7 +5,8 @@ from alembic.migration import MigrationContext
 from sqlalchemy import delete, text
 from sqlalchemy.exc import IntegrityError
 from src.core.database.database import Base
-from src.core.config.synthetic_guard import require_f013_connection, require_f013_session, require_f013_url
+from tests_unit.integrations_vk.domain.db import require_connection as require_f013_connection, require_session as require_f013_session
+from src.core.config.synthetic_guard import require_f013_url
 from src.modules.db_models import *
 from tests_unit.integrations_vk.domain.db import migrate, downgrade
 from tests_unit.integrations_vk.domain.test_identity import child, linked

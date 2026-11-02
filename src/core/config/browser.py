@@ -6,6 +6,7 @@ class BrowserConfig(BaseModel):
     origin: str
     secure: bool
     cookie_path: str = '/api/auth/browser'
+    cookie_name: str = 'lgg_refresh'
 
     @classmethod
     def build(cls, values: dict[str, str], mode: str) -> 'BrowserConfig':

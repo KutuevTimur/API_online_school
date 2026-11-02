@@ -1,6 +1,18 @@
 # Текущее состояние LGG
 
-**02.11.2026 · F01.3 local backend DONE: synthetic windows/Booking/materialization, без UI/live.**
+**02.11.2026 · F01.4 local VERIFY: teacher окна/брони/связь кабинета, owner acceptance ожидает.**
+По новому explicit приоритету владельца выполнен только local scope .4; .5+ не начинались.
+[Результат/проверки/ручные шаги](tasks/F01.md#результат-f014-02112026).
+Новый preview **5174→8020→новая synthetic55435**, входы только ignored
+`frontend/.artifacts/f014-login.txt`; retained5173/8019/55432 не тронут.
+Отдельная новая55436 используется для финального DB gate, без reset preview55435.
+**119 actual DB +61 standalone +218 frontend PASS**, types/lint/build/tokens/DTO/format PASS;
+real two-role/browser states/keyboard/mobile/Axe0 PASS (детали/ограничения в карточке); owner acceptance **не пройдена за владельца**.
+Разрешены после автоматических PASS отдельная codex/ ветка/commit/push только .4 в
+пользовательский origin; PR/merge/deploy/live/server/install запрещены.
+Следующий шаг — ручная приёмка .4, основной MVP/P03 порядок и VK/P01 gates прежние.
+
+**F01.3 local backend DONE (предыдущий этап):**
 Принято новое уточнение: бронь сразу занимает время/видна teacher, аккаунт при
 приглашении; известная подтверждённая связь создаёт Lesson сразу. Полные ответы
 [PRODUCT/F01](PRODUCT.md#будущий-f01--существующий-vk-бот--принято301001112026)/[D13](DECISIONS.md#d13),
@@ -28,17 +40,17 @@ Lesson/D04/domain outbox, own teacher API; предупреждения один
 **115 actual DB tests PASS +61 standalone PASS**, новая guarded synthetic DB55434/
 restricted role/media; retained55432/dev55431/прежняя55433 не использованы.
 Connector HTTP fail-closed до .5, delivery .6 и UI .4 не реализованы. Separate owner
-UI acceptance ожидает .4; VK/P01 gates открыты. F01.4+ только новым запросом.
+UI acceptance ожидает .4; VK/P01 gates открыты. F01.4 разрешена последующим запросом и local VERIFY выше; F01.5+ только новым запросом.
 Git задачи: отдельная `codex/f013-booking-20261102` от `17923bb`, commit/push в
 пользовательский origin после PASS; без PR/merge/deploy и переписывания истории.
-Следующий вход — [актуальный prompt F01.4](PROMPTS.md#актуальный-следующий-чат-f014).
+Следующий вход — [ручная приёмка F01.4](PROMPTS.md#актуальный-следующий-чат--ручная-приёмка-f014); prompt реализации .4 выполнен.
 **Git blocker снят** последующим явным поручением сохранить накопленную работу:
 новая ветка `codex/save-project-f012-20261102`; `daabcb5` — вся платформа/frontend/
 документы до .2, `1456d76` — отдельно .2. Пользовательский origin,
 без PR/merge/deploy. Дополнительная проверка накопленного frontend:213/40 unit PASS,
 types/lint/build/scoped format PASS; исправлены только test Date/config workers,
 не UI. Initial10 FAIL сохранены в SESSION_LOG. Исторический prompt F01.3 выполнен; следующий F01.4 указан выше.
-Остальная F01 после MVP/P03; исключение приоритета не распространяется на .4+.
+Остальная F01 после MVP/P03; текущее исключение приоритета не распространяется на .5+.
 Текущий основной план T15d → T16.1/.2 → подготовка запуска прежний.
 F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Markdown/
 538 file targets missing0;519 source hashes changes0, diff/whitespace PASS.
@@ -49,7 +61,7 @@ F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Mar
 
 ## Рабочая точка и сохранность
 
-- Internal repo `API_online_school`, branch задачи `codex/f013-booking-20261102` от `17923bb`.
+- Internal repo `API_online_school`, branch .4 `codex/f014-teacher-booking-ui-20261102` от `75636a0`; .3 `codex/f013-booking-20261102` сохранена.
   Сохранённая baseline branch `codex/save-project-f012-20261102` не переписывается.
   Предыдущий HEAD95b3560 и ветка сохранены; накопленная работа теперь в daabcb5,
   F01.2 в1456d76. Секреты/данные/runtime artifacts остаются ignored локально.

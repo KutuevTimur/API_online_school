@@ -2546,3 +2546,11 @@ missing0; relative links архива STATUS пересчитаны после �
 - Final **115 actual DB PASS /71.47s +61 standalone PASS**, 2 retained-env tests deselected;42 booking checks включая concurrent connections/rollback/timeout/access/OpenAPI/D04 checked/D12. Initial fixture/assertion/concurrent preview failures исправлены и сохранены в карточке, final FAIL0.
 - Отдельная codex/f013-booking-20261102 от17923bb, только изменения .3 в origin после PASS; baseline commits не переписываются. PR/merge/deploy/server/install/VK/Google/Long Poll/live NOT RUN; UI acceptance ожидает .4, external VK/P01 gates открыты.
 - Следующий вход — [один prompt F01.4](PROMPTS.md#актуальный-следующий-чат-f014), только новым запросом; .4+ не начинались.
+
+
+## 02.11.2026 — F01.4 local teacher UI · VERIFY
+
+- По explicit scope/приоритету/commit-push владельца только .4: [результат, gates и ручная приёмка](tasks/F01.md#результат-f014-02112026). Окна/confirmed брони в расписании, parent confirm/revoke, invite/activation и self-link; UI skills/DESIGN/A12–A14, прежние tokens/owners сохранены.
+- Новые guarded synthetic55435 (preview5174→8020) и55436 (финальная regression), restricted roles/temporary media; retained5173/8019/55432/dev55431/старые55433/55434/бот не тронуты. Финальные119 actual DB +61 standalone +218 frontend PASS, types/lint/build/tokens/DTO/format PASS; 2 прежних premium finding/chunk warning отдельно в карточке. Preview cookie `lgg_f014_refresh` отделена от retained, default auth contract сохранён.
+- Real browser two-role same Lesson, parent grant/revoke, existing User self-link/materialize, own student context/foreign read PASS; viewport360/390/768/1280/CSS200/keyboard/Escape/focus/Axe0. Initial fixture/mock/locator/focus/rate-limit failures и оставшиеся факты сохранены в карточке, owner acceptance ожидает.
+- После final автоматических PASS создана отдельная codex/f014-teacher-booking-ui-20261102 от75636a0, только .4 commit/push в пользовательский origin; точный SHA/remote verification — в финальном ответе. Preview оставлен для ручной приёмки; без F01.5+/live/внешних отправок/server/install/PR/merge/deploy.

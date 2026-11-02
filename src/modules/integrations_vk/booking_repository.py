@@ -41,3 +41,22 @@ class BookingRepository(IdentityRepository):
         if cursor is not None: predicates.append(Booking.id > cursor)
         return list((await self.session.scalars(select(Booking).join(BookingWindow,
             BookingWindow.id == Booking.window_id).where(*predicates).order_by(Booking.id).limit(limit+1))).all())
+
+
+    async def calendar_page(self, teacher: int, start, end, limit: int):
+        from sqlalchemy import func
+        from src.modules.lessons.models import Lesson
+        at = func.coalesce(Lesson.scheduled_at, Booking.start_at)
+        return list((await self.session.scalars(select(Booking).outerjoin(Lesson, Lesson.id == Booking.lesson_id)
+            .where(Booking.teacher_user_id == teacher, at >= start, at < end,
+                   Booking.status == 'confirmed').order_by(Booking.id).limit(limit+1))).all())
+
+    async def linked_page(self, teacher: int, connection: UUID, student_user_id: int,
+                          cursor: UUID | None, limit: int):
+        from src.modules.integrations_vk.models import BookingRecipient
+        predicates = [Booking.teacher_user_id == teacher, Booking.connection_id == connection,
+                      BookingRecipient.linked_student_user_id == student_user_id]
+        if cursor is not None: predicates.append(Booking.id > cursor)
+        return list((await self.session.scalars(select(Booking).join(BookingRecipient,
+            BookingRecipient.id == Booking.recipient_id).where(*predicates)
+            .order_by(Booking.id).limit(limit+1))).all())

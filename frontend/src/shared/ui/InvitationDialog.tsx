@@ -8,8 +8,10 @@ export function InvitationDialog({
   onClose,
   purpose = 'invite',
   audience = 'student',
+  username,
 }: {
   invitation: Invitation | null;
+  username?: string | null;
   purpose?: 'invite' | 'reset';
   audience?: 'student' | 'user';
   onClose: () => void;
@@ -45,6 +47,9 @@ export function InvitationDialog({
                 : ' активировать аккаунт.'}{' '}
               Новая ссылка отменяет предыдущую.
             </p>
+            {username && (
+              <FormField label="Логин ученика" value={username} readOnly />
+            )}
             <FormField
               ref={input}
               label={
