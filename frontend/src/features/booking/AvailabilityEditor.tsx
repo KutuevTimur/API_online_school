@@ -274,34 +274,39 @@ export function AvailabilityToolbar({
         </p>
       )}
       {!state.editing ? (
-        <Group>
-          <Button
-            variant="default"
-            disabled={!state.available}
-            onClick={() => {
-              state.setRemoving(false);
-              onStart(false);
-            }}
-          >
-            Открыть время для записи
-          </Button>
-          <Button
-            variant="default"
-            disabled={
-              !state.available ||
-              !state.windows.data?.items.some((w) => w.status === 'published')
-            }
-            onClick={() => {
-              state.setRemoving(true);
-              onStart(true);
-            }}
-          >
-            Убрать время для записи
-          </Button>
-          <span className={styles.legend}>
-            Мятные ячейки — открыто для записи
-          </span>
-        </Group>
+        <div className={styles.controls}>
+          <span className={styles.controlsLabel}>Время для записи</span>
+          <Group gap={6} wrap="nowrap">
+            <Button
+              variant="default"
+              className={styles.compactButton}
+              aria-label="Открыть время для записи"
+              disabled={!state.available}
+              onClick={() => {
+                state.setRemoving(false);
+                onStart(false);
+              }}
+            >
+              Открыть
+            </Button>
+            <Button
+              variant="default"
+              className={styles.compactButton}
+              aria-label="Убрать время для записи"
+              disabled={
+                !state.available ||
+                !state.windows.data?.items.some((w) => w.status === 'published')
+              }
+              onClick={() => {
+                state.setRemoving(true);
+                onStart(true);
+              }}
+            >
+              Убрать
+            </Button>
+          </Group>
+          <span className={styles.legend}>Открыто для записи</span>
+        </div>
       ) : (
         <>
           <p>

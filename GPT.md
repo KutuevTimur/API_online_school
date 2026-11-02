@@ -29,8 +29,10 @@ Git blocker снят последующим поручением сохрани�
 1456d76 — отдельно .2; детали tasks/F01.md/STATUS. F01.3 local backend DONE02.11 по новому explicit scope/приоритету/commit-push:
 115 actual DB+61 standalone PASS, новая synthetic55434; windows/Booking/receipts/
 atomic materialization/D04/domain outbox, без UI/live. Отдельная branch
-codex/f013-booking-20261102 от17923bb; прежняя история сохранена. Следующий вход —
-prompt F01.4 в docs/plan/PROMPTS.md; .4+ только новым запросом, основной порядок прежний.
+codex/f013-booking-20261102 от17923bb; прежняя история сохранена. F01.4 код/автопроверки готовы, visual feedback положительный; полный ручной
+walkthrough не заявлен. Следующий вход — local/offline F01.5 в новом чате по
+PROMPTS: оба repo/приоритет явно разрешены02.11; code-only backup/возврат в F01.md.
+.6+/live не разрешены; Тимур/его данные неприкосновенны, будущая live .8 только Даниил.
 Правила/квоты VK и правовой допуск P01 полностью не подтверждены.
 D12: архивные занятия/курсы исключены из денег и количества.
 Git сохранение разрешено в текущем scope; PR/merge/deploy/установки не разрешены.

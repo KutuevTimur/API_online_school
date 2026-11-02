@@ -2562,3 +2562,10 @@ missing0; relative links архива STATUS пересчитаны после �
 - Backend close batch с own scope/CAS/receipt и rollback всех окон; published_only не удаляет историю. 125 actual DB PASS на новой guarded55437 +222 frontend unit PASS, scoped31 PASS; real20 open/20 close, mobile/Axe0/keyboard/receipt/focus PASS; type/lint/build/tokens/DTO/format PASS,2 прежних premium finding. Ручная приёмка нового UX ожидает.
 - Review fixture отдельная55436/media/cookie/5175→8021; owner55435/media/5174 сохранены без seed/reset, retained/бот не затронуты. Impeccable cached/no install; narrow reviewer проверил Mantine focus invariant; начальные Axe/focus/fixture ожидания записаны.
 - Коррекция только .4, следующий commit/push в task branch после PASS; без F01.5+/VK/Google/Long Poll/отправок/удаления/server/install/PR/merge/deploy.
+
+## 02.11.2026 — F01.4 compact finish / F01.5 handoff
+
+- Положительный visual feedback владельца, функциональные проверки делегированы агенту; compact label + Открыть/Убрать с прежними accessible names/≥44px. Types/lint/build/scoped9 unit/format PASS; предыдущие125 DB/222 frontend/real API20+20 не повторялись ради copy/CSS. Read-only desktop1280/mobile390/Axe0/page errors0/44px и выбор/отмена PASS; исправлена только initial Axe-context ошибка временного launcher. Полную ручную приёмку не ставили.
+- [Handoff/backup/возврат](tasks/F01.md#финал-f014-и-handoff-f015-02112026): локальный code+Git/index архив бота без secrets/JSON, SHA256 и disposable restore сравнение HEAD/staged/worktree PASS; исходный dirty/staged сохранён.
+- Новый ответ разрешил только offline .5 в двух repo перед MVP/P03, начать в новом чате; актуализированы PROMPTS/TASKS/GPT/STATUS. Реализация .5 не начиналась, её commit/push отдельно не разрешены.
+- Будущий live тест только Даниил с проверенными mapping/allowlist/gates .8; Тимур/его данные не трогать, Сергей не включён. Никаких live/server stop/VK/Google/Long Poll/отправок/install/PR/merge/deploy.

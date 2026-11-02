@@ -1,22 +1,27 @@
 # Текущее состояние LGG
 
-**02.11.2026 · F01.4 local VERIFY: teacher окна/брони/связь кабинета, owner acceptance ожидает.**
-Owner feedback02.11: прежний UX не принят; доработаны массовое открытие/снятие прямо
-в календаре, contextual брони и отсутствие лишних active-account actions.
-[Актуальная коррекция/новые ручные шаги](tasks/F01.md#доработка-f014-по-ручному-отзыву-02112026).
-125 actual DB +222 frontend PASS, scoped31 PASS; оба режима20окон real API, mobile/Axe0, keyboard/receipt/error/focus PASS; types/lint/build/tokens/DTO/format PASS,2 прежних premium finding отдельно в карточке. Ручной VERIFY
-и F01.5+ прежние; окно/данные owner preview сохранены, тесты на55436/новой55437.
+**02.11.2026 · F01.4 код/автопроверки готовы; local VERIFY по отдельной ручной приёмке.**
+Владелец дал положительный визуальный отзыв, поручил функциональные проверки агенту;
+полный ручной walkthrough не заявлял. Панель компактнее: «Время для записи» +
+«Открыть» / «Убрать», прежние paint/batch/keyboard/target≥44px сохранены.
+[Результат125 actual DB +222 frontend/real API20+20](tasks/F01.md#доработка-f014-по-ручному-отзыву-02112026).
+Финальная copy/CSS правка: types/lint/build/scoped9 unit/format PASS;
+read-only desktop1280/mobile390 PASS, Axe0/page errors0, кнопки93/81×44px;
+вход/выбор/отмена PASS, без booking writes и нового DB reset.
+Owner preview5174→8020→synthetic55435 и ignored `frontend/.artifacts/f014-login.txt`
+сохранены; retained5173/8019/55432 и все прежние данные не менялись.
+Task branch `codex/f014-teacher-booking-ui-20261102`:835bb6b +fa5b47a уже в origin;
+последний compact/handoff commit сохраняется после PASS. Без PR/merge/deploy.
 
-По новому explicit приоритету владельца выполнен только local scope .4; .5+ не начинались.
-[Результат/проверки/ручные шаги](tasks/F01.md#результат-f014-02112026).
-Новый preview **5174→8020→новая synthetic55435**, входы только ignored
-`frontend/.artifacts/f014-login.txt`; retained5173/8019/55432 не тронут.
-Отдельная новая55436 используется для финального DB gate, без reset preview55435.
-**119 actual DB +61 standalone +218 frontend PASS**, types/lint/build/tokens/DTO/format PASS;
-real two-role/browser states/keyboard/mobile/Axe0 PASS (детали/ограничения в карточке); owner acceptance **не пройдена за владельца**.
-Разрешены после автоматических PASS отдельная codex/ ветка/commit/push только .4 в
-пользовательский origin; PR/merge/deploy/live/server/install запрещены.
-Следующий шаг — ручная приёмка .4, основной MVP/P03 порядок и VK/P01 gates прежние.
+**Дальше — F01.5 только в новом чате**, local/offline в API_online_school и
+VK_math_bot перед MVP/P03 явно разрешены последним ответом владельца.
+[Готовый prompt](PROMPTS.md#актуальный-следующий-чат--f015-offline-в-двух-репозиториях),
+[backup/возврат и границы](tasks/F01.md#финал-f014-и-handoff-f015-02112026).
+Code-only backup сохранён/тестово восстановлен, bot dirty/staged не менялись;
+секреты/users_data.json/server data не копировались. F01.5 код не начат; .6+ не разрешены.
+Будущая live .8 — только Даниил после точного mapping/allowlist/gates; Тимур и его
+данные неприкосновенны, Сергей не включён. Сейчас без live/VK/Google/Long Poll/
+внешних отправок/остановки server bot/установок. Основной MVP/P03 порядок прежний.
 
 **F01.3 local backend DONE (предыдущий этап):**
 Принято новое уточнение: бронь сразу занимает время/видна teacher, аккаунт при
@@ -46,17 +51,17 @@ Lesson/D04/domain outbox, own teacher API; предупреждения один
 **115 actual DB tests PASS +61 standalone PASS**, новая guarded synthetic DB55434/
 restricted role/media; retained55432/dev55431/прежняя55433 не использованы.
 Connector HTTP fail-closed до .5, delivery .6 и UI .4 не реализованы. Separate owner
-UI acceptance ожидает .4; VK/P01 gates открыты. F01.4 разрешена последующим запросом и local VERIFY выше; F01.5+ только новым запросом.
+Это исторический результат .3; последующий статус .4/.5 и VK/P01 gates указан выше.
 Git задачи: отдельная `codex/f013-booking-20261102` от `17923bb`, commit/push в
 пользовательский origin после PASS; без PR/merge/deploy и переписывания истории.
-Следующий вход — [ручная приёмка F01.4](PROMPTS.md#актуальный-следующий-чат--ручная-приёмка-f014); prompt реализации .4 выполнен.
+Следующий вход — F01.5 offline в новом чате, по актуальному prompt выше; .4 реализована.
 **Git blocker снят** последующим явным поручением сохранить накопленную работу:
 новая ветка `codex/save-project-f012-20261102`; `daabcb5` — вся платформа/frontend/
 документы до .2, `1456d76` — отдельно .2. Пользовательский origin,
 без PR/merge/deploy. Дополнительная проверка накопленного frontend:213/40 unit PASS,
 types/lint/build/scoped format PASS; исправлены только test Date/config workers,
-не UI. Initial10 FAIL сохранены в SESSION_LOG. Исторический prompt F01.3 выполнен; следующий F01.4 указан выше.
-Остальная F01 после MVP/P03; текущее исключение приоритета не распространяется на .5+.
+не UI. Initial10 FAIL сохранены в SESSION_LOG. Исторические prompts F01.3/.4 выполнены; следующий F01.5 указан выше.
+Остальная F01 после MVP/P03; новое исключение приоритета распространяется только на local/offline .5.
 Текущий основной план T15d → T16.1/.2 → подготовка запуска прежний.
 F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Markdown/
 538 file targets missing0;519 source hashes changes0, diff/whitespace PASS.
@@ -73,7 +78,7 @@ F01.0 docs gate PASS:10 docs/89 local targets+anchors; весь пакет73 Mar
   F01.2 в1456d76. Секреты/данные/runtime artifacts остаются ignored локально.
 - Внешний root main без первого commit/HEAD; не добавлять inner repo как gitlink.
 - Локальный bot main/`cae7b8f175fc4b967bb9cfacd8764e3c14494f6e`, dirty/staged
-  сохранены, read-only. Серверная версия/процессы не проверены.
+  сохранены; offline code scope .5 разрешён для нового чата. Серверная версия/процессы не проверены.
 - F01.2: app/router/model registry и commit-free account/workspace stages обновлены;
   только новая synthetic DB55433/ограниченная роль, контейнер после gates остановлен,
   volume сохранён. Retained preview/бот/существующие БД не менялись. Чужой dirty/

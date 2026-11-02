@@ -70,3 +70,38 @@
   background: var(--lgg-lesson);
   color: var(--lgg-ink);
 }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.controlsLabel {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--lgg-ink);
+}
+.compactButton {
+  padding-inline: 12px;
+}
+.controls .legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.controls .legend::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--lgg-success);
+  border-radius: 2px;
+  background: var(--lgg-successSurface);
+}
+@media (max-width: 540px) {
+  .controls .legend {
+    margin-left: 0;
+  }
+}
