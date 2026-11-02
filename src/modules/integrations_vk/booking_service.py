@@ -9,7 +9,7 @@ from src.modules.integrations_vk.booking_repository import BookingRepository
 from src.modules.integrations_vk.booking_stages import slot_busy, stage_lesson_with_snapshot, stage_cancel_booking
 from src.modules.integrations_vk.models import (Booking, BookingWindow, BookingInteraction, BookingEvent,
     BookingRecipient, ExternalContact, ExternalIdentityLink, ParentGrant, IdentityOperation, VkActorContext)
-from src.modules.integrations_vk.models_dto import (OperationResult, WindowView, BookingView,
+from src.modules.integrations_vk.models_dto import (CloseWindowsRequest, OperationResult, WindowView, BookingView,
     PublishWindowsRequest, RevisionRequest, PrepareBookingRequest, ConfirmBookingRequest,
     MaterializeRequest, BookingResolveRequest, ResolveResponse, WindowsPage, BookingsPage)
 from src.modules.integrations_vk.exception import IdentityError
@@ -296,10 +296,10 @@ class BookingService(IdentityService):
             raise IdentityError('INVALID_REQUEST', 422)
 
     async def list_windows(self, actor: int, connection: UUID, week: date,
-                           cursor: UUID | None = None, limit: int = 25) -> WindowsPage:
+                           cursor: UUID | None = None, limit: int = 25, published_only: bool = False) -> WindowsPage:
         self.validate_page(week, limit)
         await self.teacher(actor, connection)
-        rows = await self.repo.windows_page(actor, connection, week, cursor, limit)
+        rows = await self.repo.windows_page(actor, connection, week, cursor, limit, published_only)
         return WindowsPage(items=[WindowView(window_id=r.id, revision=r.revision, start_at=r.start_at,
             end_at=r.end_at, status=r.status) for r in rows[:limit]],
             next_cursor=rows[limit-1].id if len(rows)>limit else None)
@@ -363,3 +363,23 @@ class BookingService(IdentityService):
         return PlanningCapabilities(enabled=enabled,
             items=[PlanningConnection(connection_id=row.id, label='Запись · ' + row.group_id,
                                       enabled=row.enabled) for row in rows])
+
+    async def close_windows(self, actor: int, data: "CloseWindowsRequest") -> OperationResult:
+        await self.teacher(actor, data.connection_id)
+        async def work() -> tuple[dict, dict]:
+            await self.repo.schedules([actor])
+            await self.teacher(actor, data.connection_id)
+            revisions = {item.window_id: item.expected_revision for item in data.items}
+            rows = await self.repo.rows(BookingWindow,
+                BookingWindow.connection_id == data.connection_id,
+                BookingWindow.teacher_user_id == actor, BookingWindow.id.in_(revisions), lock=True)
+            if len(rows) != len(revisions):
+                raise IdentityError('NOT_FOUND', 404)
+            if any(row.revision != revisions[row.id] or row.status != 'published' for row in rows):
+                raise IdentityError('STALE_REVISION')
+            for row in rows:
+                row.withdrawn, row.status = True, 'closed'
+                row.revision += 1
+            return {'kind': 'windows_closed', 'window_ids': [str(row.id) for row in rows]}, {}
+        return (await self._operation(data.connection_id, 'windows_close', data.operation_id,
+            data.model_dump(exclude={'operation_id'}), work, user_id=actor))[0]

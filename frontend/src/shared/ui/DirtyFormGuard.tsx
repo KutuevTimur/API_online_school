@@ -6,10 +6,14 @@ export function DirtyFormGuard({
   dirty,
   onDiscard,
   allowPreviewQuery = false,
+  allowQueryKeys = [],
+  description,
 }: {
   dirty: boolean;
   onDiscard?: () => void;
   allowPreviewQuery?: boolean;
+  allowQueryKeys?: string[];
+  description?: string;
 }) {
   const drafts = useContext(DraftContext);
   const key = 'dirty-guard:' + useId();
@@ -23,17 +27,22 @@ export function DirtyFormGuard({
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
     if (!dirty) return false;
     if (
-      allowPreviewQuery &&
+      (allowPreviewQuery || allowQueryKeys.length > 0) &&
       currentLocation.pathname === nextLocation.pathname
     ) {
       const before = new URLSearchParams(currentLocation.search);
       const after = new URLSearchParams(nextLocation.search);
       for (const key of [
-        'file',
-        'condition-file',
-        'review-file',
-        'material-file',
-        'file-owner',
+        ...allowQueryKeys,
+        ...(allowPreviewQuery
+          ? [
+              'file',
+              'condition-file',
+              'review-file',
+              'material-file',
+              'file-owner',
+            ]
+          : []),
       ]) {
         before.delete(key);
         after.delete(key);
@@ -64,8 +73,8 @@ export function DirtyFormGuard({
         blocker.proceed?.();
       }}
     >
-      Несохранённые файлы и текст в этой вкладке будут потеряны. «Отмена» вернёт
-      к работе.
+      {description ||
+        'Несохранённые файлы и текст в этой вкладке будут потеряны. «Отмена» вернёт к работе.'}
     </ConfirmDialog>
   );
 }

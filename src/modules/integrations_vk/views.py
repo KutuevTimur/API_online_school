@@ -99,8 +99,8 @@ async def publish_windows(data: PublishWindowsRequest, service: BookingAPI, acto
 
 @router.get('/teacher-planning/booking-windows', response_model=WindowsPage, status_code=200)
 async def list_windows(connection_id: UUID, week_start: date, service: BookingReadAPI, actor: Actor,
-                       cursor: UUID | None = None, limit: int = Query(25, ge=1, le=100)) -> WindowsPage:
-    return await service.list_windows(actor.id, connection_id, week_start, cursor, limit)
+                       cursor: UUID | None = None, limit: int = Query(25, ge=1, le=100), published_only: bool = False) -> WindowsPage:
+    return await service.list_windows(actor.id, connection_id, week_start, cursor, limit, published_only)
 
 
 @router.post('/teacher-planning/booking-windows/{id}/close', response_model=OperationResult, status_code=200, dependencies=mutations)
@@ -166,3 +166,12 @@ async def booking_capabilities(request: Request, actor: Actor, service: BookingR
 async def linked_bookings(connection_id: UUID, student_user_id: int, service: BookingReadAPI, actor: Actor,
                           cursor: UUID | None = None, limit: int = Query(25, ge=1, le=100)) -> BookingsPage:
     return await service.linked_bookings(actor.id, connection_id, student_user_id, cursor, limit)
+
+
+from src.modules.integrations_vk.models_dto import CloseWindowsRequest
+
+
+@router.post('/teacher-planning/booking-windows/close', response_model=OperationResult,
+             status_code=200, dependencies=mutations)
+async def close_windows(data: CloseWindowsRequest, service: BookingAPI, actor: Actor) -> OperationResult:
+    return await service.close_windows(actor.id, data)

@@ -4,6 +4,7 @@ Run seed once after DB tests, then serve. Does not reset an existing database.
 """
 import asyncio
 import json
+import os
 import secrets
 import socket
 import sys
@@ -34,11 +35,18 @@ from src.modules.users.repository import UsersRepository
 from src.modules.students.repository import StudentRepository
 from src.modules.teachers.repository import TeacherRepository
 
-NOTE = Path('frontend/.artifacts/f014-preview.json')
+REVIEW = os.environ.get('LGG_F014_UI_REVIEW') == '1'
+if REVIEW:
+    from src.core.config.synthetic_guard import (F014_VERIFY_URL as F014_URL,
+        require_f014_verify_url as require_f014_url, require_f014_verify_session as require_f014_session)
+DB_PORT = 55436 if REVIEW else 55435
+UI_PORT = 5175 if REVIEW else 5174
+API_PORT = 8021 if REVIEW else 8020
+NOTE = Path('frontend/.artifacts/f014-ux-preview.json' if REVIEW else 'frontend/.artifacts/f014-preview.json')
 _connect = socket.socket.connect
 
 def connect(sock, address):
-    if sock.family in (socket.AF_INET, socket.AF_INET6) and address != ('127.0.0.1', 55435):
+    if sock.family in (socket.AF_INET, socket.AF_INET6) and address != ('127.0.0.1', DB_PORT):
         raise RuntimeError('F01.4 prohibits external/retained network targets')
     return _connect(sock, address)
 
@@ -112,7 +120,7 @@ def serve():
     note=json.loads(NOTE.read_text()); media=Path(note['media'])
     asyncio.run(preflight(media))
     config=SimpleNamespace(paths=PathsConfig.build(media_root=media), tokens=TokensConfig(algorithm='HS256'),
-        browser=BrowserConfig.build({'BROWSER_ORIGIN':'http://127.0.0.1:5174'},'TEST').model_copy(update={'cookie_name':'lgg_f014_refresh'}),
+        browser=BrowserConfig.build({'BROWSER_ORIGIN':f'http://127.0.0.1:{UI_PORT}'},'TEST').model_copy(update={'cookie_name':'lgg_f014_ux_refresh' if REVIEW else 'lgg_f014_refresh'}),
         file_maintenance_enabled=False,vk_identity_enabled=True,allowed_extensions=AllowedExtensions.build(),
         photo_originals_approved=False,legacy_file_reads=True,
         env=SimpleNamespace(mode='TEST',secret_key=note['secret']),
@@ -123,7 +131,7 @@ def serve():
             await require_f014_session(session,engine,media,media)
             yield session
     app.dependency_overrides[get_db]=guarded_db
-    uvicorn.run(app,host='127.0.0.1',port=8020,access_log=False)
+    uvicorn.run(app,host='127.0.0.1',port=API_PORT,access_log=False)
 
 async def prepare_flow():
     note=json.loads(NOTE.read_text()); media=Path(note['media'])

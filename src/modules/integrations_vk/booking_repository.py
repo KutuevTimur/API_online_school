@@ -28,9 +28,10 @@ class BookingRepository(IdentityRepository):
         return bool(await self.session.scalar(select(Booking.id).join(Lesson, Lesson.id == Booking.lesson_id)
             .where(Lesson.course_id == course_id).limit(1)))
 
-    async def windows_page(self, teacher: int, connection: UUID, week, cursor: UUID | None, limit: int):
+    async def windows_page(self, teacher: int, connection: UUID, week, cursor: UUID | None, limit: int, published_only: bool = False):
         predicates = [BookingWindow.teacher_user_id == teacher, BookingWindow.connection_id == connection,
                       BookingWindow.week_start == week]
+        if published_only: predicates.append(BookingWindow.status == 'published')
         if cursor is not None: predicates.append(BookingWindow.id > cursor)
         return list((await self.session.scalars(select(BookingWindow).where(*predicates)
             .order_by(BookingWindow.id).limit(limit+1))).all())

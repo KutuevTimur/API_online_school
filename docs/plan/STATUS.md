@@ -1,6 +1,12 @@
 # Текущее состояние LGG
 
 **02.11.2026 · F01.4 local VERIFY: teacher окна/брони/связь кабинета, owner acceptance ожидает.**
+Owner feedback02.11: прежний UX не принят; доработаны массовое открытие/снятие прямо
+в календаре, contextual брони и отсутствие лишних active-account actions.
+[Актуальная коррекция/новые ручные шаги](tasks/F01.md#доработка-f014-по-ручному-отзыву-02112026).
+125 actual DB +222 frontend PASS, scoped31 PASS; оба режима20окон real API, mobile/Axe0, keyboard/receipt/error/focus PASS; types/lint/build/tokens/DTO/format PASS,2 прежних premium finding отдельно в карточке. Ручной VERIFY
+и F01.5+ прежние; окно/данные owner preview сохранены, тесты на55436/новой55437.
+
 По новому explicit приоритету владельца выполнен только local scope .4; .5+ не начинались.
 [Результат/проверки/ручные шаги](tasks/F01.md#результат-f014-02112026).
 Новый preview **5174→8020→новая synthetic55435**, входы только ignored

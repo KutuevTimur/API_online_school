@@ -109,3 +109,29 @@ async def require_f014_verify_session(session, engine, media: Path, allocated: P
     if not media.resolve().is_relative_to(Path('/tmp').resolve()):
         raise RuntimeError('F01.4 media must be a newly allocated temporary directory')
     await (await session.connection()).run_sync(require_f014_verify_connection)
+
+
+F014_UI_API_URL = 'postgresql+asyncpg://lgg_f014_ui_api_app:f014_ui_api-synthetic-app@127.0.0.1:55437/lgg_f014_ui_api'
+
+
+def require_f014_ui_api_url(url) -> None:
+    parsed = make_url(url)
+    if (parsed.drivername, parsed.host, parsed.port, parsed.database, parsed.username, bool(parsed.query)) != (
+            'postgresql+asyncpg', '127.0.0.1', 55437, 'lgg_f014_ui_api', 'lgg_f014_ui_api_app', False):
+        raise RuntimeError('Refusing operation outside dedicated F01.4 verification synthetic target')
+
+
+def require_f014_ui_api_connection(connection: Connection) -> None:
+    require_f014_ui_api_url(connection.engine.url)
+    identity = connection.execute(text('SELECT current_database(), current_user, rolsuper, rolcreatedb, rolcreaterole FROM pg_roles WHERE rolname=current_user')).one()
+    if tuple(identity) != ('lgg_f014_ui_api', 'lgg_f014_ui_api_app', False, False, False):
+        raise RuntimeError('Refusing unexpected actual F01.4 SQL identity/role')
+
+
+async def require_f014_ui_api_session(session, engine, media: Path, allocated: Path) -> None:
+    require_f014_ui_api_url(engine.url)
+    if session.bind is not engine or media.is_symlink() or media.resolve() != allocated.resolve():
+        raise RuntimeError('Refusing mismatched engine/session or nonallocated media')
+    if not media.resolve().is_relative_to(Path('/tmp').resolve()):
+        raise RuntimeError('F01.4 media must be a newly allocated temporary directory')
+    await (await session.connection()).run_sync(require_f014_ui_api_connection)

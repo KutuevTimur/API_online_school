@@ -31,8 +31,10 @@ if _external is None:
 else:
     # Programmatic synthetic runner supplies a connection and its strict preflight.
     # No .env/.env.test or retained preview engine is constructed on this path.
-    from src.core.config.synthetic_guard import require_f012_connection, require_f013_connection, require_f014_connection, require_f014_verify_connection
-    if _external.engine.url.port == 55436:
+    from src.core.config.synthetic_guard import require_f012_connection, require_f013_connection, require_f014_connection, require_f014_verify_connection, require_f014_ui_api_connection
+    if _external.engine.url.port == 55437:
+        require_f014_ui_api_connection(_external)
+    elif _external.engine.url.port == 55436:
         require_f014_verify_connection(_external)
     elif _external.engine.url.port == 55435:
         require_f014_connection(_external)

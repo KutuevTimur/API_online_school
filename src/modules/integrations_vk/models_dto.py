@@ -200,3 +200,19 @@ class PlanningConnection(StrictDTO):
 class PlanningCapabilities(StrictDTO):
     enabled: bool
     items: list[PlanningConnection]
+
+
+class CloseWindowItem(StrictDTO):
+    window_id: UUID
+    expected_revision: Positive
+
+
+class CloseWindowsRequest(OperationRequest):
+    connection_id: UUID
+    items: Annotated[list[CloseWindowItem], Field(min_length=1, max_length=100)]
+
+    @model_validator(mode='after')
+    def unique_windows(self):
+        if len({item.window_id for item in self.items}) != len(self.items):
+            raise ValueError('Duplicate window')
+        return self

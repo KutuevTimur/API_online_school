@@ -1,16 +1,13 @@
 import { request } from '../../shared/api/client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button, Checkbox, Stack } from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRead, type Page } from '../courses/queries';
 import { ReadState } from '../courses/ReadUI';
 import { SelectField } from '../../shared/ui/SelectField';
-import { DateTimeField } from '../../shared/ui/DateTimeField';
-import { DirtyFormGuard } from '../../shared/ui/DirtyFormGuard';
 import { InvitationDialog } from '../../shared/ui/InvitationDialog';
-import { dateLabel, moscow } from '../../shared/lib/datetime';
-import { moscowToUtc } from '../../shared/lib/time';
+import { dateLabel } from '../../shared/lib/datetime';
 import { OperationDialog } from './OperationDialog';
 import {
   accessLabel,
@@ -19,16 +16,19 @@ import {
   type Command,
   type Grant,
   type Resolve,
-  type Window,
 } from './api';
 import type { Invitation, Student } from '../students/api';
 import styles from './booking.module.css';
 export function BookingPanel({
   week,
   studentId,
+  bookingId,
+  onOverlayChange,
 }: {
   week: string;
   studentId?: number;
+  bookingId?: string;
+  onOverlayChange?: (opened: boolean) => void;
 }) {
   const caps = useRead<Capabilities>('/teacher-planning/booking-capabilities');
   const [sourceParams, sourceSet] = useSearchParams();
@@ -48,9 +48,9 @@ export function BookingPanel({
     <ReadState query={caps}>
       {(data) =>
         data.items.length ? (
-          <section className={styles.panel} aria-label="Запись и брони">
-            <h2>{studentId ? 'Связь с записью' : 'Запись и брони'}</h2>
-            {data.items.length > 1 && (
+          <section aria-label="Запись и брони">
+            {!bookingId && !studentId && <h2>Запись через VK и родители</h2>}
+            {!bookingId && data.items.length > 1 && (
               <SelectField
                 label="Источник записи"
                 value={connection?.connection_id || null}
@@ -74,6 +74,8 @@ export function BookingPanel({
                 connection={connection.connection_id}
                 writable={data.enabled && connection.enabled}
                 studentId={studentId}
+                bookingId={bookingId}
+                onOverlayChange={onOverlayChange}
               />
             )}
           </section>
@@ -87,16 +89,19 @@ function ConnectionBookings({
   connection,
   writable,
   studentId,
+  bookingId,
+  onOverlayChange,
 }: {
   week: string;
   connection: string;
   writable: boolean;
   studentId?: number;
+  bookingId?: string;
+  onOverlayChange?: (opened: boolean) => void;
 }) {
   const client = useQueryClient();
   const [paging, setPaging] = useSearchParams();
   const cursor = paging.get('booking_cursor') || undefined;
-  const windowCursor = paging.get('window_cursor') || undefined;
   const page = (key: string, value?: string) => {
     const next = new URLSearchParams(paging);
     if (value) next.set(key, value);
@@ -104,38 +109,33 @@ function ConnectionBookings({
     setPaging(next);
   };
   const setCursor = (v?: string) => page('booking_cursor', v);
-  const setWindowCursor = (v?: string) => page('window_cursor', v);
   const params = {
     connection_id: connection,
     week_start: week,
     cursor,
     limit: 25,
   };
-  const bookings = useRead<{ items: Booking[]; next_cursor?: string | null }>(
-    studentId
-      ? '/teacher-planning/linked-bookings'
-      : '/teacher-planning/bookings',
-    studentId
-      ? {
-          connection_id: connection,
-          student_user_id: studentId,
-          cursor,
-          limit: 25,
-        }
-      : params,
+  const bookings = useRead<
+    Booking | { items: Booking[]; next_cursor?: string | null }
+  >(
+    bookingId
+      ? `/teacher-planning/bookings/${encodeURIComponent(bookingId)}`
+      : studentId
+        ? '/teacher-planning/linked-bookings'
+        : '/teacher-planning/bookings',
+    bookingId
+      ? {}
+      : studentId
+        ? {
+            connection_id: connection,
+            student_user_id: studentId,
+            cursor,
+            limit: 25,
+          }
+        : params,
     true,
     60000,
   );
-  const windows = useRead<{ items: Window[]; next_cursor?: string | null }>(
-    '/teacher-planning/booking-windows',
-    { ...params, cursor: windowCursor },
-    !studentId,
-    60000,
-  );
-  const [publish, setPublish] = useState(false);
-  const [date, setDate] = useState<string | null>(week);
-  const [time, setTime] = useState('15:00');
-  const [error, setError] = useState('');
   const [command, setCommand] = useState<{
     title: string;
     label: string;
@@ -148,43 +148,14 @@ function ConnectionBookings({
     null,
   );
   const [message, setMessage] = useState('');
+  const childOpened = !!(target || command || invitation);
+  useEffect(() => {
+    onOverlayChange?.(childOpened);
+    return () => onOverlayChange?.(false);
+  }, [childOpened, onOverlayChange]);
   async function refresh() {
     await client.invalidateQueries({ queryKey: ['student-read'] });
   }
-  const publishWindow = () => {
-    const start = date && moscowToUtc(date, time);
-    if (
-      !start ||
-      !date ||
-      date < week ||
-      date > moscow(week).add(6, 'day').format('YYYY-MM-DD') ||
-      Date.parse(start) <= Date.now()
-    ) {
-      setError('Выберите будущее время в указанной неделе.');
-      document.getElementById('window-time')?.focus();
-      return;
-    }
-    setError('');
-    setCommand({
-      title: 'Открыть окно записи',
-      label: 'Открыть окно',
-      text: `${dateLabel(start)} · 55 минут. Это окно только выбранной недели.`,
-      command: {
-        path: '/teacher-planning/booking-windows',
-        action: 'windows_publish',
-        body: {
-          connection_id: connection,
-          week_start: week,
-          items: [
-            {
-              start_at: start,
-              end_at: new Date(Date.parse(start) + 55 * 60000).toISOString(),
-            },
-          ],
-        },
-      },
-    });
-  };
   function grant(
     booking: Booking,
     item: Grant,
@@ -209,235 +180,134 @@ function ConnectionBookings({
   }
   return (
     <Stack>
-      {studentId ? (
-        <p>История записи · все даты · МСК</p>
-      ) : (
-        <p>
-          Неделя {moscow(week).format('D MMMM')} —{' '}
-          {moscow(week).add(6, 'day').format('D MMMM YYYY')} · МСК
-        </p>
-      )}
       {!writable && (
         <p>Источник закрыт для изменений. Подтверждённые брони сохраняются.</p>
       )}
-      {!studentId && (
-        <>
-          <Button
-            variant="default"
-            disabled={!writable}
-            onClick={() => setPublish(!publish)}
-            aria-expanded={publish}
-          >
-            Открыть время для записи
-          </Button>
-          {publish && (
-            <form
-              noValidate
-              onSubmit={(e) => {
-                e.preventDefault();
-                publishWindow();
-              }}
-            >
-              <DirtyFormGuard dirty={publish} />
-              <Stack>
-                <DateTimeField
-                  date={date}
-                  time={time}
-                  timeId="window-time"
-                  onDateChange={setDate}
-                  onTimeChange={setTime}
-                  error={error}
-                />
-                <p>
-                  Продолжительность окна — 55 минут. На следующую неделю окно не
-                  переносится.
-                </p>
-                <Button type="submit" disabled={!writable}>
-                  Открыть окно
-                </Button>
-              </Stack>
-            </form>
-          )}
-          <details>
-            <summary>Окна выбранной недели</summary>
-            <ReadState query={windows}>
-              {(data) => (
-                <>
-                  {!data.items.length && (
-                    <p>
-                      Открытых окон пока нет. Пустой календарь не разрешает
-                      запись.
-                    </p>
-                  )}
-                  <ul className={styles.list}>
-                    {data.items.map((w) => (
-                      <li key={w.window_id}>
-                        <span>
-                          {dateLabel(w.start_at)} ·{' '}
-                          {w.status === 'published'
-                            ? 'Открыто'
-                            : w.status === 'consumed'
-                              ? 'Занято бронью'
-                              : 'Закрыто'}
-                        </span>
-                        {w.status === 'published' && (
-                          <Button
-                            variant="default"
-                            disabled={!writable}
-                            onClick={() =>
-                              setCommand({
-                                title: 'Закрыть окно',
-                                label: 'Закрыть окно',
-                                text: `${dateLabel(w.start_at)}. Новая запись на это время станет недоступна.`,
-                                command: {
-                                  path: `/teacher-planning/booking-windows/${w.window_id}/close`,
-                                  action: 'window_close',
-                                  body: { expected_revision: w.revision },
-                                },
-                              })
-                            }
-                          >
-                            Закрыть окно
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    variant="default"
-                    disabled={!windowCursor}
-                    onClick={() => setWindowCursor(undefined)}
-                  >
-                    К первым окнам
-                  </Button>
-                  {data.next_cursor && (
-                    <Button
-                      variant="default"
-                      onClick={() => setWindowCursor(data.next_cursor!)}
-                    >
-                      Следующие окна
-                    </Button>
-                  )}
-                </>
-              )}
-            </ReadState>
-          </details>
-        </>
-      )}
       <ReadState query={bookings}>
-        {(data) => (
-          <>
-            {!data.items.length && <p>Броней на эту неделю пока нет.</p>}
-            <ul className={styles.list}>
-              {data.items
-                .filter(
-                  (b) =>
-                    !studentId ||
-                    b.recipient.linked_student_user_id === studentId,
-                )
-                .map((b) => (
-                  <li key={b.booking_id} data-booking-id={b.booking_id}>
-                    <div>
-                      <strong>
-                        {b.recipient.first_name} {b.recipient.last_name}
-                        {b.recipient.grade
-                          ? ` · ${b.recipient.grade} класс`
-                          : ''}
-                      </strong>
-                      <p>
-                        {dateLabel(b.start_at)} ·{' '}
-                        {b.status === 'confirmed'
-                          ? 'Бронь подтверждена'
-                          : 'Бронь отменена'}
-                      </p>
-                      <p>{accessLabel(b.access_state)}</p>
-                      {b.lesson_id ? (
-                        <Link to={`/teacher/lessons/${b.lesson_id}`}>
-                          Открыть занятие
-                        </Link>
-                      ) : (
-                        <p>Время занято. Повторная запись не нужна.</p>
-                      )}
-                      {b.recipient.linked_student_user_id && (
-                        <Link
-                          to={`/teacher/students/${b.recipient.linked_student_user_id}`}
-                        >
-                          К ученику
-                        </Link>
-                      )}
-                      {b.status === 'confirmed' &&
-                        writable &&
-                        !['blocked', 'awaiting_admin_link'].includes(
-                          b.access_state,
-                        ) && (
-                          <Button
-                            variant="default"
-                            onClick={() => setTarget(b)}
-                          >
-                            {b.lesson_id
-                              ? 'Доступ в кабинет'
-                              : 'Подключить кабинет'}
-                          </Button>
+        {(payload) => {
+          const data =
+            'booking_id' in payload
+              ? { items: [payload], next_cursor: null }
+              : payload;
+          return (
+            <>
+              {!data.items.length && <p>Броней на эту неделю пока нет.</p>}
+              <ul className={styles.list}>
+                {data.items
+                  .filter(
+                    (b) =>
+                      !studentId ||
+                      b.recipient.linked_student_user_id === studentId,
+                  )
+                  .map((b) => (
+                    <li key={b.booking_id} data-booking-id={b.booking_id}>
+                      <div>
+                        <strong>
+                          {b.recipient.first_name} {b.recipient.last_name}
+                          {b.recipient.grade
+                            ? ` · ${b.recipient.grade} класс`
+                            : ''}
+                        </strong>
+                        <p>
+                          {dateLabel(b.start_at)} ·{' '}
+                          {b.status === 'confirmed'
+                            ? 'Бронь подтверждена'
+                            : 'Бронь отменена'}
+                        </p>
+                        {b.access_state !== 'active' && (
+                          <p>{accessLabel(b.access_state)}</p>
                         )}
-                      {b.recipient.parent_grants.map((g) => (
-                        <div key={g.grant_id} className={styles.relation}>
-                          <p>
-                            {g.parent_label} ·{' '}
-                            {g.state === 'pending'
-                              ? 'Связь ожидает подтверждения'
-                              : g.state === 'confirmed'
-                                ? 'Связь подтверждена'
-                                : g.state === 'revoked'
-                                  ? 'Связь отозвана'
-                                  : 'Связь отклонена'}
-                          </p>
-                          {writable && g.state === 'pending' && (
-                            <>
-                              <Button
-                                variant="default"
-                                onClick={() => grant(b, g, 'confirm')}
-                              >
-                                Подтвердить связь
-                              </Button>
-                              <Button
-                                variant="subtle"
-                                onClick={() => grant(b, g, 'reject')}
-                              >
-                                Отклонить связь
-                              </Button>
-                            </>
-                          )}
-                          {writable && g.state === 'confirmed' && (
+                        {b.lesson_id ? (
+                          <Link to={`/teacher/lessons/${b.lesson_id}`}>
+                            Открыть занятие
+                          </Link>
+                        ) : (
+                          <p>Время занято. Повторная запись не нужна.</p>
+                        )}
+                        {b.recipient.linked_student_user_id && (
+                          <Link
+                            to={`/teacher/students/${b.recipient.linked_student_user_id}`}
+                          >
+                            К ученику
+                          </Link>
+                        )}
+                        {b.status === 'confirmed' &&
+                          !(b.access_state === 'active' && !!b.lesson_id) &&
+                          writable &&
+                          !['blocked', 'awaiting_admin_link'].includes(
+                            b.access_state,
+                          ) && (
                             <Button
                               variant="default"
-                              onClick={() => grant(b, g, 'revoke')}
+                              onClick={() => setTarget(b)}
                             >
-                              Отозвать связь
+                              {b.lesson_id
+                                ? 'Выдать новое приглашение'
+                                : 'Пригласить ученика'}
                             </Button>
                           )}
-                        </div>
-                      ))}
-                    </div>
-                  </li>
-                ))}
-            </ul>
-            <Button
-              variant="default"
-              disabled={!cursor}
-              onClick={() => setCursor(undefined)}
-            >
-              К первым броням
-            </Button>
-            {data.next_cursor && (
-              <Button
-                variant="default"
-                onClick={() => setCursor(data.next_cursor!)}
-              >
-                Следующие брони
-              </Button>
-            )}
-          </>
-        )}
+                        {b.recipient.parent_grants.map((g) => (
+                          <div key={g.grant_id} className={styles.relation}>
+                            <p>
+                              {g.parent_label} ·{' '}
+                              {g.state === 'pending'
+                                ? 'Связь ожидает подтверждения'
+                                : g.state === 'confirmed'
+                                  ? 'Связь подтверждена'
+                                  : g.state === 'revoked'
+                                    ? 'Связь отозвана'
+                                    : 'Связь отклонена'}
+                            </p>
+                            {writable && g.state === 'pending' && (
+                              <>
+                                <Button
+                                  variant="default"
+                                  onClick={() => grant(b, g, 'confirm')}
+                                >
+                                  Подтвердить связь
+                                </Button>
+                                <Button
+                                  variant="subtle"
+                                  onClick={() => grant(b, g, 'reject')}
+                                >
+                                  Отклонить связь
+                                </Button>
+                              </>
+                            )}
+                            {writable && g.state === 'confirmed' && (
+                              <Button
+                                variant="default"
+                                onClick={() => grant(b, g, 'revoke')}
+                              >
+                                Отозвать связь
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+              {!bookingId && (
+                <Button
+                  variant="default"
+                  disabled={!cursor}
+                  onClick={() => setCursor(undefined)}
+                >
+                  К первым броням
+                </Button>
+              )}
+              {data.next_cursor && (
+                <Button
+                  variant="default"
+                  onClick={() => setCursor(data.next_cursor!)}
+                >
+                  Следующие брони
+                </Button>
+              )}
+            </>
+          );
+        }}
       </ReadState>
       <Button variant="subtle" onClick={() => void refresh()}>
         Обновить запись и брони
@@ -449,7 +319,6 @@ function ConnectionBookings({
           onClose={() => setCommand(null)}
           onSuccess={() => {
             setCommand(null);
-            setPublish(false);
             setMessage('Изменение сохранено.');
             void refresh();
           }}
@@ -544,8 +413,18 @@ function ResolveBooking({
   return (
     <OperationDialog
       onReload={onReload}
-      title="Подключить кабинет"
-      label={confirm ? 'Выдать доступ' : 'Продолжить'}
+      title={
+        b.access_state === 'active'
+          ? 'Добавить сохранённые записи'
+          : 'Пригласить ученика'
+      }
+      label={
+        confirm
+          ? b.access_state === 'active'
+            ? 'Добавить занятия'
+            : 'Создать приглашение'
+          : 'Продолжить'
+      }
       command={command}
       disabled={
         !confirm ||

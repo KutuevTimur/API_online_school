@@ -1,0 +1,72 @@
+.toolbar {
+  margin-block: 12px;
+}
+.toolbar p {
+  margin-block: 8px;
+}
+.legend {
+  color: var(--lgg-success);
+  font-size: 14px;
+}
+.cell,
+.openRead {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid var(--lgg-border);
+  border-radius: 8px;
+  padding: 6px;
+  background: var(--lgg-surface);
+  color: var(--lgg-ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+}
+.cell:hover {
+  border-color: var(--lgg-primary);
+  background: var(--lgg-canvas);
+}
+.cell[data-selected='true'] {
+  border: 2px solid var(--lgg-primary);
+  background: var(--lgg-lesson);
+}
+.cell[data-open='true'],
+.openRead {
+  background: var(--lgg-successSurface);
+  border-color: var(--lgg-success);
+  color: var(--lgg-success);
+}
+.cell:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.openRead {
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+@media (max-width: 1023px) {
+  .cell,
+  .openRead {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    min-height: 64px;
+    margin-bottom: 8px;
+  }
+}
+
+.cell[data-open='true'][data-selected='true'] {
+  border-color: var(--lgg-primary);
+  background: var(--lgg-lesson);
+  color: var(--lgg-ink);
+}

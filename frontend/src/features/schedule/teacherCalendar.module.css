@@ -415,15 +415,22 @@
   font-size: 14px;
   overflow-wrap: anywhere;
 }
-.bookingEvent a {
+.bookingEvent button {
   display: flex;
   height: 100%;
   flex-direction: column;
   justify-content: center;
   min-height: 44px;
   color: var(--lgg-ink);
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
-.bookingEvent:has(a:hover) {
+.bookingEvent:has(button:hover) {
   background: var(--lgg-studentHover);
 }
 
@@ -441,4 +448,8 @@
     height: auto;
     min-height: 88px;
   }
+}
+
+.bookingEvent button:disabled {
+  cursor: default;
 }

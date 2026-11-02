@@ -1,3 +1,9 @@
+import {
+  AvailabilityCell,
+  AvailabilityToolbar,
+  cellBusy,
+  useAvailability,
+} from '../booking/AvailabilityEditor';
 import { accessLabel, provisional, type Booking } from '../booking/api';
 import { BookingPanel } from '../booking/BookingPanel';
 import { WeeklyNeeds } from './WeeklyNeeds';
@@ -41,12 +47,24 @@ import { previewRegularChange, type RegularOperation } from './planning';
 import styles from './teacherCalendar.module.css';
 
 export function TeacherSchedulePage() {
+  const [params] = useSearchParams();
+  return (
+    <TeacherScheduleWeek
+      key={weekStart(params.get('week')).format('YYYY-MM-DD')}
+    />
+  );
+}
+function TeacherScheduleWeek() {
   usePageTitle('Расписание преподавателя');
   const desktop = useMediaQuery('(min-width:1024px)');
   const [params, set] = useSearchParams();
   const location = useLocation();
   const weekParam = params.get('week');
   const start = useMemo(() => weekStart(weekParam), [weekParam]);
+  const availability = useAvailability(start.format('YYYY-MM-DD'));
+  const bookingOpener = useRef<HTMLButtonElement | null>(null);
+  const [bookingOverlay, setBookingOverlay] = useState(false);
+  const [inspectedBooking, inspectBooking] = useState<string | null>(null);
   const days = Array.from({ length: 7 }, (_, i) => start.add(i, 'day'));
   const raw = Number(params.get('day') ?? (moscow().day() + 6) % 7);
   const day = raw >= 0 && raw <= 6 && Number.isInteger(raw) ? raw : 0;
@@ -97,11 +115,16 @@ export function TeacherSchedulePage() {
   );
   const slotHeights = useMemo(
     () =>
-      calendarSlotHeights([
-        ...lessons.map((l) => moscow(l.scheduled_at).hour()),
-        ...pendingBookings.map((b) => moscow(b.start_at).hour()),
-      ]),
-    [lessons, pendingBookings],
+      availability.editing
+        ? Array<number>(14).fill(88)
+        : calendarSlotHeights([
+            ...lessons.map((l) => moscow(l.scheduled_at).hour()),
+            ...pendingBookings.map((b) => moscow(b.start_at).hour()),
+            ...(availability.windows.data?.items
+              .filter((w) => w.status === 'published')
+              .map((w) => moscow(w.start_at).hour()) || []),
+          ]),
+    [lessons, pendingBookings, availability.editing, availability.windows.data],
   );
   const slotStyle = (n: number) =>
     ({ '--calendar-slot-height': `${slotHeights[n]}px` }) as CSSProperties;
@@ -137,7 +160,7 @@ export function TeacherSchedulePage() {
     );
   };
   const back = location.pathname + location.search;
-  useModalIsolation(!!overlapHour);
+  useModalIsolation(!!overlapHour || !!inspectedBooking);
   useEffect(() => {
     if (
       !query.data ||
@@ -267,7 +290,11 @@ export function TeacherSchedulePage() {
       lesson.course_name ||
       lesson.title;
     const draggable =
-      !!lesson.can_manage && lesson.status === 'scheduled' && !list && desktop;
+      !!lesson.can_manage &&
+      lesson.status === 'scheduled' &&
+      !list &&
+      desktop &&
+      !availability.editing;
     return (
       <article
         key={sourceBooking?.booking_id || lesson.id}
@@ -322,6 +349,7 @@ export function TeacherSchedulePage() {
         >
           <Menu.Target>
             <ActionIcon
+              disabled={availability.editing}
               className={styles.eventMenu}
               variant="subtle"
               color="var(--lgg-ink)"
@@ -425,6 +453,7 @@ export function TeacherSchedulePage() {
       <header className={styles.heading}>
         <h1>Расписание</h1>
         <Button
+          disabled={availability.editing}
           onClick={() =>
             setAdding(droppedHour(days[day].format('YYYY-MM-DD'), 15)!)
           }
@@ -485,6 +514,13 @@ export function TeacherSchedulePage() {
           </div>
         </details>
       </div>
+      <AvailabilityToolbar
+        state={availability}
+        onStart={() => {
+          update({ view: 'active', cancelled: '0' });
+          availability.setEditing(true);
+        }}
+      />
       <p className={styles.caption}>МСК · 08:00–22:00 · по времени начала</p>
       <div className={styles.dayButtons} aria-label="День недели">
         {days.map((d, i) => {
@@ -622,11 +658,28 @@ export function TeacherSchedulePage() {
                                   acceptDrop(e, d.format('YYYY-MM-DD'), hour)
                                 }
                               >
-                                <button
-                                  type="button"
-                                  className={styles.addSlot}
-                                  aria-label={`Добавить занятие ${d.format('D MMMM')} ${String(hour).padStart(2, '0')}:00 МСК`}
-                                  onClick={() => setAdding(initial)}
+                                {!availability.editing && (
+                                  <button
+                                    type="button"
+                                    className={styles.addSlot}
+                                    aria-label={`Добавить занятие ${d.format('D MMMM')} ${String(hour).padStart(2, '0')}:00 МСК`}
+                                    onClick={() => setAdding(initial)}
+                                  />
+                                )}
+                                <AvailabilityCell
+                                  state={availability}
+                                  start={initial}
+                                  busy={
+                                    cellBusy(
+                                      initial,
+                                      lessons,
+                                      bookingQuery.data?.items || [],
+                                    ) ||
+                                    query.isPending ||
+                                    query.isError ||
+                                    bookingQuery.isPending ||
+                                    bookingQuery.isError
+                                  }
                                 />
                                 {slot.length > 1 ? (
                                   <>
@@ -668,8 +721,19 @@ export function TeacherSchedulePage() {
                                       data-calendar-booking-id={b.booking_id}
                                       className={styles.bookingEvent}
                                     >
-                                      <a
-                                        href="#booking-management"
+                                      <button
+                                        type="button"
+                                        disabled={availability.editing}
+                                        title={
+                                          availability.editing
+                                            ? 'Завершите выделение, чтобы открыть бронь'
+                                            : undefined
+                                        }
+                                        onClick={(event) => {
+                                          bookingOpener.current =
+                                            event.currentTarget;
+                                          inspectBooking(b.booking_id);
+                                        }}
                                         aria-label={`${moscow(b.start_at).format('HH:mm')} ${b.recipient.first_name} ${b.recipient.last_name}. Бронь подтверждена. ${accessLabel(b.access_state)}`}
                                       >
                                         <span className={styles.bookingName}>
@@ -678,7 +742,7 @@ export function TeacherSchedulePage() {
                                           {b.recipient.last_name}
                                         </span>
                                         <span>Бронь подтверждена</span>
-                                      </a>
+                                      </button>
                                     </article>
                                   ))}
                                 {drop === initial && (
@@ -694,7 +758,8 @@ export function TeacherSchedulePage() {
                           },
                         )}
                       </div>
-                      {!items.length &&
+                      {!availability.editing &&
+                        !items.length &&
                         !pendingBookings.some((b) =>
                           moscow(b.start_at).isSame(d, 'day'),
                         ) && (
@@ -711,11 +776,40 @@ export function TeacherSchedulePage() {
       <p role="status" className={styles.dragStatus}>
         {drop
           ? `Новое время: ${moscow(drop).format('D MMMM, HH:mm')} МСК. Отпустите для подтверждения переноса.`
-          : 'Нажатие открывает занятие. Действия — в меню ⋯.'}
+          : availability.editing
+            ? availability.removing
+              ? 'Выбранные окна закроются только после подтверждения.'
+              : 'Выбранные часы откроются только после подтверждения.'
+            : 'Нажатие открывает занятие. Действия — в меню ⋯.'}
       </p>
-      <div id="booking-management">
-        <BookingPanel week={start.format('YYYY-MM-DD')} />
-      </div>
+      <Modal
+        opened={!!inspectedBooking}
+        onExitTransitionEnd={() =>
+          requestAnimationFrame(() => {
+            if (
+              bookingOpener.current?.isConnected &&
+              !document.querySelector('[role="dialog"]')
+            )
+              bookingOpener.current.focus();
+          })
+        }
+        closeOnEscape={!bookingOverlay}
+        closeOnClickOutside={!bookingOverlay}
+        withCloseButton={!bookingOverlay}
+        trapFocus={!bookingOverlay}
+        onClose={() => inspectBooking(null)}
+        title="Запись на занятие"
+        zIndex={180}
+        closeButtonProps={{ 'aria-label': 'Закрыть' }}
+      >
+        {inspectedBooking && (
+          <BookingPanel
+            week={start.format('YYYY-MM-DD')}
+            bookingId={inspectedBooking}
+            onOverlayChange={setBookingOverlay}
+          />
+        )}
+      </Modal>
       <WeeklyNeeds week={start.format('YYYY-MM-DD')} />
       <WeeklyEarnings week={start.format('YYYY-MM-DD')} />
       {adding && (

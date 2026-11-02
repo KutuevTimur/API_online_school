@@ -1231,6 +1231,19 @@ Teacher recipient DTO содержит revision/own masked parent grants; linked
 показан рядом с приглашением; одноразовая ссылка не входит в receipt/replay.
 Ручная приёмка/границы и фактические gates — [F01.4](tasks/F01.md#результат-f014-02112026).
 
+Уточнение F01.4 после owner feedback02.11: `AvailabilityEditor` — business owner
+режима выделения в существующей сетке TeacherSchedulePage; HH:00→55min, click/paint/
+keyboard/tap, один publish batch или atomic close batch (до100). Опубликованные окна
+читаются bounded `published_only`, закрытая история сохраняется. Close batch использует
+operation→schedule→sorted own Window locks, проверяет connection/teacher/revision/
+published для всех строк до DML; consumed Booking и Lesson не отменяются. Конфликт
+любой строки откатывает всю пачку, receipt/replay остаётся immutable/scoped.
+BookingPanel больше не обычный подвал расписания: contextual Modal из provisional
+карточки, связи/приглашения — secondary disclosure ученика. Active User с Lesson не
+получает повторной кнопки выдачи доступа. DirtyFormGuard сохраняет выбор при смене
+`day`, блокирует уход в другую неделю; child dialog владеет Escape, parent focus trap
+и возврат в календарь проверяются отдельно. Это local .4, не VK transport .5+.
+
 <a id="a147-f010-local"></a>
 
 ### A14.7. F01.0 — локальная спецификация перед первым кодом ·02.11.2026

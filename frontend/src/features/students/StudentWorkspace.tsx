@@ -482,10 +482,13 @@ export function StudentWorkspace({
           )
         }
       </ReadState>
-      <BookingPanel
-        week={weekStart().format('YYYY-MM-DD')}
-        studentId={student.user_id}
-      />
+      <details className={`${styles.panel} ${styles.secondaryDisclosure}`}>
+        <summary>Запись через VK и родители</summary>
+        <BookingPanel
+          week={weekStart().format('YYYY-MM-DD')}
+          studentId={student.user_id}
+        />
+      </details>
       <TeacherReminders studentId={student.user_id} />
       <details
         ref={settings}

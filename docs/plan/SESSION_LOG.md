@@ -2554,3 +2554,11 @@ missing0; relative links архива STATUS пересчитаны после �
 - Новые guarded synthetic55435 (preview5174→8020) и55436 (финальная regression), restricted roles/temporary media; retained5173/8019/55432/dev55431/старые55433/55434/бот не тронуты. Финальные119 actual DB +61 standalone +218 frontend PASS, types/lint/build/tokens/DTO/format PASS; 2 прежних premium finding/chunk warning отдельно в карточке. Preview cookie `lgg_f014_refresh` отделена от retained, default auth contract сохранён.
 - Real browser two-role same Lesson, parent grant/revoke, existing User self-link/materialize, own student context/foreign read PASS; viewport360/390/768/1280/CSS200/keyboard/Escape/focus/Axe0. Initial fixture/mock/locator/focus/rate-limit failures и оставшиеся факты сохранены в карточке, owner acceptance ожидает.
 - После final автоматических PASS создана отдельная codex/f014-teacher-booking-ui-20261102 от75636a0, только .4 commit/push в пользовательский origin; точный SHA/remote verification — в финальном ответе. Preview оставлен для ручной приёмки; без F01.5+/live/внешних отправок/server/install/PR/merge/deploy.
+
+
+## 02.11.2026 — F01.4 · коррекция по owner feedback
+
+- По явному отзыву и следующему требованию обратной операции: [массовое открытие/снятие времени и контекст ребёнка](tasks/F01.md#доработка-f014-по-ручному-отзыву-02112026). Палитра прежняя; inline grid/click/paint/keyboard/tap, один atomic batch на действие, без большого подвала и лишнего доступа активному User.
+- Backend close batch с own scope/CAS/receipt и rollback всех окон; published_only не удаляет историю. 125 actual DB PASS на новой guarded55437 +222 frontend unit PASS, scoped31 PASS; real20 open/20 close, mobile/Axe0/keyboard/receipt/focus PASS; type/lint/build/tokens/DTO/format PASS,2 прежних premium finding. Ручная приёмка нового UX ожидает.
+- Review fixture отдельная55436/media/cookie/5175→8021; owner55435/media/5174 сохранены без seed/reset, retained/бот не затронуты. Impeccable cached/no install; narrow reviewer проверил Mantine focus invariant; начальные Axe/focus/fixture ожидания записаны.
+- Коррекция только .4, следующий commit/push в task branch после PASS; без F01.5+/VK/Google/Long Poll/отправок/удаления/server/install/PR/merge/deploy.

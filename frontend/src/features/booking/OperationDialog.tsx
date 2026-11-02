@@ -42,12 +42,18 @@ export function OperationDialog({
   );
   useEffect(
     () => () => {
+      // Mantine reactivates the parent focus trap on its own next timer turn.
+      // Restore afterward, unless a replacement invitation/reauth dialog owns focus.
       requestAnimationFrame(() => {
-        if (
-          !document.querySelector('[role="dialog"]') &&
-          opener.current?.isConnected
-        )
-          opener.current.focus();
+        window.setTimeout(() => {
+          if (
+            !Array.from(document.querySelectorAll('[role="dialog"]')).some(
+              (dialog) => !dialog.contains(opener.current),
+            ) &&
+            opener.current?.isConnected
+          )
+            opener.current.focus();
+        }, 0);
       });
     },
     [],

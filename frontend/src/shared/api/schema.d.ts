@@ -1194,6 +1194,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/teacher-planning/booking-windows/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Windows */
+        post: operations["close_windows_teacher_planning_booking_windows_close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/teacher-planning/booking-windows/{id}/close": {
         parameters: {
             query?: never;
@@ -1983,6 +2000,31 @@ export interface components {
             completed: number;
             /** Failed */
             failed: number;
+        };
+        /** CloseWindowItem */
+        CloseWindowItem: {
+            /** Expected Revision */
+            expected_revision: number;
+            /**
+             * Window Id
+             * Format: uuid
+             */
+            window_id: string;
+        };
+        /** CloseWindowsRequest */
+        CloseWindowsRequest: {
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            /** Items */
+            items: components["schemas"]["CloseWindowItem"][];
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
         };
         /** ConfirmBookingRequest */
         ConfirmBookingRequest: {
@@ -6645,6 +6687,7 @@ export interface operations {
                 week_start: string;
                 cursor?: string | null;
                 limit?: number;
+                published_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -6682,6 +6725,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PublishWindowsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_windows_teacher_planning_booking_windows_close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseWindowsRequest"];
             };
         };
         responses: {
