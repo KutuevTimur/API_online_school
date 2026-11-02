@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import declarative_base
 
 from src.core.config import Config
+from src.core.config.test_guard import require_test_config
 from src.modules.depends import get_config
 
 Base_sqlalchemy = declarative_base()
@@ -22,6 +23,8 @@ class Base(Base_sqlalchemy):
 async def get_db(
     config: Config = Depends(get_config),
 ) -> AsyncIterator[AsyncSession]:
+    if config.env.mode == "TEST":
+        require_test_config(config)
     async_session_factory = config.db_connection.session_local
     async with async_session_factory() as session:
         yield session

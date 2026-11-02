@@ -6,3 +6,10 @@ __pycache__/
 *.log
 *.env
 *.test.env
+.env*
+!.env.example
+!.env.test.example
+media*/
+.pytest_cache/
+.coverage
+.DS_Store
